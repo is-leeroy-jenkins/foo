@@ -1606,12 +1606,16 @@ def profile_dataframe_schema( df: pd.DataFrame,
 	schema_signature = repr( (tuple( df.columns.tolist( ) ),
 			tuple( str( dtype ) for dtype in df.dtypes.tolist( ) )) )
 	overrides_by_schema = st.session_state.get( 'column_type_overrides', { } )
-	legacy_override_values = list( overrides_by_schema.values( ) ) if isinstance( overrides_by_schema, dict ) else [ ]
+	legacy_override_values = list( overrides_by_schema.values( ) ) if isinstance(
+		overrides_by_schema, dict ) else [ ]
+	
 	if legacy_override_values and all(
 			isinstance( value, str ) for value in legacy_override_values ):
 		overrides = overrides_by_schema
 	else:
-		overrides = overrides_by_schema.get( schema_signature, { } ) if isinstance( overrides_by_schema, dict ) else { }
+		overrides = overrides_by_schema.get(
+			schema_signature, { } ) if isinstance( overrides_by_schema, dict ) else { }
+		
 	declared_types = declared_schema if isinstance( declared_schema, dict ) else { }
 	return { column: profile_column( str( column ),
 		df[ column ], str( overrides.get( column, '' ) ), str( declared_types.get( column, '' ) ) )
