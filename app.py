@@ -4195,7 +4195,8 @@ if mode == 'Loading':
 				if can_save:
 					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ), file_name='pubmed_loader_output.txt', mime='text/plain', key='pubmed_save', icon='💾', width='stretch' )
 				else:
-					col_save.button( 'Save', key='pubmed_save_disabled', disabled=True, icon='💾', width='stretch' )
+					col_save.button( 'Save', key='pubmed_save_disabled', disabled=True,
+						icon='💾', width='stretch' )
 				
 				# --------------------------------------------------
 				# Clear
@@ -4210,7 +4211,8 @@ if mode == 'Loading':
 				# --------------------------------------------------
 				if load_pubmed and isinstance( pubmed_query, str ) and pubmed_query.strip( ):
 					loader = PubMedSearchLoader( )
-					documents = loader.load( query=pubmed_query.strip( ), max_docs=int( pubmed_max_docs ), ) or [ ]
+					documents = loader.load( query=pubmed_query.strip( ),
+						max_docs=int( pubmed_max_docs ), ) or [ ]
 					
 					for document in documents:
 						if not isinstance( getattr( document, 'metadata', None ), dict ):
@@ -4223,7 +4225,8 @@ if mode == 'Loading':
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
 					st.session_state.raw_text = '\n\n'.join( d.page_content for d in documents if
-							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) and d.page_content.strip( ) )
+							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) \
+							and d.page_content.strip( ) )
 					st.session_state.processed_text = None
 					st.session_state.lines = None
 					st.session_state.chunked_documents = None
@@ -4236,9 +4239,14 @@ if mode == 'Loading':
 			# --- Expander Open City Loader
 			# ----------------------------
 			with st.expander( label='Open City Loader', icon='🏙️', expanded=False ):
-				open_city_id = st.text_input( 'City Domain', value='', key='open_city_id', placeholder='e.g. data.sfgov.org', help='City domain identifier for the Socrata-backed portal.', icon='💾', width='stretch' )
+				open_city_id = st.text_input( 'City Domain', value='', key='open_city_id',
+					placeholder='e.g. data.sfgov.org',
+					help='City domain identifier for the Socrata-backed portal.',
+					icon='💾', width='stretch' )
 				
-				open_city_dataset_id = st.text_input( 'Dataset ID', value='', key='open_city_dataset_id', placeholder='e.g. vw6y-z8j6', help='Dataset identifier from the city portal.', icon='💾', width='stretch' )
+				open_city_dataset_id = st.text_input( 'Dataset ID', value='',
+					key='open_city_dataset_id', placeholder='e.g. vw6y-z8j6',
+					help='Dataset identifier from the city portal.', icon='💾', width='stretch' )
 				
 				open_city_limit = st.number_input( 'Maximum Records', min_value=1, value=100, step=1, key='open_city_limit', )
 				
@@ -4246,14 +4254,20 @@ if mode == 'Loading':
 				# Buttons: Load / Clear / Save
 				# --------------------------------------------------
 				col_load, col_clear, col_save = st.columns( 3 )
-				load_open_city = col_load.button( 'Load', key='open_city_load', icon='📥', width='stretch' )
-				clear_open_city = col_clear.button( 'Clear', key='open_city_clear', icon='🧹', width='stretch' )
+				load_open_city = col_load.button( 'Load', key='open_city_load',
+					icon='📥', width='stretch' )
+				clear_open_city = col_clear.button( 'Clear', key='open_city_clear',
+					icon='🧹', width='stretch' )
 				
 				can_save = (
-						st.session_state.get( 'active_loader' ) == 'OpenCityLoader' and isinstance( st.session_state.get( 'raw_text' ), str ) and st.session_state.get( 'raw_text' ).strip( ))
+						st.session_state.get( 'active_loader' ) == 'OpenCityLoader' \
+						and isinstance( st.session_state.get( 'raw_text' ), str ) \
+						and st.session_state.get( 'raw_text' ).strip( ))
 				
 				if can_save:
-					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ), file_name='open_city_loader_output.txt', mime='text/plain', key='open_city_save', icon='💾', width='stretch' )
+					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ),
+						file_name='open_city_loader_output.txt', mime='text/plain',
+						key='open_city_save', icon='💾', width='stretch' )
 				else:
 					col_save.button( 'Save', key='open_city_save_disabled', disabled=True, icon='💾', width='stretch' )
 				
@@ -4268,10 +4282,13 @@ if mode == 'Loading':
 				# --------------------------------------------------
 				# Load
 				# --------------------------------------------------
-				if (
-						load_open_city and isinstance( open_city_id, str ) and open_city_id.strip( ) and isinstance( open_city_dataset_id, str ) and open_city_dataset_id.strip( )):
+				if (load_open_city and isinstance( open_city_id, str ) \
+						and open_city_id.strip( ) and isinstance( open_city_dataset_id, str ) \
+						and open_city_dataset_id.strip( )):
 					loader = OpenCityLoader( )
-					documents = loader.load( city_id=open_city_id.strip( ), dataset_id=open_city_dataset_id.strip( ), limit=int( open_city_limit ), ) or [ ]
+					documents = loader.load( city_id=open_city_id.strip( ),
+						dataset_id=open_city_dataset_id.strip( ),
+						limit=int( open_city_limit ), ) or [ ]
 					
 					for document in documents:
 						if not isinstance( getattr( document, 'metadata', None ), dict ):
@@ -4285,24 +4302,27 @@ if mode == 'Loading':
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
 					st.session_state.raw_text = '\n\n'.join( d.page_content for d in documents if
-							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) and d.page_content.strip( ) )
+							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) \
+							and d.page_content.strip( ) )
 					st.session_state.processed_text = None
 					st.session_state.lines = None
 					st.session_state.chunked_documents = None
 					st.session_state.df_chunks = None
 					st.session_state.active_loader = 'OpenCityLoader'
-					st.session_state[
-						'_loader_status' ] = f'Loaded {len( documents )} Open City document(s).'
+					st.session_state[ '_loader_status' ] = \
+						f'Loaded {len( documents )} Open City document(s).'
 		
 		with st.expander( label='Cloud Documents', expanded=False ):
 			# ----------------------------
 			# ---- Expander OneDrive Loader
 			# ----------------------------
 			with st.expander( label='OneDrive Loader', icon='🟦', expanded=False ):
-				onedrive_drive_id = st.text_input( 'Drive ID', value='', key='onedrive_drive_id', placeholder='OneDrive drive identifier', )
+				onedrive_drive_id = st.text_input( 'Drive ID', value='', key='onedrive_drive_id',
+					placeholder='OneDrive drive identifier', )
 				
-				onedrive_folder_path = st.text_input( 'Folder Path', value='', key='onedrive_folder_path', placeholder='Optional folder path within the '
-				                                                                                                       'drive', help='Leave blank to load the drive target directly.', )
+				onedrive_folder_path = st.text_input( 'Folder Path', value='',
+					key='onedrive_folder_path', placeholder='Optional folder path within the drive',
+					help='Leave blank to load the drive target directly.', )
 				
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
@@ -4311,13 +4331,17 @@ if mode == 'Loading':
 				load_onedrive = col_load.button( 'Load', key='onedrive_load', icon='📤', width='stretch' )
 				clear_onedrive = col_clear.button( 'Clear', key='onedrive_clear', icon='🧹', width='stretch' )
 				
-				can_save = (
-							st.session_state.get( 'active_loader' ) == 'OneDriveDocLoader' and isinstance( st.session_state.get( 'raw_text' ), str ) and st.session_state.get( 'raw_text' ).strip( ))
+				can_save = ( st.session_state.get( 'active_loader' ) == 'OneDriveDocLoader' \
+							and isinstance( st.session_state.get( 'raw_text' ), str ) \
+				             and st.session_state.get( 'raw_text' ).strip( ))
 				
 				if can_save:
-					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ), file_name='onedrive_loader_output.txt', mime='text/plain', key='onedrive_save', icon='💾', width='stretch' )
+					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ),
+						file_name='onedrive_loader_output.txt', mime='text/plain',
+						key='onedrive_save', icon='💾', width='stretch' )
 				else:
-					col_save.button( 'Save', key='onedrive_save_disabled', disabled=True, icon='💾', width='stretch' )
+					col_save.button( 'Save', key='onedrive_save_disabled', disabled=True,
+						icon='💾', width='stretch' )
 				
 				# --------------------------------------------------
 				# Clear
@@ -4330,12 +4354,12 @@ if mode == 'Loading':
 				# --------------------------------------------------
 				# Load
 				# --------------------------------------------------
-				if (
-						load_onedrive and isinstance( onedrive_drive_id, str ) and onedrive_drive_id.strip( )):
+				if ( load_onedrive and isinstance( onedrive_drive_id, str ) \
+						and onedrive_drive_id.strip( )):
 					loader = OneDriveDocLoader( )
-					
 					if isinstance( onedrive_folder_path, str ) and onedrive_folder_path.strip( ):
-						documents = loader.load_folder( id=onedrive_drive_id.strip( ), path=onedrive_folder_path.strip( ), ) or [ ]
+						documents = loader.load_folder( id=onedrive_drive_id.strip( ),
+							path=onedrive_folder_path.strip( ), ) or [ ]
 					else:
 						documents = loader.load( id=onedrive_drive_id.strip( ), ) or [ ]
 					
@@ -4345,17 +4369,20 @@ if mode == 'Loading':
 						
 						document.metadata[ 'loader' ] = 'OneDriveDocLoader'
 						document.metadata.setdefault( 'drive_id', onedrive_drive_id.strip( ) )
-						document.metadata.setdefault( 'folder_path', onedrive_folder_path.strip( ) or None, )
+						document.metadata.setdefault( 'folder_path',
+							onedrive_folder_path.strip( ) or None, )
 						
 						if onedrive_folder_path.strip( ):
-							document.metadata.setdefault( 'source', f"{onedrive_drive_id.strip( )}:{onedrive_folder_path.strip( )}" )
+							document.metadata.setdefault( 'source',
+								f"{onedrive_drive_id.strip( )}:{onedrive_folder_path.strip( )}" )
 						else:
 							document.metadata.setdefault( 'source', onedrive_drive_id.strip( ), )
 					
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
 					st.session_state.raw_text = '\n\n'.join( d.page_content for d in documents if
-							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) and d.page_content.strip( ) )
+							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) \
+							and d.page_content.strip( ) )
 					st.session_state.processed_text = None
 					st.session_state.lines = None
 					st.session_state.chunked_documents = None
@@ -4368,11 +4395,14 @@ if mode == 'Loading':
 			# ---- Expander Google Cloud File Loader
 			# ----------------------------
 			with st.expander( label='Google Cloud File Loader', icon='☁️', expanded=False ):
-				gcs_project_name = st.text_input( 'Project Name', value='', key='gcs_file_project_name', placeholder='e.g. my-gcp-project', )
+				gcs_project_name = st.text_input( 'Project Name', value='',
+					key='gcs_file_project_name', placeholder='e.g. my-gcp-project', )
 				
-				gcs_bucket = st.text_input( 'Bucket', value='', key='gcs_file_bucket', placeholder='e.g. my-bucket', )
+				gcs_bucket = st.text_input( 'Bucket', value='',
+					key='gcs_file_bucket', placeholder='e.g. my-bucket', )
 				
-				gcs_blob = st.text_input( 'Blob', value='', key='gcs_file_blob', placeholder='e.g. documents/report.pdf', )
+				gcs_blob = st.text_input( 'Blob', value='',
+					key='gcs_file_blob', placeholder='e.g. documents/report.pdf', )
 				
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
@@ -4381,12 +4411,17 @@ if mode == 'Loading':
 				load_gcs_file = col_load.button( 'Load', key='gcs_file_load', icon='📤', width='stretch' )
 				clear_gcs_file = col_clear.button( 'Clear', key='gcs_file_clear', icon='🧹', width='stretch' )
 				can_save = (
-							st.session_state.get( 'active_loader' ) == 'GoogleCloudFileLoader' and isinstance( st.session_state.get( 'raw_text' ), str ) and st.session_state.get( 'raw_text' ).strip( ))
+							st.session_state.get( 'active_loader' ) == 'GoogleCloudFileLoader' \
+							and isinstance( st.session_state.get( 'raw_text' ), str ) \
+							and st.session_state.get( 'raw_text' ).strip( ))
 				
 				if can_save:
-					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ), file_name='google_cloud_file_loader_output.txt', mime='text/plain', key='gcs_file_save', icon='💾', width='stretch' )
+					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ),
+						file_name='google_cloud_file_loader_output.txt', mime='text/plain',
+						key='gcs_file_save', icon='💾', width='stretch' )
 				else:
-					col_save.button( 'Save', key='gcs_file_save_disabled', disabled=True, icon='💾', width='stretch' )
+					col_save.button( 'Save', key='gcs_file_save_disabled',
+						disabled=True, icon='💾', width='stretch' )
 				
 				# --------------------------------------------------
 				# Clear
@@ -4400,10 +4435,12 @@ if mode == 'Loading':
 				# --------------------------------------------------
 				# Load
 				# --------------------------------------------------
-				if (
-						load_gcs_file and isinstance( gcs_project_name, str ) and gcs_project_name.strip( ) and isinstance( gcs_bucket, str ) and gcs_bucket.strip( ) and isinstance( gcs_blob, str ) and gcs_blob.strip( )):
+				if ( load_gcs_file and isinstance( gcs_project_name, str ) \
+						and gcs_project_name.strip( ) and isinstance( gcs_bucket, str ) \
+						and gcs_bucket.strip( ) and isinstance( gcs_blob, str ) and gcs_blob.strip( )):
 					loader = GoogleCloudFileLoader( )
-					documents = loader.load( project_name=gcs_project_name.strip( ), bucket=gcs_bucket.strip( ), blob=gcs_blob.strip( ), ) or [ ]
+					documents = loader.load( project_name=gcs_project_name.strip( ),
+						bucket=gcs_bucket.strip( ), blob=gcs_blob.strip( ), ) or [ ]
 					
 					for document in documents:
 						if not isinstance( getattr( document, 'metadata', None ), dict ):
@@ -4413,12 +4450,14 @@ if mode == 'Loading':
 						document.metadata.setdefault( 'project_name', gcs_project_name.strip( ) )
 						document.metadata.setdefault( 'bucket', gcs_bucket.strip( ) )
 						document.metadata.setdefault( 'blob', gcs_blob.strip( ) )
-						document.metadata.setdefault( 'source', f"gs://{gcs_bucket.strip( )}/{gcs_blob.strip( )}" )
+						document.metadata.setdefault( 'source',
+							f"gs://{gcs_bucket.strip( )}/{gcs_blob.strip( )}" )
 					
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
 					st.session_state.raw_text = '\n\n'.join( d.page_content for d in documents if
-							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) and d.page_content.strip( ) )
+							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) \
+							and d.page_content.strip( ) )
 					st.session_state.processed_text = None
 					st.session_state.lines = None
 					st.session_state.chunked_documents = None
@@ -4432,32 +4471,45 @@ if mode == 'Loading':
 			# ---- Expander AWS File Loader
 			# ----------------------------
 			with st.expander( label='AWS File Loader', icon='🪣', expanded=False ):
-				aws_file_bucket = st.text_input( 'Bucket', value='', key='aws_file_bucket', placeholder='e.g. my-s3-bucket', )
+				aws_file_bucket = st.text_input( 'Bucket', value='', key='aws_file_bucket',
+					placeholder='e.g. my-s3-bucket', )
 				
-				aws_file_key = st.text_input( 'Object Key', value='', key='aws_file_key', placeholder='e.g. documents/report.pdf', )
+				aws_file_key = st.text_input( 'Object Key', value='', key='aws_file_key',
+					placeholder='e.g. documents/report.pdf', )
 				
-				aws_file_region = st.text_input( 'Region Name', value='', key='aws_file_region', placeholder='e.g. us-east-1', )
+				aws_file_region = st.text_input( 'Region Name', value='',
+					key='aws_file_region', placeholder='e.g. us-east-1', )
 				
-				aws_file_api_version = st.text_input( 'API Version', value='', key='aws_file_api_version', placeholder='Optional', )
+				aws_file_api_version = st.text_input( 'API Version', value='',
+					key='aws_file_api_version', placeholder='Optional', )
 				
 				aws_file_use_ssl = st.checkbox( 'Use SSL', value=True, key='aws_file_use_ssl', )
-				aws_file_verify = st.text_input( 'Verify', value='', key='aws_file_verify', placeholder='Optional path or True / False', help='Leave blank for default behavior, or provide a CA bundle path.', )
+				aws_file_verify = st.text_input( 'Verify', value='', key='aws_file_verify',
+					placeholder='Optional path or True / False',
+					help='Leave blank for default behavior, or provide a CA bundle path.', )
 				
-				aws_file_endpoint_url = st.text_input( 'Endpoint URL', value='', key='aws_file_endpoint_url', placeholder='Optional custom endpoint', )
+				aws_file_endpoint_url = st.text_input( 'Endpoint URL', value='',
+					key='aws_file_endpoint_url', placeholder='Optional custom endpoint', )
 				
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
 				# --------------------------------------------------
 				col_load, col_clear, col_save = st.columns( 3 )
-				load_aws_file = col_load.button( label='Load', key='aws_file_load', icon='📤', width='stretch' )
-				clear_aws_file = col_clear.button( label='Clear', key='aws_file_clear', icon='🧹', width='stretch' )
-				can_save = (
-							st.session_state.get( 'active_loader' ) == 'AwsFileLoader' and isinstance( st.session_state.get( 'raw_text' ), str ) and st.session_state.get( 'raw_text' ).strip( ))
+				load_aws_file = col_load.button( label='Load', key='aws_file_load',
+					icon='📤', width='stretch' )
+				clear_aws_file = col_clear.button( label='Clear', key='aws_file_clear',
+					icon='🧹', width='stretch' )
+				can_save = ( st.session_state.get( 'active_loader' ) == 'AwsFileLoader' \
+				             and isinstance( st.session_state.get( 'raw_text' ), str ) \
+				             and st.session_state.get( 'raw_text' ).strip( ))
 				
 				if can_save:
-					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ), file_name='aws_file_loader_output.txt', mime='text/plain', key='aws_file_save', icon='📥', width='stretch' )
+					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ),
+						file_name='aws_file_loader_output.txt', mime='text/plain',
+						key='aws_file_save', icon='📥', width='stretch' )
 				else:
-					col_save.button( 'Save', key='aws_file_save_disabled', disabled=True, icon='💾', width='stretch' )
+					col_save.button( 'Save', key='aws_file_save_disabled', disabled=True,
+						icon='💾', width='stretch' )
 				
 				# --------------------------------------------------
 				# Clear
@@ -4470,13 +4522,12 @@ if mode == 'Loading':
 				# --------------------------------------------------
 				# Load
 				# --------------------------------------------------
-				if (
-						load_aws_file and isinstance( aws_file_bucket, str ) and aws_file_bucket.strip( ) and isinstance( aws_file_key, str ) and aws_file_key.strip( )):
+				if (load_aws_file and isinstance( aws_file_bucket, str ) \
+						and aws_file_bucket.strip( ) and isinstance( aws_file_key, str ) \
+						and aws_file_key.strip( )):
 					verify_value: str | bool | None = None
-					
 					if isinstance( aws_file_verify, str ) and aws_file_verify.strip( ):
 						verify_text = aws_file_verify.strip( )
-						
 						if verify_text.lower( ) == 'true':
 							verify_value = True
 						elif verify_text.lower( ) == 'false':
@@ -4485,7 +4536,11 @@ if mode == 'Loading':
 							verify_value = verify_text
 					
 					loader = AwsFileLoader( )
-					documents = loader.load( bucket=aws_file_bucket.strip( ), key=aws_file_key.strip( ), region_name=aws_file_region.strip( ) or None, api_version=aws_file_api_version.strip( ) or None, use_ssl=bool( aws_file_use_ssl ), verify=verify_value, endpoint_url=aws_file_endpoint_url.strip( ) or None, ) or [ ]
+					documents = loader.load( bucket=aws_file_bucket.strip( ),
+						key=aws_file_key.strip( ), region_name=aws_file_region.strip( ) or None,
+						api_version=aws_file_api_version.strip( ) or None,
+						use_ssl=bool( aws_file_use_ssl ), verify=verify_value,
+						endpoint_url=aws_file_endpoint_url.strip( ) or None, ) or [ ]
 					
 					for document in documents:
 						if not isinstance( getattr( document, 'metadata', None ), dict ):
@@ -4494,17 +4549,22 @@ if mode == 'Loading':
 						document.metadata[ 'loader' ] = 'AwsFileLoader'
 						document.metadata.setdefault( 'bucket', aws_file_bucket.strip( ) )
 						document.metadata.setdefault( 'key', aws_file_key.strip( ) )
-						document.metadata.setdefault( 'region_name', aws_file_region.strip( ) or None )
-						document.metadata.setdefault( 'api_version', aws_file_api_version.strip( ) or None )
+						document.metadata.setdefault( 'region_name',
+							aws_file_region.strip( ) or None )
+						document.metadata.setdefault( 'api_version',
+							aws_file_api_version.strip( ) or None )
 						document.metadata.setdefault( 'use_ssl', bool( aws_file_use_ssl ) )
 						document.metadata.setdefault( 'verify', verify_value )
-						document.metadata.setdefault( 'endpoint_url', aws_file_endpoint_url.strip( ) or None )
-						document.metadata.setdefault( 'source', f"s3://{aws_file_bucket.strip( )}/{aws_file_key.strip( )}" )
+						document.metadata.setdefault( 'endpoint_url',
+							aws_file_endpoint_url.strip( ) or None )
+						document.metadata.setdefault( 'source',
+							f"s3://{aws_file_bucket.strip( )}/{aws_file_key.strip( )}" )
 					
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
 					st.session_state.raw_text = '\n\n'.join( d.page_content for d in documents if
-							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) and d.page_content.strip( ) )
+							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) \
+							and d.page_content.strip( ) )
 					st.session_state.processed_text = None
 					st.session_state.lines = None
 					st.session_state.chunked_documents = None
@@ -4517,27 +4577,37 @@ if mode == 'Loading':
 			# ----- Expander Google Bucket Loader
 			# ----------------------------
 			with st.expander( label='Google Bucket Loader', icon='🗂️', expanded=False ):
-				gcs_bucket_project_name = st.text_input( 'Project Name', value='', key='gcs_bucket_project_name', placeholder='e.g. my-gcp-project', )
+				gcs_bucket_project_name = st.text_input( 'Project Name', value='',
+					key='gcs_bucket_project_name', placeholder='e.g. my-gcp-project', )
 				
-				gcs_bucket_name = st.text_input( 'Bucket', value='', key='gcs_bucket_name', placeholder='e.g. my-bucket', )
+				gcs_bucket_name = st.text_input( 'Bucket', value='', key='gcs_bucket_name',
+					placeholder='e.g. my-bucket', )
 				
-				gcs_bucket_prefix = st.text_input( 'Prefix', value='', key='gcs_bucket_prefix', placeholder='Optional folder / object prefix', )
+				gcs_bucket_prefix = st.text_input( 'Prefix', value='', key='gcs_bucket_prefix',
+					placeholder='Optional folder / object prefix', )
 				
-				gcs_bucket_continue_on_failure = st.checkbox( 'Continue On Failure', value=False, key='gcs_bucket_continue_on_failure', )
+				gcs_bucket_continue_on_failure = st.checkbox( 'Continue On Failure',
+					value=False, key='gcs_bucket_continue_on_failure', )
 				
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
 				# --------------------------------------------------
 				col_load, col_clear, col_save = st.columns( 3 )
-				load_gcs_bucket = col_load.button( 'Load', key='gcs_bucket_load', icon='📥', width='stretch' )
-				clear_gcs_bucket = col_clear.button( 'Clear', key='gcs_bucket_clear', icon='🧹', width='stretch' )
-				can_save = (
-							st.session_state.get( 'active_loader' ) == 'GoogleBucketLoader' and isinstance( st.session_state.get( 'raw_text' ), str ) and st.session_state.get( 'raw_text' ).strip( ))
+				load_gcs_bucket = col_load.button( 'Load', key='gcs_bucket_load',
+					icon='📥', width='stretch' )
+				clear_gcs_bucket = col_clear.button( 'Clear', key='gcs_bucket_clear',
+					icon='🧹', width='stretch' )
+				can_save = ( st.session_state.get( 'active_loader' ) == 'GoogleBucketLoader' and \
+				             isinstance( st.session_state.get( 'raw_text' ), str ) \
+				             and st.session_state.get( 'raw_text' ).strip( ))
 				
 				if can_save:
-					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ), file_name='google_bucket_loader_output.txt', mime='text/plain', key='gcs_bucket_save', icon='💾', width='stretch' )
+					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ),
+						file_name='google_bucket_loader_output.txt', mime='text/plain',
+						key='gcs_bucket_save', icon='💾', width='stretch' )
 				else:
-					col_save.button( 'Save', key='gcs_bucket_save_disabled', disabled=True, icon='💾', width='stretch' )
+					col_save.button( 'Save', key='gcs_bucket_save_disabled', disabled=True,
+						icon='💾', width='stretch' )
 				
 				# --------------------------------------------------
 				# Clear
@@ -4551,83 +4621,107 @@ if mode == 'Loading':
 				# Load
 				# --------------------------------------------------
 				if (
-						load_gcs_bucket and isinstance( gcs_bucket_project_name, str ) and gcs_bucket_project_name.strip( ) and isinstance( gcs_bucket_name, str ) and gcs_bucket_name.strip( )):
+						load_gcs_bucket and isinstance( gcs_bucket_project_name, str ) \
+						and gcs_bucket_project_name.strip( ) and isinstance( gcs_bucket_name, str )\
+						and gcs_bucket_name.strip( )):
 					loader = GoogleBucketLoader( )
-					documents = loader.load( project_name=gcs_bucket_project_name.strip( ), bucket=gcs_bucket_name.strip( ), prefix=gcs_bucket_prefix.strip( ) or None, continue_on_failure=bool( gcs_bucket_continue_on_failure ), ) or [ ]
+					documents = loader.load( project_name=gcs_bucket_project_name.strip( ),
+						bucket=gcs_bucket_name.strip( ), prefix=gcs_bucket_prefix.strip( ) or None,
+						continue_on_failure=bool( gcs_bucket_continue_on_failure ), ) or [ ]
 					
 					for document in documents:
 						if not isinstance( getattr( document, 'metadata', None ), dict ):
 							document.metadata = { }
 						
 						document.metadata[ 'loader' ] = 'GoogleBucketLoader'
-						document.metadata.setdefault( 'project_name', gcs_bucket_project_name.strip( ), )
+						document.metadata.setdefault( 'project_name',
+							gcs_bucket_project_name.strip( ), )
+						
 						document.metadata.setdefault( 'bucket', gcs_bucket_name.strip( ), )
-						document.metadata.setdefault( 'prefix', gcs_bucket_prefix.strip( ) or None, )
-						document.metadata.setdefault( 'continue_on_failure', bool( gcs_bucket_continue_on_failure ), )
+						document.metadata.setdefault( 'prefix', gcs_bucket_prefix.strip( ) or None,)
+						document.metadata.setdefault( 'continue_on_failure',
+							bool( gcs_bucket_continue_on_failure ), )
 						
 						if gcs_bucket_prefix.strip( ):
-							document.metadata.setdefault( 'source', f"gs://{gcs_bucket_name.strip( )}/{gcs_bucket_prefix.strip( )}" )
+							document.metadata.setdefault( 'source',
+								f"gs://{gcs_bucket_name.strip( )}/{gcs_bucket_prefix.strip( )}" )
 						else:
-							document.metadata.setdefault( 'source', f"gs://{gcs_bucket_name.strip( )}" )
+							document.metadata.setdefault( 'source',
+								f"gs://{gcs_bucket_name.strip( )}" )
 					
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
 					st.session_state.raw_text = '\n\n'.join( d.page_content for d in documents if
-							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) and d.page_content.strip( ) )
+							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) \
+							and d.page_content.strip( ) )
 					st.session_state.processed_text = None
 					st.session_state.lines = None
 					st.session_state.chunked_documents = None
 					st.session_state.df_chunks = None
 					st.session_state.active_loader = 'GoogleBucketLoader'
 					st.session_state[ '_loader_status' ] = (
-							f'Loaded {len( documents )} Google bucket document('
-							f's).')
+							f'Loaded {len( documents )} Google bucket document(s).')
 			
 			# ----------------------------
 			# ---- Expander AWS Bucket Loader
 			# ----------------------------
 			with st.expander( label='AWS Bucket Loader', icon='🗃️', expanded=False ):
-				aws_bucket_name = st.text_input( 'Bucket', value='', key='aws_bucket_name', placeholder='e.g. my-s3-bucket', )
+				aws_bucket_name = st.text_input( 'Bucket', value='',
+					key='aws_bucket_name', placeholder='e.g. my-s3-bucket', )
 				
-				aws_bucket_prefix = st.text_input( 'Prefix', value='', key='aws_bucket_prefix', placeholder='Optional folder / object prefix', )
+				aws_bucket_prefix = st.text_input( 'Prefix', value='',
+					key='aws_bucket_prefix', placeholder='Optional folder / object prefix', )
 				
-				aws_bucket_region = st.text_input( 'Region Name', value='', key='aws_bucket_region', placeholder='e.g. us-east-1', )
+				aws_bucket_region = st.text_input( 'Region Name', value='',
+					key='aws_bucket_region', placeholder='e.g. us-east-1', )
 				
-				aws_bucket_api_version = st.text_input( 'API Version', value='', key='aws_bucket_api_version', placeholder='Optional', )
+				aws_bucket_api_version = st.text_input( 'API Version', value='',
+					key='aws_bucket_api_version', placeholder='Optional', )
 				
 				aws_bucket_use_ssl = st.checkbox( 'Use SSL', value=True, key='aws_bucket_use_ssl', )
 				
-				aws_bucket_verify = st.text_input( 'Verify', value='', key='aws_bucket_verify', placeholder='Optional path or True / False', help='Leave blank for default behavior, or provide a CA bundle path.', )
+				aws_bucket_verify = st.text_input( 'Verify', value='', key='aws_bucket_verify',
+					placeholder='Optional path or True / False',
+					help='Leave blank for default behavior, or provide a CA bundle path.', )
 				
-				aws_bucket_endpoint_url = st.text_input( 'Endpoint URL', value='', key='aws_bucket_endpoint_url', placeholder='Optional custom endpoint', )
+				aws_bucket_endpoint_url = st.text_input( 'Endpoint URL', value='',
+					key='aws_bucket_endpoint_url', placeholder='Optional custom endpoint', )
 				
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
 				# --------------------------------------------------
 				col_load, col_clear, col_save = st.columns( 3 )
-				load_aws_bucket = col_load.button( 'Load', key='aws_bucket_load', icon='📤', width='stretch' )
-				clear_aws_bucket = col_clear.button( 'Clear', key='aws_bucket_clear', icon='🧹', width='stretch' )
-				can_save = (
-							st.session_state.get( 'active_loader' ) == 'AwsBucketLoader' and isinstance( st.session_state.get( 'raw_text' ), str ) and st.session_state.get( 'raw_text' ).strip( ))
+				load_aws_bucket = col_load.button( 'Load', key='aws_bucket_load',
+					icon='📤', width='stretch' )
+				
+				clear_aws_bucket = col_clear.button( 'Clear', key='aws_bucket_clear',
+					icon='🧹', width='stretch' )
+				
+				can_save = st.session_state.get( 'active_loader' ) == 'AwsBucketLoader' \
+							and isinstance( st.session_state.get( 'raw_text' ), str ) \
+				            and st.session_state.get( 'raw_text' ).strip( ) )
 				
 				if can_save:
-					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ), file_name='aws_bucket_loader_output.txt', mime='text/plain', key='aws_bucket_save', icon='💾', width='stretch' )
+					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ),
+						file_name='aws_bucket_loader_output.txt', mime='text/plain',
+						key='aws_bucket_save', icon='💾', width='stretch' )
 				else:
-					col_save.button( 'Save', key='aws_bucket_save_disabled', disabled=True, icon='💾', width='stretch' )
+					col_save.button( 'Save', key='aws_bucket_save_disabled',
+						disabled=True, icon='💾', width='stretch' )
 				
 				# --------------------------------------------------
 				# Clear
 				# --------------------------------------------------
 				if clear_aws_bucket:
 					clear_if_active( 'AwsBucketLoader' )
-					st.session_state.raw_text = rebuild_raw_text_from_documents( )
-					st.session_state[ '_loader_status' ] = 'AWS Bucket Loader state cleared.'
+				st.session_state.raw_text = rebuild_raw_text_from_documents( )
+				st.session_state[ '_loader_status' ] = 'AWS Bucket Loader state cleared.'
 				
 				# --------------------------------------------------
 				# Load
 				# --------------------------------------------------
-				if (
-						load_aws_bucket and isinstance( aws_bucket_name, str ) and aws_bucket_name.strip( )):
+				if ( load_aws_bucket and isinstance( aws_bucket_name, str ) \
+						and aws_bucket_name.strip( )):
 					verify_value: str = None
 					
 					if isinstance( aws_bucket_verify, str ) and aws_bucket_verify.strip( ):
@@ -4640,7 +4734,12 @@ if mode == 'Loading':
 							verify_value = verify_text
 					
 					loader = AwsBucketLoader( )
-					documents = loader.load( bucket=aws_bucket_name.strip( ), prefix=aws_bucket_prefix.strip( ), region_name=aws_bucket_region.strip( ) or None, api_version=aws_bucket_api_version.strip( ) or None, use_ssl=bool( aws_bucket_use_ssl ), verify=verify_value, endpoint_url=aws_bucket_endpoint_url.strip( ) or None, ) or [ ]
+					documents = loader.load( bucket=aws_bucket_name.strip( ),
+						prefix=aws_bucket_prefix.strip( ),
+						region_name=aws_bucket_region.strip( ) or None,
+						api_version=aws_bucket_api_version.strip( ) or None,
+						use_ssl=bool( aws_bucket_use_ssl ), verify=verify_value,
+						endpoint_url=aws_bucket_endpoint_url.strip( ) or None, ) or [ ]
 					
 					for document in documents:
 						if not isinstance( getattr( document, 'metadata', None ), dict ):
@@ -4656,9 +4755,11 @@ if mode == 'Loading':
 						document.metadata.setdefault( 'endpoint_url', aws_bucket_endpoint_url.strip( ) or None )
 						
 						if aws_bucket_prefix.strip( ):
-							document.metadata.setdefault( 'source', f"s3://{aws_bucket_name.strip( )}/{aws_bucket_prefix.strip( )}" )
+							document.metadata.setdefault( 'source',
+								f"s3://{aws_bucket_name.strip( )}/{aws_bucket_prefix.strip( )}" )
 						else:
-							document.metadata.setdefault( 'source', f"s3://{aws_bucket_name.strip( )}" )
+							document.metadata.setdefault( 'source',
+								f"s3://{aws_bucket_name.strip( )}" )
 					
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
@@ -4676,9 +4777,12 @@ if mode == 'Loading':
 			# ---- Expander SharePoint Loader
 			# ---------------------------
 			with st.expander( label='SharePoint Loader', icon='🟩', expanded=False ):
-				spfx_library_id = st.text_input( 'Library ID', value='', key='spfx_library_id', placeholder='SharePoint document library identifier', )
+				spfx_library_id = st.text_input( 'Library ID', value='',
+					key='spfx_library_id', placeholder='SharePoint document library identifier', )
 				
-				spfx_folder_id = st.text_input( 'Folder ID', value='', key='spfx_folder_id', placeholder='Optional folder identifier within the library', help='Leave blank to load the library directly.', )
+				spfx_folder_id = st.text_input( 'Folder ID', value='', key='spfx_folder_id',
+					placeholder='Optional folder identifier within the library',
+					help='Leave blank to load the library directly.', )
 				
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
@@ -4687,13 +4791,17 @@ if mode == 'Loading':
 				load_spfx = col_load.button( 'Load', key='spfx_load', icon='📤', width='stretch' )
 				clear_spfx = col_clear.button( 'Clear', key='spfx_clear', icon='🧹', width='stretch' )
 				
-				can_save = (
-							st.session_state.get( 'active_loader' ) == 'SpfxLoader' and isinstance( st.session_state.get( 'raw_text' ), str ) and st.session_state.get( 'raw_text' ).strip( ))
+				can_save = ( st.session_state.get( 'active_loader' ) == 'SpfxLoader' \
+				             and isinstance( st.session_state.get( 'raw_text' ), str ) \
+				             and st.session_state.get( 'raw_text' ).strip( ) )
 				
 				if can_save:
-					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ), file_name='sharepoint_loader_output.txt', mime='text/plain', key='spfx_save', icon='💾', width='stretch' )
+					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ),
+						file_name='sharepoint_loader_output.txt', mime='text/plain',
+						key='spfx_save', icon='💾', width='stretch' )
 				else:
-					col_save.button( 'Save', key='spfx_save_disabled', disabled=True, icon='💾', width='stretch' )
+					col_save.button( 'Save', key='spfx_save_disabled', disabled=True,
+						icon='💾', width='stretch' )
 				
 				# --------------------------------------------------
 				# Clear
