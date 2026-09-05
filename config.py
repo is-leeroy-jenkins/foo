@@ -691,7 +691,6 @@ AWS_FILE = r'''High-performance, fully managed file system access to S3 object s
 		https://reference.langchain.com/python/langchain-community/document_loaders/s3_file/S3FileLoader
 '''
 
-
 GOOGLE_BUCKET = r'''Google Cloud Storage buckets are foundational, globally unique containers holding
 		data as objects (files) within Google Cloud, ranging up to 5 TB each. They offer high durability
 		and availability, featuring flexible storage classes (Standard, Nearline, Coldline, Archive)

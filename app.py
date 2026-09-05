@@ -2849,6 +2849,7 @@ if mode == 'Loading':
 				from nltk.corpus import (brown, gutenberg, reuters, webtext, inaugural, state_union)
 				
 				st.markdown( '###### NLTK Corpora' )
+				st.badge( label='Information', help=cfg.NLTK_LOADER )
 				corpus_name = st.selectbox( 'Select corpus',
 					['Brown', 'Gutenberg', 'Reuters', 'WebText', 'Inaugural', 'State of the Union'],
 					key='nltk_corpus_name', )
@@ -2972,6 +2973,7 @@ if mode == 'Loading':
 			# ------ Expander Text Loader
 			# ----------------------------
 			with st.expander( label='Text Loader', icon='📝', expanded=False ):
+				st.badge( label='Information', help=cfg.TEXT_LOADER )
 				files = st.file_uploader( 'Upload Text File(s)', type=[ 'txt', 'text', 'log' ],
 					accept_multiple_files=True, key='txt_upload' )
 				
@@ -3042,6 +3044,7 @@ if mode == 'Loading':
 			# ------ Expander CSV Loader
 			# ----------------------------
 			with st.expander( label="CSV Loader", icon='📑', expanded=False ):
+				st.badge( label='Information', help=cfg.CSV_LOADER )
 				csv_file = st.file_uploader( label="Upload CSV", type=[ "csv" ], key="csv_upload" )
 				delimiter = st.text_input( "Delimiter", value=",", key="csv_delim", )
 				quotechar = st.text_input( "Quote Character", value='"', key="csv_quote", )
@@ -7009,6 +7012,7 @@ elif mode == 'Retrieval':
 					if isinstance( doc, Document ):
 						title = str( doc.metadata.get( 'Title', '' ) ) if doc.metadata else ''
 					label = f'Document {idx}' if not title else f'Document {idx}: {title}'
+					
 					with st.expander( label, expanded=False ):
 						if isinstance( doc, Document ):
 							if doc.metadata:
@@ -7028,7 +7032,8 @@ elif mode == 'Retrieval':
 										st.markdown( f"**Entry ID:** "
 										             f"{doc.metadata.get( 'Entry ID', '' )}" )
 							
-							st.text_area( 'Content', value=doc.page_content or '', height=300, key=f'arxiv_doc_{idx}' )
+							st.text_area( 'Content', value=doc.page_content or '',
+								height=300, key=f'arxiv_doc_{idx}' )
 							
 							if doc.metadata:
 								st.json( doc.metadata )
@@ -7038,9 +7043,7 @@ elif mode == 'Retrieval':
 		# -------- Google Drive
 		if active_source == 'Google Drive':
 			st.markdown( 'Results', help=cfg.GOOGLE_DRIVE )
-			
 			results = st.session_state.get( 'googledrive_results', [ ] )
-			
 			if not results:
 				st.text( 'No results.' )
 			else:
@@ -7050,7 +7053,6 @@ elif mode == 'Retrieval':
 						title = str( doc.metadata.get( 'name', '' ) ) if doc.metadata else ''
 					
 					label = f'Document {idx}' if not title else f'Document {idx}: {title}'
-					
 					with st.expander( label, expanded=False ):
 						if isinstance( doc, Document ):
 							if doc.metadata:
@@ -7059,18 +7061,22 @@ elif mode == 'Retrieval':
 								with meta_col1:
 									if 'name' in doc.metadata:
 										st.markdown( f"**Name:** {doc.metadata.get( 'name', '' )}" )
+									
 									if 'id' in doc.metadata:
 										st.markdown( f"**ID:** "
 										             f"{doc.metadata.get( 'id', '' )}" )
 								
 								with meta_col2:
 									if 'mimeType' in doc.metadata:
-										st.markdown( f"**MIME Type:** {doc.metadata.get( 'mimeType', '' )}" )
+										st.markdown(
+											f"**MIME Type:** {doc.metadata.get( 'mimeType', '' )}" )
+										
 									if 'modifiedTime' in doc.metadata:
 										st.markdown( f"**Modified:** "
 										             f"{doc.metadata.get( 'modifiedTime', '' )}" )
 							
-							st.text_area( 'Content', value=doc.page_content or '', height=300, key=f'googledrive_doc_{idx}' )
+							st.text_area( 'Content', value=doc.page_content or '',
+								height=300, key=f'googledrive_doc_{idx}' )
 							
 							if doc.metadata:
 								st.json( doc.metadata )
@@ -7080,9 +7086,7 @@ elif mode == 'Retrieval':
 		# -------- Wikipedia
 		if active_source == 'Wikipedia':
 			st.markdown( 'Results' )
-			
 			results = st.session_state.get( 'wikipedia_results', [ ] )
-			
 			if not results:
 				st.text( 'No results.' )
 			else:
@@ -7092,7 +7096,6 @@ elif mode == 'Retrieval':
 						title = str( doc.metadata.get( 'title', '' ) ) if doc.metadata else ''
 					
 					label = f'Document {idx}' if not title else f'Document {idx}: {title}'
-					
 					with st.expander( 'Search Results', expanded=False ):
 						if isinstance( doc, Document ):
 							if doc.metadata:
@@ -7100,9 +7103,13 @@ elif mode == 'Retrieval':
 								
 								with meta_col1:
 									if 'title' in doc.metadata:
-										st.markdown( f"**Title:** {doc.metadata.get( 'title', '' )}" )
+										st.markdown(
+											f"**Title:** {doc.metadata.get( 'title', '' )}" )
+										
 									if 'source' in doc.metadata:
-										st.markdown( f"**Source:** {doc.metadata.get( 'source', '' )}" )
+										st.markdown(
+											f"**Source:** {doc.metadata.get( 'source', '' )}" )
+										
 								
 								with meta_col2:
 									if 'categories' in doc.metadata:
@@ -7112,7 +7119,8 @@ elif mode == 'Retrieval':
 										st.markdown( f"**Page ID:** "
 										             f"{doc.metadata.get( 'pageid', '' )}" )
 							
-							st.text_area( 'Content', value=doc.page_content or '', height=300, key=f'wikipedia_doc_{idx}' )
+							st.text_area( 'Content', value=doc.page_content or '',
+								height=300, key=f'wikipedia_doc_{idx}' )
 							
 							if doc.metadata:
 								st.json( doc.metadata )
@@ -7126,8 +7134,18 @@ elif mode == 'Retrieval':
 			if google_submit:
 				try:
 					f = GoogleSearch( )
-					result = f.fetch( keywords=google_query, results=int( google_num_results ), start=int( google_start ), exact_terms=google_exact_terms, exclude_terms=google_exclude_terms, file_type=google_file_type, date_restrict=google_date_restrict, gl=google_gl, lr=google_lr, safe=google_safe, search_type=google_search_type, site_search=google_site_search, site_search_filter=google_site_search_filter, sort=google_sort, img_size=google_img_size, img_type=google_img_type, img_color_type=google_img_color_type, img_dominant_color=google_img_dominant_color, time=int( google_timeout ), api_key=(
-								google_api_key or None), cse_id=(google_cse_id or None) )
+					result = f.fetch( keywords=google_query, results=int( google_num_results ),
+						start=int( google_start ), exact_terms=google_exact_terms,
+						exclude_terms=google_exclude_terms, file_type=google_file_type,
+						date_restrict=google_date_restrict, gl=google_gl, lr=google_lr,
+						safe=google_safe, search_type=google_search_type,
+						site_search=google_site_search,
+						site_search_filter=google_site_search_filter, sort=google_sort,
+						img_size=google_img_size, img_type=google_img_type,
+						img_color_type=google_img_color_type,
+						img_dominant_color=google_img_dominant_color,
+						time=int( google_timeout ), api_key=( google_api_key or None),
+						cse_id=(google_cse_id or None) )
 					
 					st.session_state[ 'googlesearch_results' ] = result or { }
 					st.rerun( )
@@ -7142,7 +7160,8 @@ elif mode == 'Retrieval':
 				st.text( 'No results.' )
 			else:
 				queries = result.get( 'queries', { } ) if isinstance( result, dict ) else { }
-				search_info = result.get( 'searchInformation', { } ) if isinstance( result, dict ) else { }
+				search_info = result.get(
+					'searchInformation', { } ) if isinstance( result, dict ) else { }
 				items = result.get( 'items', [ ] ) if isinstance( result, dict ) else [ ]
 				
 				if queries or search_info:
@@ -7189,7 +7208,9 @@ elif mode == 'Retrieval':
 							if display_link:
 								meta_parts.append( f'Domain: `{display_link}`' )
 							
-							pagemap = item.get( 'pagemap', { } ) if isinstance( item, dict ) else { }
+							pagemap = item.get(
+								'pagemap', { } ) if isinstance( item, dict ) else { }
+							
 							if isinstance( pagemap, dict ):
 								if 'metatags' in pagemap:
 									meta_parts.append( 'Has metatags' )
@@ -7225,12 +7246,12 @@ elif mode == 'Retrieval':
 		# -------- Open Science
 		if active_source == 'Open Science':
 			st.markdown( 'Results' )
-			
 			if openscience_submit:
 				try:
 					f = OpenScience( )
-					
-					result = f.fetch( mode=str( openscience_mode ), query=str( openscience_query ), accession=str( openscience_accession ), format_value=str( openscience_format ), time=int( openscience_timeout ) )
+					result = f.fetch( mode=str( openscience_mode ), query=str( openscience_query ),
+						accession=str( openscience_accession ),
+						format_value=str( openscience_format ), time=int( openscience_timeout ) )
 					
 					st.session_state[ 'openscience_results' ] = result or { }
 					st.rerun( )
@@ -7251,11 +7272,11 @@ elif mode == 'Retrieval':
 				st.json( { 'mode': mode_value, 'url': result.get( 'url', '' ), 'params': params, } )
 				
 				if mode_value == 'dataset' and isinstance( data, dict ) and data:
-					title_value = (
-								data.get( 'title' ) or data.get( 'name' ) or data.get( 'accession' ) or params.get( 'accession', '' ) or 'Dataset')
+					title_value = ( data.get( 'title' ) or data.get( 'name' ) \
+								or data.get( 'accession' ) or params.get( 'accession', '' ) \
+								or 'Dataset')
 					
 					st.markdown( f'### {title_value}' )
-					
 					meta_fields: Dict[ str, Any ] = { }
 					for key in [ 'accession', 'identifier', 'organism', 'platform', 'assay',
 							'project', 'study' ]:
