@@ -4699,7 +4699,7 @@ if mode == 'Loading':
 				
 				can_save = st.session_state.get( 'active_loader' ) == 'AwsBucketLoader' \
 							and isinstance( st.session_state.get( 'raw_text' ), str ) \
-				            and st.session_state.get( 'raw_text' ).strip( ) )
+				            and st.session_state.get( 'raw_text' ).strip( )
 				
 				if can_save:
 					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ),
