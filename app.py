@@ -3106,6 +3106,7 @@ if mode == 'Loading':
 				# ------------------------------------------------------------------
 				# Session-backed loader instance
 				# ------------------------------------------------------------------
+				st.badge( label='Information', help=cfg.XML_LOADER )
 				if 'xml_loader' not in st.session_state or st.session_state.xml_loader is None:
 					st.session_state.xml_loader = XmlLoader( )
 				
