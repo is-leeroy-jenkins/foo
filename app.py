@@ -2849,7 +2849,6 @@ if mode == 'Loading':
 				from nltk.corpus import (brown, gutenberg, reuters, webtext, inaugural, state_union)
 				
 				st.markdown( '###### NLTK Corpora' )
-				
 				corpus_name = st.selectbox( 'Select corpus',
 					['Brown', 'Gutenberg', 'Reuters', 'WebText', 'Inaugural', 'State of the Union'],
 					key='nltk_corpus_name', )
@@ -3996,7 +3995,7 @@ if mode == 'Loading':
 			# ----------------------------
 			with st.expander( label='GitHub Loader', icon='🐙', expanded=False ):
 				gh_url = st.text_input( "GitHub API URL", placeholder="https://api.github.com",
-					value="https://api.github.com", key="gh_url", help="GitHub REST API base URL.", )
+					value="https://api.github.com", key="gh_url", help="GitHub REST API base URL.",)
 				
 				gh_repo = st.text_input( "Repo (owner/name)", placeholder="openai/openai-python",
 					key="gh_repo", help="Name of the repository.", )
@@ -4134,7 +4133,8 @@ if mode == 'Loading':
 				urls = st.text_area( "Enter one URL per line",
 					placeholder="https://example.com\nhttps://another.com", key="web_urls", )
 				
-				web_timeout = st.number_input( "Timeout (seconds)", min_value=1, max_value=120, value=10, step=1, key="web_timeout", )
+				web_timeout = st.number_input( "Timeout (seconds)", min_value=1, max_value=120,
+					value=10, step=1, key="web_timeout", )
 				
 				web_ignore = st.checkbox( "Continue On Failure", value=True,
 					key="web_ignore", help="Keep loading remaining URLs if one page fails." )
@@ -5085,29 +5085,37 @@ if mode == 'Loading':
 			with st.expander( label='Text', icon='📖', expanded=True ):
 				col1, col2, col3, col4 = st.columns( 4, border=True )
 				with col1:
-					metric_with_tooltip( 'Characters', f'{char_count:,}', 'Total number of characters in the selected text.' )
+					metric_with_tooltip( 'Characters', f'{char_count:,}',
+						'Total number of characters in the selected text.' )
 				
 				with col2:
-					metric_with_tooltip( 'Tokens', f'{token_count:,}', 'Token Count: total number of tokenized words after cleanup.' )
+					metric_with_tooltip( 'Tokens', f'{token_count:,}',
+						'Token Count: total number of tokenized words after cleanup.' )
 				
 				with col3:
-					metric_with_tooltip( 'Unique Tokens', f'{vocab_size:,}', 'Vocabulary Size: number of distinct word types in the text.' )
+					metric_with_tooltip( 'Unique Tokens', f'{vocab_size:,}',
+						'Vocabulary Size: number of distinct word types in the text.' )
 				
 				with col4:
-					metric_with_tooltip( 'TTR', f'{ttr:.3f}', 'Type–Token Ratio: unique words ÷ total words.' )
+					metric_with_tooltip( 'TTR', f'{ttr:.3f}',
+						'Type–Token Ratio: unique words ÷ total words.' )
 				
 				col5, col6, col7, col8 = st.columns( 4, border=True )
 				with col5:
-					metric_with_tooltip( 'Hapax Ratio', f'{hapax_ratio:.3f}', 'Hapax Ratio: proportion of words that occur only once.' )
+					metric_with_tooltip( 'Hapax Ratio', f'{hapax_ratio:.3f}',
+						'Hapax Ratio: proportion of words that occur only once.' )
 				
 				with col6:
-					metric_with_tooltip( 'Avg Length', f'{avg_word_len:.2f}', 'Average number of characters per token.' )
+					metric_with_tooltip( 'Avg Length', f'{avg_word_len:.2f}',
+						'Average number of characters per token.' )
 				
 				with col7:
-					metric_with_tooltip( 'Stopword Ratio', f'{stopword_ratio:.2%}', 'Percentage of stopwords in the text.' )
+					metric_with_tooltip( 'Stopword Ratio', f'{stopword_ratio:.2%}',
+						'Percentage of stopwords in the text.' )
 				
 				with col8:
-					metric_with_tooltip( 'Lexical Density', f'{lexical_density:.2%}', 'Proportion of content-bearing words.' )
+					metric_with_tooltip( 'Lexical Density', f'{lexical_density:.2%}',
+						'Proportion of content-bearing words.' )
 			
 			st.markdown( cfg.BLUE_DIVIDER, unsafe_allow_html=True, )
 			st.markdown( '#### Comprehension Metrics' )
@@ -5117,16 +5125,24 @@ if mode == 'Loading':
 				if TEXTSTAT_AVAILABLE:
 					r1, r2, r3, r4 = st.columns( 4, border=True )
 					with r1:
-						metric_with_tooltip( 'Flesch Reading Ease', f'{textstat.flesch_reading_ease( raw_text ):.1f}', 'Higher scores indicate easier readability.' )
+						metric_with_tooltip( 'Flesch Reading Ease',
+							f'{textstat.flesch_reading_ease( raw_text ):.1f}',
+							'Higher scores indicate easier readability.' )
 					
 					with r2:
-						metric_with_tooltip( 'Flesch–Kincaid Grade', f'{textstat.flesch_kincaid_grade( raw_text ):.1f}', 'Estimated U.S. grade level required.' )
+						metric_with_tooltip( 'Flesch–Kincaid Grade',
+							f'{textstat.flesch_kincaid_grade( raw_text ):.1f}',
+							'Estimated U.S. grade level required.' )
 					
 					with r3:
-						metric_with_tooltip( 'Gunning Fog', f'{textstat.gunning_fog( raw_text ):.1f}', 'Readability based on sentence length and complex words.' )
+						metric_with_tooltip( 'Gunning Fog',
+							f'{textstat.gunning_fog( raw_text ):.1f}',
+							'Readability based on sentence length and complex words.' )
 					
 					with r4:
-						metric_with_tooltip( 'Coleman–Liau Index', f'{textstat.coleman_liau_index( raw_text ):.1f}', 'Readability based on characters and sentences.' )
+						metric_with_tooltip( 'Coleman–Liau Index',
+							f'{textstat.coleman_liau_index( raw_text ):.1f}',
+							'Readability based on characters and sentences.' )
 				else:
 					st.caption( 'Install `textstat` to enable readability metrics.' )
 
@@ -7313,7 +7329,9 @@ elif mode == 'Retrieval':
 								f.write( notebook_file.read( ) )
 							
 							loader = JupyterNotebookLoader( )
-							documents = loader.load( path=path, include_outputs=include_outputs, max_output_length=int( max_output_length ), remove_newline=remove_newline, traceback=include_traceback ) or [ ]
+							documents = loader.load( path=path, include_outputs=include_outputs,
+								max_output_length=int( max_output_length ),
+								remove_newline=remove_newline, traceback=include_traceback ) or [ ]
 						
 						count = _promote_loader_documents( documents, 'JupyterNotebookLoader' )
 						
@@ -7386,14 +7404,18 @@ elif mode == 'Retrieval':
 				else:
 					try:
 						loader = GoogleCloudFileLoader( )
-						documents = loader.load( project_name=project_name.strip( ), bucket=bucket.strip( ), blob=blob.strip( ) ) or [ ]
+						documents = loader.load( project_name=project_name.strip( ),
+							bucket=bucket.strip( ), blob=blob.strip( ) ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'GoogleCloudStorageFileLoader' )
+						count = _promote_loader_documents(
+							documents, 'GoogleCloudStorageFileLoader' )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
 							metadata = (
-									doc.metadata if isinstance( getattr( doc, 'metadata', { } ), dict ) else { })
+									doc.metadata if isinstance( getattr( doc,
+										'metadata', { } ), dict ) else { } )
+							
 							content = str( getattr( doc, 'page_content', '' ) or '' )
 							items.append( { 'Index': i, 'Source': metadata.get( 'source', '' ),
 									'Blob': blob.strip( ), 'Preview': content[ :200 ],
@@ -7419,18 +7441,15 @@ elif mode == 'Retrieval':
 						'ProjectName': result.get( 'project_name', '' ),
 						'Bucket': result.get( 'bucket', '' ), 'Blob': result.get( 'blob', '' ),
 						'Returned': result.get( 'count', 0 ), } )
-				
 				items = result.get( 'items', [ ] ) if isinstance( result, dict ) else [ ]
-				
 				if items:
-					table_rows = [
-							{ 'Index': item.get( 'Index', '' ), 'Source': item.get( 'Source', '' ),
-									'Blob': item.get( 'Blob', '' ),
-									'Preview': item.get( 'Preview', '' ), } for item in items ]
+					table_rows = [ { 'Index': item.get( 'Index', '' ),
+							'Source': item.get( 'Source', '' ),
+							'Blob': item.get( 'Blob', '' ),
+							'Preview': item.get( 'Preview', '' ), } for item in items ]
 					
 					st.markdown( '#### Results' )
 					st.dataframe( table_rows, use_container_width=True, hide_index=True )
-					
 					first = items[ 0 ]
 					st.markdown( '#### First File Preview' )
 					st.code( str( first.get( 'Content', '' ) )[ :8000 ] )
@@ -7454,10 +7473,13 @@ elif mode == 'Retrieval':
 				else:
 					try:
 						loader = AwsFileLoader( )
-						documents = loader.load( bucket=bucket.strip( ), key=key_name.strip( ), aws_access_key_id=aws_access_key_id.strip( ) or None, aws_secret_access_key=aws_secret_access_key.strip( ) or None, aws_session_token=aws_session_token.strip( ) or None, region_name=region_name.strip( ) or None ) or [ ]
+						documents = loader.load( bucket=bucket.strip( ), key=key_name.strip( ),
+							aws_access_key_id=aws_access_key_id.strip( ) or None,
+							aws_secret_access_key=aws_secret_access_key.strip( ) or None,
+							aws_session_token=aws_session_token.strip( ) or None,
+							region_name=region_name.strip( ) or None ) or [ ]
 						
 						count = _promote_loader_documents( documents, 'AwsFileLoader' )
-						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
 							metadata = (
@@ -7490,17 +7512,14 @@ elif mode == 'Retrieval':
 						'Returned': result.get( 'count', 0 ), } )
 				
 				items = result.get( 'items', [ ] ) if isinstance( result, dict ) else [ ]
-				
 				if items:
-					table_rows = [
-							{ 'Index': item.get( 'Index', '' ), 'Source': item.get( 'Source', '' ),
-									'Bucket': item.get( 'Bucket', '' ),
-									'Key': item.get( 'Key', '' ),
-									'Preview': item.get( 'Preview', '' ), } for item in items ]
+					table_rows = [ { 'Index': item.get( 'Index', '' ),
+							'Source': item.get( 'Source', '' ), 'Bucket': item.get( 'Bucket', '' ),
+							'Key': item.get( 'Key', '' ),
+							'Preview': item.get( 'Preview', '' ), } for item in items ]
 					
 					st.markdown( '##### Results' )
 					st.dataframe( table_rows, use_container_width=True, hide_index=True )
-					
 					first = items[ 0 ]
 					st.markdown( '##### First File Preview' )
 					st.code( str( first.get( 'Content', '' ) )[ :8000 ] )
@@ -7527,7 +7546,9 @@ elif mode == 'Retrieval':
 									item and item.strip( ) ]
 						
 						loader = OneDriveDocLoader( )
-						documents = loader.load( drive_id=drive_id.strip( ), folder_path=folder_path.strip( ) or None, object_ids=object_ids, auth_with_token=auth_with_token ) or [ ]
+						documents = loader.load( drive_id=drive_id.strip( ),
+							folder_path=folder_path.strip( ) or None, object_ids=object_ids,
+							auth_with_token=auth_with_token ) or [ ]
 						
 						count = _promote_loader_documents( documents, 'OneDriveDocLoader' )
 						
@@ -7606,7 +7627,8 @@ elif mode == 'Retrieval':
 						if gcs_audio_uri.strip( ):
 							file_path = gcs_audio_uri.strip( )
 							loader = GoogleSpeechToTextLoader( )
-							documents = loader.load( project_id=project_id.strip( ), file_path=file_path, config=config ) or [ ]
+							documents = loader.load( project_id=project_id.strip( ),
+								file_path=file_path, config=config ) or [ ]
 						else:
 							with tempfile.TemporaryDirectory( ) as tmp:
 								path = os.path.join( tmp, audio_file.name )
@@ -7614,14 +7636,17 @@ elif mode == 'Retrieval':
 									f.write( audio_file.read( ) )
 								
 								loader = GoogleSpeechToTextLoader( )
-								documents = loader.load( project_id=project_id.strip( ), file_path=path, config=config ) or [ ]
+								documents = loader.load( project_id=project_id.strip( ),
+									file_path=path, config=config ) or [ ]
 						
 						count = _promote_loader_documents( documents, 'GoogleSpeechToTextLoader' )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
 							metadata = (
-									doc.metadata if isinstance( getattr( doc, 'metadata', { } ), dict ) else { })
+									doc.metadata if isinstance( getattr(
+										doc, 'metadata', { } ), dict ) else { })
+							
 							content = str( getattr( doc, 'page_content', '' ) or '' )
 							items.append( { 'Index': i, 'Source': metadata.get( 'source', '' ),
 									'LanguageCode': language_code.strip( ),
@@ -7654,8 +7679,7 @@ elif mode == 'Retrieval':
 				items = result.get( 'items', [ ] ) if isinstance( result, dict ) else [ ]
 				
 				if items:
-					table_rows = [
-							{ 'Index': item.get( 'Index', '' ), 'Source': item.get( 'Source', '' ),
+					table_rows = [ { 'Index': item.get( 'Index', '' ), 'Source': item.get( 'Source', '' ),
 									'LanguageCode': item.get( 'LanguageCode', '' ),
 									'Preview': item.get( 'Preview', '' ), } for item in items ]
 					
@@ -7683,14 +7707,19 @@ elif mode == 'Retrieval':
 				else:
 					try:
 						loader = AwsBucketLoader( )
-						documents = loader.load( bucket=bucket_name.strip( ), prefix=prefix.strip( ) or None, aws_access_key_id=aws_access_key_id.strip( ) or None, aws_secret_access_key=aws_secret_access_key.strip( ) or None, aws_session_token=aws_session_token.strip( ) or None, region_name=region_name.strip( ) or None, endpoint_url=endpoint_url.strip( ) or None ) or [ ]
+						documents = loader.load( bucket=bucket_name.strip( ),
+							prefix=prefix.strip( ) or None,
+							aws_access_key_id=aws_access_key_id.strip( ) or None,
+							aws_secret_access_key=aws_secret_access_key.strip( ) or None,
+							aws_session_token=aws_session_token.strip( ) or None,
+							region_name=region_name.strip( ) or None,
+							endpoint_url=endpoint_url.strip( ) or None ) or [ ]
 						
 						count = _promote_loader_documents( documents, 'AmazonBucketLoader' )
-						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
-							metadata = (
-									doc.metadata if isinstance( getattr( doc, 'metadata', { } ), dict ) else { })
+							metadata = ( doc.metadata if isinstance(
+								getattr( doc, 'metadata', { } ), dict ) else { } )
 							content = str( getattr( doc, 'page_content', '' ) or '' )
 							items.append( { 'Index': i, 'Source': metadata.get( 'source', '' ),
 									'Bucket': bucket_name.strip( ), 'Prefix': prefix.strip( ) or '',
@@ -7755,14 +7784,17 @@ elif mode == 'Retrieval':
 				else:
 					try:
 						loader = GoogleBucketLoader( )
-						documents = loader.load( project_name=project_name.strip( ), bucket=bucket_name.strip( ), prefix=prefix.strip( ) or None, continue_on_failure=continue_on_failure ) or [ ]
+						documents = loader.load( project_name=project_name.strip( ),
+							bucket=bucket_name.strip( ), prefix=prefix.strip( ) or None,
+							continue_on_failure=continue_on_failure ) or [ ]
 						
 						count = _promote_loader_documents( documents, 'GoogleBucketLoader' )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
-							metadata = (
-									doc.metadata if isinstance( getattr( doc, 'metadata', { } ), dict ) else { })
+							metadata = ( doc.metadata if isinstance( getattr(
+										doc, 'metadata', { } ), dict ) else { } )
+							
 							content = str( getattr( doc, 'page_content', '' ) or '' )
 							items.append( { 'Index': i, 'Source': metadata.get( 'source', '' ),
 									'Bucket': bucket_name.strip( ), 'Prefix': prefix.strip( ) or '',
@@ -7794,17 +7826,14 @@ elif mode == 'Retrieval':
 						'Returned': result.get( 'count', 0 ), } )
 				
 				items = result.get( 'items', [ ] ) if isinstance( result, dict ) else [ ]
-				
 				if items:
-					table_rows = [
-							{ 'Index': item.get( 'Index', '' ), 'Source': item.get( 'Source', '' ),
+					table_rows = [ { 'Index': item.get( 'Index', '' ), 'Source': item.get( 'Source', '' ),
 									'Bucket': item.get( 'Bucket', '' ),
 									'Prefix': item.get( 'Prefix', '' ),
 									'Preview': item.get( 'Preview', '' ), } for item in items ]
 					
 					st.markdown( '#### Results' )
 					st.dataframe( table_rows, use_container_width=True, hide_index=True )
-					
 					first = items[ 0 ]
 					st.markdown( '#### First File Preview' )
 					st.code( str( first.get( 'Content', '' ) )[ :8000 ] )
