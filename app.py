@@ -64,10 +64,21 @@ from typing import Any, Dict, List, Tuple, Callable
 from langchain_core.documents import Document
 from lxml import etree
 from processors import PdfParser
-from loaders import (TextLoader, CsvLoader, PdfLoader, ExcelLoader, WordLoader, MarkdownLoader, HtmlLoader, JsonLoader, PowerPointLoader, WikiLoader, GithubLoader, WebLoader, ArXivLoader, XmlLoader, PubMedSearchLoader, OpenCityLoader, OutlookLoader, JupyterNotebookLoader, AwsFileLoader, OneDriveDocLoader, GoogleCloudFileLoader, GoogleSpeechToTextLoader, GoogleBucketLoader, AwsBucketLoader, EmailLoader, SpfxLoader, WebCrawler as LoaderWebCrawler)
+from loaders import (TextLoader, CsvLoader, PdfLoader, ExcelLoader, WordLoader, MarkdownLoader,
+	HtmlLoader, JsonLoader, PowerPointLoader, WikiLoader, GithubLoader, WebLoader, ArXivLoader,
+	XmlLoader, PubMedSearchLoader, OpenCityLoader, OutlookLoader, JupyterNotebookLoader,
+	AwsFileLoader, OneDriveDocLoader, GoogleCloudFileLoader, GoogleSpeechToTextLoader,
+	GoogleBucketLoader, AwsBucketLoader, EmailLoader, SpfxLoader, WebCrawler as LoaderWebCrawler)
 
 from generators import Chat, Claude, Grok, Mistral, Gemini
-from fetchers import (Wikipedia, TheNews, SatelliteCenter, WebFetcher, GoogleWeather, Grokipedia, OpenWeather, NavalObservatory, GoogleSearch, GoogleDrive, GoogleMaps, NearbyObjects, OpenScience, EarthObservatory, SpaceWeather, AstroCatalog, AstroQuery, StarMap, GovData, Congress, InternetArchive, StarChart, HistoricalWeather, GoogleGeocoding, USGSEarthquakes, USGSWaterData, USGSTheNationalMap, USGSScienceBase, AirNow, ClimateData, EoNet, EnviroFacts, TidesAndCurrents, UvIndex, PurpleAir, OpenAQ, Firms, CensusData, Socrata, HealthData, GlobalHealthData, UnitedNations, WorldPopulation, Wonder, OpenSky, WebCrawler)
+from fetchers import (Wikipedia, TheNews, SatelliteCenter, WebFetcher, GoogleWeather,
+	Grokipedia, OpenWeather, NavalObservatory, GoogleSearch, GoogleDrive, GoogleMaps,
+	NearbyObjects, OpenScience, EarthObservatory, SpaceWeather, AstroCatalog, AstroQuery,
+	StarMap, GovData, Congress, InternetArchive, StarChart, HistoricalWeather, GoogleGeocoding,
+	USGSEarthquakes, USGSWaterData, USGSTheNationalMap, USGSScienceBase, AirNow, ClimateData,
+	EoNet, EnviroFacts, TidesAndCurrents, UvIndex, PurpleAir, OpenAQ, Firms, CensusData,
+	Socrata, HealthData, GlobalHealthData, UnitedNations, WorldPopulation,
+	Wonder, OpenSky, WebCrawler)
 
 import nltk
 from nltk import sent_tokenize
@@ -472,7 +483,8 @@ def _render_fallback_raw( result: Any ) -> None:
 		else:
 			st.text_area( 'Output', value=str( result ), height=320 )
 
-def _model_selector( key_prefix: str, label: str, options: list[ str ], default_model: str ) -> str:
+def _model_selector( key_prefix: str, label: str,
+		options: list[ str ], default_model: str ) -> str:
 	base_options = options[ : ]
 	if "Custom..." not in base_options:
 		base_options.append( "Custom..." )
@@ -606,7 +618,7 @@ def normalize_text( text: str ) -> str:
 	
 	return text
 
-def chunk_text( text: str, max_tokens: int = 400 ) -> list[ str ]:
+def chunk_text( text: str, max_tokens: int=400 ) -> list[ str ]:
 	"""
 
 		Purpose
@@ -711,32 +723,6 @@ def metric_with_tooltip( label: str, value: str, tooltip: str ):
 	            " title="{tooltip}">ℹ️ </span>
 	            """, unsafe_allow_html=True, )
 
-# ----------  Database Utilities --------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def clear_if_active( loader_name: str ) -> None:
 	if st.session_state.active_loader == loader_name:
 		st.session_state.documents = None
@@ -757,39 +743,7 @@ def clear_if_active( loader_name: str ) -> None:
 		st.session_state.df_chunks = None
 		st.session_state.lines = None
 
-
-
-
-
-
-
-
-
-
-
-
-
 _streamlit_data_editor = st.data_editor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # -------- Expander Utilities
 
@@ -812,7 +766,6 @@ def set_sidebar_mode( source_key: str ) -> None:
 	selected_mode = st.session_state.get( source_key )
 	if selected_mode:
 		st.session_state[ 'mode' ] = selected_mode
-
 
 def _promote_loader_documents( documents: List[ Document ] | None, active_loader: str ) -> int:
 	docs: List[ Document ] = list( documents or [ ] )
@@ -2138,8 +2091,8 @@ if mode == 'Loading':
 			# -------- Expander Outlook Loader
 			# ----------------------------
 			with st.expander( label='Outlook Loader', icon='📨', expanded=False ):
-				outlook_file = st.file_uploader( 'Upload Outlook Message', type=[
-						'msg' ], key='outlook_upload', )
+				outlook_file = st.file_uploader( 'Upload Outlook Message',
+					type=[ 'msg' ], key='outlook_upload', )
 				
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
@@ -7247,8 +7200,17 @@ elif mode == 'Geospatial':
 			if googlegeocoding_submit:
 				try:
 					f = GoogleGeocoding( )
-					result = f.fetch( mode=str( googlegeocoding_mode ), query=str( googlegeocoding_query ), latitude=float( googlegeocoding_latitude ), longitude=float( googlegeocoding_longitude ), place_id=str( googlegeocoding_place_id ), language=str( googlegeocoding_language or 'en' ).strip( ), region=str( googlegeocoding_region or '' ).strip( ), result_type=str( googlegeocoding_result_type or '' ).strip( ), location_type=str( googlegeocoding_location_type or '' ).strip( ), time=int( googlegeocoding_timeout ), api_key=(
-								googlegeocoding_api_key or None) )
+					result = f.fetch( mode=str( googlegeocoding_mode ),
+						query=str( googlegeocoding_query ),
+						latitude=float( googlegeocoding_latitude ),
+						longitude=float( googlegeocoding_longitude ),
+						place_id=str( googlegeocoding_place_id ),
+						language=str( googlegeocoding_language or 'en' ).strip( ),
+						region=str( googlegeocoding_region or '' ).strip( ),
+						result_type=str( googlegeocoding_result_type or '' ).strip( ),
+						location_type=str( googlegeocoding_location_type or '' ).strip( ),
+						time=int( googlegeocoding_timeout ),
+						api_key=(googlegeocoding_api_key or None) )
 					
 					st.session_state[ 'googlegeocoding_results' ] = result or { }
 					st.rerun( )
@@ -7309,7 +7271,8 @@ elif mode == 'Geospatial':
 								
 								if component_rows:
 									with st.expander( 'Address Components', expanded=False ):
-										st.dataframe( pd.DataFrame( component_rows ), use_container_width=True, hide_index=True )
+										st.dataframe( pd.DataFrame( component_rows ),
+											use_container_width=True, hide_index=True )
 							
 							with st.expander( 'Raw Item', expanded=False ):
 								st.json( item )
@@ -7336,7 +7299,8 @@ elif mode == 'Geospatial':
 								'coordinates': f'{coords[ 0 ]}, {coords[ 1 ]}', }
 					
 					elif googlemaps_mode == 'geocode_coordinates':
-						address = gm.geocode_coordinates( lat=float( googlemaps_latitude ), long=float( googlemaps_longitude ) )
+						address = gm.geocode_coordinates( lat=float( googlemaps_latitude ),
+							long=float( googlemaps_longitude ) )
 						result = { 'mode': googlemaps_mode,
 								'latitude': float( googlemaps_latitude ),
 								'longitude': float( googlemaps_longitude ), 'address': address, }
@@ -7345,7 +7309,7 @@ elif mode == 'Geospatial':
 						address_lines = _split_googlemaps_address_lines( googlemaps_address_lines )
 						
 						if not address_lines:
-							raise ValueError( 'At least one address line is required for validate_address '
+							raise ValueError( 'One address line is required for validate_address '
 							                  'mode.' )
 						
 						payload = gm.validate_address( address_lines )
@@ -7359,7 +7323,10 @@ elif mode == 'Geospatial':
 						if not str( googlemaps_destination or '' ).strip( ):
 							raise ValueError( 'Destination is required for request_directions mode.' )
 						
-						payload = gm.request_directions( origin=str( googlemaps_origin ).strip( ), destination=str( googlemaps_destination ).strip( ), mode=str( googlemaps_travel_mode ).strip( ) )
+						payload = gm.request_directions( origin=str( googlemaps_origin ).strip( ),
+							destination=str( googlemaps_destination ).strip( ),
+							mode=str( googlemaps_travel_mode ).strip( ) )
+						
 						result = { 'mode': googlemaps_mode,
 								'origin': str( googlemaps_origin ).strip( ),
 								'destination': str( googlemaps_destination ).strip( ),
@@ -7374,13 +7341,11 @@ elif mode == 'Geospatial':
 					st.exception( exc )
 			
 			result = st.session_state.get( 'googlemaps_results', { } )
-			
 			if not result:
 				st.text( 'No results.' )
 			else:
 				st.markdown( '#### Request Summary' )
 				summary_rows = [ ]
-				
 				for key, value in result.items( ):
 					if key == 'data':
 						continue
@@ -7389,7 +7354,8 @@ elif mode == 'Geospatial':
 						summary_rows.append( { 'Field': key, 'Value': value } )
 				
 				if summary_rows:
-					st.dataframe( pd.DataFrame( summary_rows ), use_container_width=True, hide_index=True )
+					st.dataframe( pd.DataFrame( summary_rows ),
+						use_container_width=True, hide_index=True )
 				
 				if result.get( 'mode' ) == 'geocode_location':
 					lat_value = result.get( 'latitude', None )
@@ -7397,14 +7363,16 @@ elif mode == 'Geospatial':
 					
 					if lat_value is not None and lon_value is not None:
 						st.markdown( '#### Coordinates' )
-						st.text_area( 'Coords', value=str( result.get( 'coordinates', '' ) ), height=90 )
+						st.text_area( 'Coords', value=str(
+							result.get( 'coordinates', '' ) ), height=90 )
 						
 						st.markdown( '#### Map' )
 						st.map( [ { 'lat': float( lat_value ), 'lon': float( lon_value ) } ] )
 				
 				elif result.get( 'mode' ) == 'geocode_coordinates':
 					st.markdown( '#### Address' )
-					st.text_area( 'Formatted Address', value=str( result.get( 'address', '' ) ), height=120 )
+					st.text_area( 'Formatted Address',
+						value=str( result.get( 'address', '' ) ), height=120 )
 					
 					st.markdown( '#### Map' )
 					st.map( [ { 'lat': float( result.get( 'latitude', 0.0 ) ),
@@ -7423,7 +7391,7 @@ elif mode == 'Geospatial':
 							route_rows = [ ]
 							
 							for idx, route in enumerate( routes, start=1 ):
-								legs = route.get( 'legs', [ ] ) if isinstance( route, dict ) else [ ]
+								legs = route.get( 'legs', [] ) if isinstance( route, dict ) else []
 								first_leg = legs[ 0 ] if legs else { }
 								
 								route_rows.append( { 'Route': idx,
@@ -7432,10 +7400,11 @@ elif mode == 'Geospatial':
 										'End': first_leg.get( 'end_address', '' ), 'Distance': (
 												first_leg.get( 'distance', { } ).get( 'text', '' )),
 										'Duration': (
-												first_leg.get( 'duration', { } ).get( 'text', '' )), } )
+												first_leg.get( 'duration', {} ).get( 'text', '' )),})
 							
 							st.markdown( '#### Routes' )
-							st.dataframe( pd.DataFrame( route_rows ), use_container_width=True, hide_index=True )
+							st.dataframe( pd.DataFrame( route_rows ),
+								use_container_width=True, hide_index=True )
 						
 						result_payload = data.get( 'result', { } )
 						if isinstance( result_payload, dict ) and result_payload:
@@ -7462,15 +7431,23 @@ elif mode == 'Geospatial':
 					f = GoogleWeather( )
 					
 					if gw_mode == 'current':
-						result = f.fetch_current( address=gw_location, units_system=gw_units, language_code=gw_language, time=int( gw_timeout ) )
+						result = f.fetch_current( address=gw_location, units_system=gw_units,
+							language_code=gw_language, time=int( gw_timeout ) )
 					elif gw_mode == 'hourly_forecast':
-						result = f.fetch_hourly_forecast( address=gw_location, hours=int( gw_hours ), units_system=gw_units, language_code=gw_language, time=int( gw_timeout ) )
+						result = f.fetch_hourly_forecast( address=gw_location,
+							hours=int( gw_hours ), units_system=gw_units,
+							language_code=gw_language, time=int( gw_timeout ) )
 					elif gw_mode == 'daily_forecast':
-						result = f.fetch_daily_forecast( address=gw_location, days=int( gw_days ), units_system=gw_units, language_code=gw_language, time=int( gw_timeout ) )
+						result = f.fetch_daily_forecast( address=gw_location, days=int( gw_days ),
+							units_system=gw_units, language_code=gw_language,
+							time=int( gw_timeout ) )
 					elif gw_mode == 'hourly_history':
-						result = f.fetch_hourly_history( address=gw_location, hours=int( gw_history_hours ), units_system=gw_units, language_code=gw_language, time=int( gw_timeout ) )
+						result = f.fetch_hourly_history( address=gw_location,
+							hours=int( gw_history_hours ), units_system=gw_units,
+							language_code=gw_language,  time=int( gw_timeout ) )
 					else:
-						result = f.fetch_alerts( address=gw_location, language_code=gw_language, time=int( gw_timeout ) )
+						result = f.fetch_alerts( address=gw_location, language_code=gw_language,
+							time=int( gw_timeout ) )
 					
 					st.session_state[ 'googleweather_results' ] = result or { }
 					st.rerun( )
@@ -7544,7 +7521,11 @@ elif mode == 'Geospatial':
 			if openweather_submit:
 				try:
 					f = OpenWeather( )
-					result = f.fetch( location=str( openweather_location ), mode=str( openweather_mode ), zone=str( openweather_timezone or 'auto' ).strip( ), forecast_days=int( openweather_forecast_days ), past_days=int( openweather_past_days ), count=int( openweather_count ) )
+					result = f.fetch( location=str( openweather_location ),
+						mode=str( openweather_mode ),
+						zone=str( openweather_timezone or 'auto' ).strip( ),
+						forecast_days=int( openweather_forecast_days ),
+						past_days=int( openweather_past_days ), count=int( openweather_count ) )
 					
 					st.session_state[ 'openweather_results' ] = result or { }
 					st.rerun( )
@@ -7600,7 +7581,10 @@ elif mode == 'Geospatial':
 			if historicalweather_submit:
 				try:
 					f = HistoricalWeather( )
-					result = f.fetch( location=str( historicalweather_location ), date=historicalweather_date, zone=str( historicalweather_timezone or 'auto' ).strip( ), count=int( historicalweather_count ) )
+					result = f.fetch( location=str( historicalweather_location ),
+						date=historicalweather_date,
+						zone=str( historicalweather_timezone or 'auto' ).strip( ),
+						count=int( historicalweather_count ) )
 					
 					st.session_state[ 'historicalweather_results' ] = result or { }
 					st.rerun( )
@@ -7662,10 +7646,13 @@ elif mode == 'Geospatial':
 						if float( usgseq_min_magnitude ) > float( usgseq_max_magnitude ):
 							raise ValueError( 'Min Magnitude must be less than or equal to Max Magnitude.' )
 					
-					latitude_value = _coerce_optional_float( name='Latitude', value=usgseq_latitude, min_value=-90.0, max_value=90.0 )
+					latitude_value = _coerce_optional_float( name='Latitude',
+						value=usgseq_latitude, min_value=-90.0, max_value=90.0 )
 					
-					longitude_value = _coerce_optional_float( name='Longitude', value=usgseq_longitude, min_value=-180.0, max_value=180.0 )
-					max_radius_value = _coerce_optional_float( name='Max Radius KM', value=usgseq_max_radius_km, min_value=0.0, max_value=20001.6 )
+					longitude_value = _coerce_optional_float( name='Longitude',
+						value=usgseq_longitude, min_value=-180.0, max_value=180.0 )
+					max_radius_value = _coerce_optional_float( name='Max Radius KM',
+						value=usgseq_max_radius_km, min_value=0.0, max_value=20001.6 )
 					
 					if (latitude_value is None and longitude_value is not None) or (
 							latitude_value is not None and longitude_value is None):
@@ -7676,7 +7663,14 @@ elif mode == 'Geospatial':
 						raise ValueError( 'Max Radius KM requires both Latitude and Longitude.' )
 					
 					f = USGSEarthquakes( )
-					result = f.fetch( mode=str( usgseq_mode ), feed=str( usgseq_feed ), start_date=str( usgseq_start_date ), end_date=str( usgseq_end_date ), min_magnitude=float( usgseq_min_magnitude ), max_magnitude=float( usgseq_max_magnitude ), limit=int( usgseq_limit ), order_by=str( usgseq_order_by ), event_type=str( usgseq_event_type or 'earthquake' ), latitude=latitude_value, longitude=longitude_value, max_radius_km=max_radius_value, time=int( usgseq_timeout ) )
+					result = f.fetch( mode=str( usgseq_mode ), feed=str( usgseq_feed ),
+						start_date=str( usgseq_start_date ), end_date=str( usgseq_end_date ),
+						min_magnitude=float( usgseq_min_magnitude ),
+						max_magnitude=float( usgseq_max_magnitude ), limit=int( usgseq_limit ),
+						order_by=str( usgseq_order_by ),
+						event_type=str( usgseq_event_type or 'earthquake' ),
+						latitude=latitude_value, longitude=longitude_value,
+						max_radius_km=max_radius_value, time=int( usgseq_timeout ) )
 					
 					st.session_state[ 'usgsearthquakes_results' ] = result or { }
 					st.rerun( )
@@ -7739,10 +7733,12 @@ elif mode == 'Geospatial':
 						
 						map_rows = [ ]
 						for item in rows:
-							latitude = (
-										item.get( 'Latitude', None ) or item.get( 'lat', None ) or item.get( 'latitude', None ))
-							longitude = (
-										item.get( 'Longitude', None ) or item.get( 'lon', None ) or item.get( 'longitude', None ))
+							latitude = ( item.get( 'Latitude', None ) \
+										or item.get( 'lat', None ) \
+							             or item.get( 'latitude', None ))
+							longitude = (item.get( 'Longitude', None ) \
+							             or item.get( 'lon', None ) \
+							             or item.get( 'longitude', None ))
 							
 							if latitude is not None and longitude is not None:
 								map_rows.append( { 'lat': float( latitude ),
@@ -7754,7 +7750,8 @@ elif mode == 'Geospatial':
 						
 						top_rows = rows[ : min( 10, len( rows ) ) ]
 						for idx, item in enumerate( top_rows, start=1 ):
-							label = str( item.get( 'Place', '' ) or item.get( 'Title', '' ) or item.get( 'Id', '' ) or f'Record {idx}' )
+							label = str( item.get( 'Place', '' ) or item.get( 'Title', '' ) \
+							             or item.get( 'Id', '' ) or f'Record {idx}' )
 							
 							with st.expander( f'Record {idx}: {label}', expanded=False ):
 								left_c, right_c = st.columns( 2 )
@@ -7793,7 +7790,10 @@ elif mode == 'Geospatial':
 			if earth_submit:
 				try:
 					f = EarthObservatory( )
-					result = f.fetch( mode=earth_mode, status=earth_status, category=earth_category, source=earth_source, limit=int( earth_limit ), days=int( earth_days ), start_date=str( earth_start_date ), end_date=str( earth_end_date ), time=int( earth_timeout ) )
+					result = f.fetch( mode=earth_mode, status=earth_status,
+						category=earth_category, source=earth_source, limit=int( earth_limit ),
+						days=int( earth_days ), start_date=str( earth_start_date ),
+						end_date=str( earth_end_date ), time=int( earth_timeout ) )
 					
 					st.session_state[ 'earthobservatory_results' ] = result or { }
 					st.rerun( )
@@ -7854,7 +7854,11 @@ elif mode == 'Geospatial':
 					clean_product_formats = ','.join( usgstnm_prod_formats or [ ] )
 					
 					f = USGSTheNationalMap( )
-					result = f.fetch( mode=str( usgstnm_mode ), dataset=str( usgstnm_dataset ).strip( ), q=str( usgstnm_q ).strip( ), bbox=clean_bbox, prod_formats=clean_product_formats, max_items=int( usgstnm_max_items ), offset=int( usgstnm_offset ), time=int( usgstnm_timeout ) )
+					result = f.fetch( mode=str( usgstnm_mode ),
+						dataset=str( usgstnm_dataset ).strip( ), q=str( usgstnm_q ).strip( ),
+						bbox=clean_bbox, prod_formats=clean_product_formats,
+						max_items=int( usgstnm_max_items ), offset=int( usgstnm_offset ),
+						time=int( usgstnm_timeout ) )
 					
 					st.session_state[ 'usgstnm_results' ] = result or { }
 					st.rerun( )
@@ -7923,7 +7927,8 @@ elif mode == 'Geospatial':
 						
 						top_rows = rows[ : min( 10, len( rows ) ) ]
 						for idx, item in enumerate( top_rows, start=1 ):
-							label = str( item.get( 'Title', '' ) or item.get( 'Name', '' ) or item.get( 'Id', '' ) or f'Record {idx}' )
+							label = str( item.get( 'Title', '' ) or item.get( 'Name', '' ) \
+							             or item.get( 'Id', '' ) or f'Record {idx}' )
 							
 							with st.expander( f'Record {idx}: {label}', expanded=False ):
 								st.json( item )
@@ -7945,7 +7950,10 @@ elif mode == 'Geospatial':
 					selected_fields = ','.join( usgssb_fields or [ ] )
 					
 					f = USGSScienceBase( )
-					result = f.fetch( mode=str( usgssb_mode ), q=str( usgssb_q ).strip( ), item_id=str( usgssb_item_id ).strip( ), max_items=int( usgssb_max_items ), offset=int( usgssb_offset ), fields=selected_fields, time=int( usgssb_timeout ) )
+					result = f.fetch( mode=str( usgssb_mode ), q=str( usgssb_q ).strip( ),
+						item_id=str( usgssb_item_id ).strip( ), max_items=int( usgssb_max_items ),
+						offset=int( usgssb_offset ), fields=selected_fields,
+						time=int( usgssb_timeout ) )
 					
 					st.session_state[ 'usgssb_results' ] = result or { }
 					st.rerun( )
@@ -8055,10 +8063,20 @@ elif mode == 'Geospatial':
 		if active_source == 'Open Sky':
 			if opensky_submit:
 				try:
-					normalized_time_value = _coerce_opensky_time_value( mode_value=mode, raw_value=int( time_value or 0 ) )
+					normalized_time_value = _coerce_opensky_time_value( mode_value=mode,
+						raw_value=int( time_value or 0 ) )
 					
 					client = OpenSky( )
-					result = client.fetch( mode=mode, icao24=icao24, airport=airport, begin=int( begin ) if int( begin or 0 ) > 0 else None, end=int( end ) if int( end or 0 ) > 0 else None, time_value=normalized_time_value, lamin=float( lamin ) if lamin is not None else None, lomin=float( lomin ) if lomin is not None else None, lamax=float( lamax ) if lamax is not None else None, lomax=float( lomax ) if lomax is not None else None, extended=bool( extended ), client_id=client_id.strip( ) or None, client_secret=client_secret.strip( ) or None, time=int( timeout ), )
+					result = client.fetch( mode=mode, icao24=icao24, airport=airport,
+						begin=int(begin ) if int( begin or 0 ) > 0 else None,
+						nd=int( end ) if int( end or   0 ) > 0 else None,
+						time_value=normalized_time_value,
+						lamin=float( lamin ) if lamin is not None else None,
+						lomin=float( lomin ) if lomin is not None else None,
+						lamax=float( lamax ) if lamax is not None else None,
+						lomax=float( lomax ) if lomax is not None else None,
+						extended=bool( extended ), client_id=client_id.strip( ) or None,
+						client_secret=client_secret.strip( ) or None, time=int( timeout ), )
 					st.session_state[ 'opensky_results' ] = result or { }
 				except Exception as exc:
 					st.error( 'OpenSky request failed.' )
@@ -8225,29 +8243,42 @@ elif mode == 'Environmental':
 			airnow_mode = st.selectbox( 'Mode', options=[ 'current-zip', 'current-latlon',
 					'forecast-zip', 'forecast-latlon' ], index=[ 'current-zip', 'current-latlon',
 					'forecast-zip',
-					'forecast-latlon' ].index( st.session_state.get( 'airnow_mode', 'current-zip' ) ), key='airnow_mode' )
+					'forecast-latlon' ].index( st.session_state.get( 'airnow_mode',
+				'current-zip' ) ), key='airnow_mode' )
 			
-			airnow_zip_code = st.text_input( 'Zip Code', value=st.session_state.get( 'airnow_zip_code', '' ), key='airnow_zip_code', disabled=(
-						airnow_mode not in [ 'current-zip',
-						'forecast-zip' ]), placeholder='Example: 22201' )
+			airnow_zip_code = st.text_input( 'Zip Code',
+				value=st.session_state.get( 'airnow_zip_code', '' ),
+				key='airnow_zip_code',
+				disabled=(airnow_mode not in [ 'current-zip', 'forecast-zip' ]),
+				placeholder='Example: 22201' )
 			
 			coord_c1, coord_c2 = st.columns( 2 )
 			with coord_c1:
-				airnow_latitude = st.text_input( 'Latitude', value=st.session_state.get( 'airnow_latitude', '' ), key='airnow_latitude', disabled=(
-							airnow_mode not in [ 'current-latlon',
-							'forecast-latlon' ]), placeholder='Example: 38.8816' )
+				airnow_latitude = st.text_input( 'Latitude',
+					value=st.session_state.get( 'airnow_latitude', '' ),
+					key='airnow_latitude',
+					disabled=(airnow_mode not in [ 'current-latlon', 'forecast-latlon' ]),
+					placeholder='Example: 38.8816' )
 			
 			with coord_c2:
-				airnow_longitude = st.text_input( 'Longitude', value=st.session_state.get( 'airnow_longitude', '' ), key='airnow_longitude', disabled=(
-							airnow_mode not in [ 'current-latlon',
-							'forecast-latlon' ]), placeholder='Example: -77.0910' )
+				airnow_longitude = st.text_input( 'Longitude',
+					value=st.session_state.get( 'airnow_longitude', '' ),
+					key='airnow_longitude',
+					disabled=(airnow_mode not in [ 'current-latlon', 'forecast-latlon' ]),
+					placeholder='Example: -77.0910' )
 			
-			airnow_date = st.date_input( 'Forecast Date', value=st.session_state.get( 'airnow_date', dt.date.today( ) ), key='airnow_date', disabled=(
-						airnow_mode not in [ 'forecast-zip', 'forecast-latlon' ]) )
+			airnow_date = st.date_input( 'Forecast Date',
+				value=st.session_state.get( 'airnow_date', dt.date.today( ) ),
+				key='airnow_date',
+				disabled=(airnow_mode not in [ 'forecast-zip', 'forecast-latlon' ]) )
 			
-			airnow_distance = st.number_input( 'Distance (miles)', min_value=0, max_value=500, value=int( st.session_state.get( 'airnow_distance', 25 ) ), step=1, key='airnow_distance' )
+			airnow_distance = st.number_input( 'Distance (miles)', min_value=0, max_value=500,
+				value=int( st.session_state.get( 'airnow_distance', 25 ) ),
+				step=1, key='airnow_distance' )
 			
-			airnow_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120, value=int( st.session_state.get( 'airnow_timeout', 20 ) ), step=1, key='airnow_timeout' )
+			airnow_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120,
+				value=int( st.session_state.get( 'airnow_timeout', 20 ) ),
+				step=1, key='airnow_timeout' )
 			
 			st.caption( 'AirNow supports current observations and forecasts by Zip code or '
 			            'latitude/longitude.' )
@@ -8257,7 +8288,8 @@ elif mode == 'Environmental':
 				airnow_submit = st.button( 'Submit', key='airnow_submit', width='stretch' )
 			
 			with btn_c2:
-				st.button( 'Clear', key='airnow_clear', on_click=_clear_airnow_state, width='stretch' )
+				st.button( 'Clear', key='airnow_clear',
+					on_click=_clear_airnow_state, width='stretch' )
 			
 			if airnow_submit:
 				st.session_state[ 'environmental_active_source' ] = 'Air Now'
@@ -9643,7 +9675,6 @@ elif mode == 'Environmental':
 						for item in rows:
 							latitude = (item.get( 'Latitude', None ) or item.get( 'lat', None ))
 							longitude = (item.get( 'Longitude', None ) or item.get( 'lon', None ))
-							
 							if latitude is not None and longitude is not None:
 								map_rows.append( { 'lat': float( latitude ),
 										'lon': float( longitude ) } )
@@ -9783,12 +9814,10 @@ elif mode == 'Environmental':
 					st.exception( exc )
 			
 			result = st.session_state.get( 'tidesandcurrents_results', { } )
-			
 			if not result:
 				st.text( 'No results.' )
 			else:
 				meta_c1, meta_c2 = st.columns( 2 )
-				
 				with meta_c1:
 					if 'mode' in result:
 						st.markdown( f"**Mode:** {result.get( 'mode', '' )}" )
@@ -10542,26 +10571,42 @@ elif mode == 'Astronomical':
 			def _clear_navalobservatory_state( ) -> None:
 				st.session_state[ 'navalobservatory_clear_request' ] = True
 			
-			naval_date = st.date_input( 'Date', value=st.session_state.get( 'navalobservatory_date', dt.date.today( ) ), key='navalobservatory_date', help='USNO date parameter in YYYY-MM-DD format.' )
+			naval_date = st.date_input( 'Date', value=st.session_state.get(
+				'navalobservatory_date', dt.date.today( ) ), key='navalobservatory_date',
+				help='USNO date parameter in YYYY-MM-DD format.' )
 			
-			naval_time = st.time_input( 'Time (UTC)', value=st.session_state.get( 'navalobservatory_time', dt.time( 12, 0 ) ), key='navalobservatory_time', help='USNO time parameter in 24-hour format.' )
+			naval_time = st.time_input( 'Time (UTC)', value=st.session_state.get(
+				'navalobservatory_time', dt.time( 12, 0 ) ), key='navalobservatory_time',
+				help='USNO time parameter in 24-hour format.' )
 			
 			c1, c2 = st.columns( 2 )
 			with c1:
-				naval_latitude = st.number_input( 'Latitude', min_value=-90.0, max_value=90.0, value=float( st.session_state.get( 'navalobservatory_latitude', 38.9072 ) ), step=0.0001, format='%.6f', key='navalobservatory_latitude', help='Decimal degrees. North positive.' )
+				naval_latitude = st.number_input( 'Latitude', min_value=-90.0, max_value=90.0,
+					value=float( st.session_state.get( 'navalobservatory_latitude', 38.9072 ) ),
+					step=0.0001, format='%.6f', key='navalobservatory_latitude',
+					help='Decimal degrees. North positive.' )
 			
 			with c2:
-				naval_longitude = st.number_input( 'Longitude', min_value=-180.0, max_value=180.0, value=float( st.session_state.get( 'navalobservatory_longitude', -77.0369 ) ), step=0.0001, format='%.6f', key='navalobservatory_longitude', help='Decimal degrees. East positive, west negative.' )
+				naval_longitude = st.number_input( 'Longitude', min_value=-180.0, max_value=180.0,
+					value=float( st.session_state.get( 'navalobservatory_longitude', -77.0369 ) ),
+					step=0.0001, format='%.6f', key='navalobservatory_longitude',
+					help='Decimal degrees. East positive, west negative.' )
 			
-			naval_location_label = st.text_input( 'Location Label', value=st.session_state.get( 'navalobservatory_location_label', '' ), key='navalobservatory_location_label', placeholder='Example: Washington, DC' )
+			naval_location_label = st.text_input( 'Location Label',
+				value=st.session_state.get( 'navalobservatory_location_label', '' ),
+				key='navalobservatory_location_label', placeholder='Example: Washington, DC' )
 			
-			naval_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120, value=int( st.session_state.get( 'navalobservatory_timeout', 20 ) ), step=1, key='navalobservatory_timeout' )
+			naval_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120,
+				value=int( st.session_state.get( 'navalobservatory_timeout', 20 ) ), step=1,
+				key='navalobservatory_timeout' )
 			
 			b1, b2 = st.columns( 2 )
 			with b1:
-				naval_submit = st.button( 'Submit', key='navalobservatory_submit', use_container_width=True, width='stretch' )
+				naval_submit = st.button( 'Submit', key='navalobservatory_submit',
+					use_container_width=True, width='stretch' )
 			with b2:
-				naval_clear = st.button( 'Clear', key='navalobservatory_clear', on_click=_clear_navalobservatory_state, width='stretch' )
+				naval_clear = st.button( 'Clear', key='navalobservatory_clear',
+					on_click=_clear_navalobservatory_state, width='stretch' )
 			
 			if naval_submit:
 				st.session_state[ 'astronomical_active_source' ] = 'US Naval Observatory'
@@ -10802,10 +10847,11 @@ elif mode == 'Astronomical':
 			def _clear_astroquery_state( ) -> None:
 				st.session_state[ 'astroquery_clear_request' ] = True
 			
-			astroquery_mode = st.selectbox( 'Mode', options=[ 'object_search', 'object_ids',
-					'region_search' ], index=[ 'object_search', 'object_ids',
-					'region_search' ].index( st.session_state.get( 'astroquery_mode',
-				'object_search' ) ), key='astroquery_mode' )
+			astroquery_mode = st.selectbox( 'Mode',
+				options=[ 'object_search', 'object_ids', 'region_search' ],
+				index=[ 'object_search', 'object_ids', 'region_search' ].index(
+					st.session_state.get( 'astroquery_mode', 'object_search' ) ),
+				key='astroquery_mode' )
 			
 			astroquery_query = st.text_area( 'Object Query', height=80, key='astroquery_query',
 				placeholder=(
@@ -10819,43 +10865,38 @@ elif mode == 'Astronomical':
 			
 			c1, c2, c3 = st.columns( 3 )
 			with c1:
-				astroquery_ra = st.text_input( 'RA', value=st.session_state.get( 'astroquery_ra',
-					'' ), key='astroquery_ra', placeholder='13:09:48.09', disabled=(
-							astroquery_mode != 'region_search'), help='Right Ascension of the '
-				                                                      'search center, '
-				                                                      'e.g. 13:09:48.09.' )
+				astroquery_ra = st.text_input( 'RA',
+					value=st.session_state.get( 'astroquery_ra', '' ), key='astroquery_ra',
+					placeholder='13:09:48.09',
+					disabled=(astroquery_mode != 'region_search'),
+					help='Right Ascension of the search center, e.g. 13:09:48.09.' )
 			
 			with c2:
 				astroquery_dec = st.text_input( 'Dec', value=st.session_state.get(
 					'astroquery_dec', '' ), key='astroquery_dec', placeholder='-23:22:53.3',
-					disabled=(
-							astroquery_mode != 'region_search'), help='Declination of the '
-					                                                  'center.' )
+					disabled=(astroquery_mode != 'region_search'),
+					help='Declination of the center.' )
 			
 			with c3:
 				astroquery_radius = st.number_input( 'Radius', min_value=0.001, max_value=60.0,
 					value=float( st.session_state.get( 'astroquery_radius', 0.5 ) ), step=0.1,
-					key='astroquery_radius', disabled=(
-							astroquery_mode != 'region_search'), help='Cone-search radius around '
-					                                                  'the RA/Dec sky position.' )
+					key='astroquery_radius', disabled=(astroquery_mode != 'region_search'),
+					help='Cone-search radius around the RA/Dec sky position.' )
 			
 			c4, c5 = st.columns( 2 )
 			with c4:
-				astroquery_radius_unit = st.selectbox( 'Radius Unit', options=[ 'deg', 'arcmin',
-						'arcsec' ], index=[ 'deg', 'arcmin',
-						'arcsec' ].index( st.session_state.get( 'astroquery_radius_unit', 'deg' )
-				), key='astroquery_radius_unit', disabled=(
-						astroquery_mode != 'region_search') )
+				astroquery_radius_unit = st.selectbox( 'Radius Unit',
+					options=[ 'deg', 'arcmin', 'arcsec' ],
+					index=[ 'deg', 'arcmin', 'arcsec' ].index( st.session_state.get(
+						'astroquery_radius_unit', 'deg' ) ), key='astroquery_radius_unit',
+					disabled=( astroquery_mode != 'region_search') )
 			
 			with c5:
 				astroquery_row_limit = st.number_input( 'Row Limit', min_value=1, max_value=10000,
 					value=int( st.session_state.get( 'astroquery_row_limit', 100 ) ), step=1,
 					key='astroquery_row_limit' )
 			
-			st.caption( 'No API key is required for basic astroquery SIMBAD queries. '
-			            'Use object_search for a named object, object_ids for alternate '
-			            'names, '
-			            'and region_search for a cone search around RA/Dec.' )
+			st.caption( 'No API key is required for basic astroquery SIMBAD queries.' )
 			
 			b1, b2 = st.columns( 2 )
 			with b1:
@@ -10897,31 +10938,29 @@ elif mode == 'Astronomical':
 			def _clear_starmap_state( ) -> None:
 				st.session_state[ 'starmap_clear_request' ] = True
 			
-			starmap_mode = st.selectbox( 'Mode', options=[ 'object_link', 'coordinate_link',
-					'snapshot' ], index=[ 'object_link', 'coordinate_link',
-					'snapshot' ].index( st.session_state.get( 'starmap_mode', 'object_link' ) ),
-				key='starmap_mode' )
+			starmap_mode = st.selectbox( 'Mode',
+				options=[ 'object_link', 'coordinate_link', 'snapshot' ],
+				index=[ 'object_link', 'coordinate_link', 'snapshot' ].index(
+					st.session_state.get( 'starmap_mode', 'object_link' ) ), key='starmap_mode' )
 			
 			starmap_query = st.text_area( 'Object Query', height=80, key='starmap_query',
 				placeholder='Examples: Polaris, M31, NGC 1300, Used for object_link mode only.',
-				disabled=(
-						starmap_mode != 'object_link') )
+				disabled=( starmap_mode != 'object_link') )
 			
 			c1, c2, c3 = st.columns( 3 )
 			with c1:
 				starmap_ra = st.number_input( 'RA (hours)', min_value=0.0, max_value=24.0,
 					value=float( st.session_state.get( 'starmap_ra', 15.2976 ) ), step=0.0001,
-					format='%.4f', key='starmap_ra', disabled=(
-							starmap_mode == 'object_link'), help='Right Ascension of the sky '
-					                                             'center in hours. Example: '
-					                                             '15.2976' )
+					format='%.4f', key='starmap_ra',
+					disabled=( starmap_mode == 'object_link'),
+					help='Right Ascension of the sky center in hours. Example: 15.2976' )
 			
 			with c2:
 				starmap_dec = st.number_input( 'Dec (degrees)', min_value=-90.0, max_value=90.0,
 					value=float( st.session_state.get( 'starmap_dec', -17.5892 ) ), step=0.0001,
-					format='%.4f', key='starmap_dec', disabled=(
-							starmap_mode == 'object_link'), help='Declination of the sky center in '
-					                                             'degrees. Example: -17.5892' )
+					format='%.4f', key='starmap_dec',
+					disabled=(starmap_mode == 'object_link'),
+					help='Declination of the sky center in degrees. Example: -17.5892' )
 			
 			with c3:
 				starmap_zoom = st.number_input( 'Zoom', min_value=1, max_value=18, value=int(
@@ -10930,13 +10969,12 @@ elif mode == 'Astronomical':
 			
 			c4, c5 = st.columns( 2 )
 			with c4:
-				starmap_image_source = st.selectbox( 'Image Source', options=[ 'DSS2', 'SDSS',
-						'SDSS-III', 'GALEX', 'IRAS', 'RASS', 'H-Alpha' ], index=[ 'DSS2', 'SDSS',
-						'SDSS-III', 'GALEX', 'IRAS', 'RASS',
-						'H-Alpha' ].index( st.session_state.get( 'starmap_image_source', 'DSS2' )
-				), key='starmap_image_source', disabled=(
-							starmap_mode != 'snapshot'), help='Sky survey source used for snapshot '
-				                                              'generation.' )
+				starmap_image_source = st.selectbox( 'Image Source',
+					options=[ 'DSS2', 'SDSS', 'SDSS-III', 'GALEX', 'IRAS', 'RASS', 'H-Alpha' ],
+					index=[ 'DSS2', 'SDSS', 'SDSS-III', 'GALEX', 'IRAS', 'RASS', 'H-Alpha' ].index(
+						st.session_state.get( 'starmap_image_source', 'DSS2' )),
+					key='starmap_image_source', disabled=(starmap_mode != 'snapshot'),
+					help='Sky survey source used for snapshot generation.' )
 			
 			with c5:
 				starmap_box_color = st.text_input( 'Box Color', value=st.session_state.get(
@@ -10947,13 +10985,13 @@ elif mode == 'Astronomical':
 			c6, c7 = st.columns( 2 )
 			with c6:
 				starmap_show_box = st.checkbox( 'Show Box', value=st.session_state.get(
-					'starmap_show_box', True ), key='starmap_show_box', disabled=(
-							starmap_mode == 'snapshot') )
+					'starmap_show_box', True ), key='starmap_show_box',
+					disabled=(starmap_mode == 'snapshot') )
 			
 			with c7:
 				starmap_show_grid = st.checkbox( 'Show Grid', value=st.session_state.get(
-					'starmap_show_grid', True ), key='starmap_show_grid', disabled=(
-							starmap_mode == 'object_link') )
+					'starmap_show_grid', True ), key='starmap_show_grid',
+					disabled=(starmap_mode == 'object_link') )
 			
 			c8, c9 = st.columns( 2 )
 			with c8:
@@ -11245,11 +11283,11 @@ elif mode == 'Astronomical':
 				'''
 				st.session_state[ 'starchart_clear_request' ] = True
 			
-			starchart_mode = st.selectbox( 'Mode', options=[ 'object_search', 'object_chart',
-					'coordinate_chart', 'static_chart' ], index=[ 'object_search', 'object_chart',
-					'coordinate_chart',
-					'static_chart' ].index( st.session_state.get( 'starchart_mode', 'object_chart'
-			) ), key='starchart_mode' )
+			starchart_mode = st.selectbox( 'Mode',
+				options=[ 'object_search', 'object_chart', 'coordinate_chart', 'static_chart' ],
+				index=[ 'object_search', 'object_chart', 'coordinate_chart', 'static_chart' ].index(
+					st.session_state.get( 'starchart_mode',
+						'object_chart' ) ), key='starchart_mode' )
 			
 			starchart_query = st.text_area( 'Object Query', height=80, key='starchart_query',
 				placeholder=(
@@ -11555,7 +11593,7 @@ elif mode == 'Astronomical':
 			if nearby_submit:
 				st.session_state[ 'astronomical_active_source' ] = 'Near Earth Objects'
 	
-	with (right):
+	with right:
 		active_source = st.session_state.get( 'astronomical_active_source', '' )
 		result_keys: Dict[ str, str ] = { 'US Naval Observatory': 'navalobservatory_results',
 				'Satellite Center': 'satellitecenter_results',
@@ -11668,8 +11706,9 @@ elif mode == 'Astronomical':
 					f = SatelliteCenter( )
 					result = f.fetch( mode=satellite_mode, query=satellite_query,
 						start_time=satellite_start_time, end_time=satellite_end_time,
-						coordinate_systems=satellite_coordinate_systems, resolution_factor=int(
-							satellite_resolution_factor ), time=int( satellite_timeout ) )
+						coordinate_systems=satellite_coordinate_systems,
+						resolution_factor=int(satellite_resolution_factor ),
+						time=int( satellite_timeout ) )
 					
 					st.session_state[ 'satellitecenter_results' ] = {
 							'request': { 'mode': satellite_mode, 'query': satellite_query,
@@ -11803,7 +11842,6 @@ elif mode == 'Astronomical':
 		# -------- Astro Catalog
 		if active_source == 'Astro Catalog':
 			st.markdown( 'Results' )
-			
 			if astro_submit:
 				try:
 					f = AstroCatalog( )
@@ -12209,15 +12247,15 @@ elif mode == 'Astronomical':
 				try:
 					f = StarChart( )
 					result = f.fetch( mode=starchart_mode, query=str( starchart_query or '' ),
-						ra=float( starchart_ra ), dec=float( starchart_dec ), zoom=int(
-							starchart_zoom ), image_source=str( starchart_image_source ),
-						box_color=str( starchart_box_color or 'yellow' ), show_box=bool(
-							starchart_show_box ), show_grid=bool( starchart_show_grid ),
-						show_lines=bool( starchart_show_lines ), show_boundaries=bool(
-							starchart_show_boundaries ), show_const_names=bool(
-							starchart_show_const_names ), width=int( starchart_width ),
-						height=int( starchart_height ), magnitude=float( starchart_magnitude ),
-						time=int( starchart_timeout ) )
+						ra=float( starchart_ra ), dec=float( starchart_dec ),
+						zoom=int(starchart_zoom ), image_source=str( starchart_image_source ),
+						box_color=str( starchart_box_color or 'yellow' ),
+						show_box=bool(starchart_show_box ), show_grid=bool( starchart_show_grid ),
+						show_lines=bool( starchart_show_lines ),
+						show_boundaries=bool(starchart_show_boundaries ),
+						show_const_names=bool(starchart_show_const_names ),
+						width=int( starchart_width ), height=int( starchart_height ),
+						magnitude=float( starchart_magnitude ), time=int( starchart_timeout ) )
 					
 					st.session_state[ 'starchart_results' ] = result or { }
 					st.rerun( )
@@ -12331,17 +12369,17 @@ elif mode == 'Astronomical':
 					f = NearbyObjects( )
 					result = f.fetch( mode=nearby_mode, start_date=str( nearby_start_date ),
 						end_date=str( nearby_end_date ), query=str( nearby_query or '' ).strip( ),
-						query_type=str( nearby_query_type ), dist_max=str( nearby_dist_max or
-						                                                   '10LD' ), body=str(
-							nearby_body or 'Earth' ), sort=str( nearby_sort or 'date' ),
+						query_type=str( nearby_query_type ),
+						dist_max=str( nearby_dist_max or '10LD' ),
+						body=str(nearby_body or 'Earth' ), sort=str( nearby_sort or 'date' ),
 						limit=int( nearby_limit ), dv=float( nearby_dv ), dur=int( nearby_dur ),
 						stay=int( nearby_stay ), launch=str( nearby_launch or '2020-2045' ),
-						h=float( nearby_h ), occ=int( nearby_occ ), include_physical=bool(
-							nearby_include_physical ), include_close_approaches=bool(
-							nearby_include_close_approaches ), ca_body=str( nearby_ca_body or
-						                                                    'Earth' ),
-						include_discovery=bool( nearby_include_discovery ), time=int(
-							nearby_timeout ) )
+						h=float( nearby_h ), occ=int( nearby_occ ),
+						include_physical=bool(nearby_include_physical ),
+						include_close_approaches=bool(nearby_include_close_approaches ),
+						ca_body=str( nearby_ca_body or 'Earth' ),
+						include_discovery=bool( nearby_include_discovery ),
+						time=int(nearby_timeout ) )
 					
 					st.session_state[ 'nearbyobjects_results' ] = result or { }
 					st.rerun( )
@@ -12356,7 +12394,6 @@ elif mode == 'Astronomical':
 				st.text( 'No results.' )
 			else:
 				meta_c1, meta_c2 = st.columns( 2 )
-				
 				with meta_c1:
 					if 'mode' in result:
 						st.markdown( f"**Mode:** {result.get( 'mode', '' )}" )
@@ -12373,8 +12410,8 @@ elif mode == 'Astronomical':
 				
 				if result.get( 'fields', [ ] ) and result.get( 'data', [ ] ):
 					st.markdown( '#### Results' )
-					df_nearby = pd.DataFrame( result.get( 'data', [ ] ), columns=result.get(
-						'fields', [ ] ) )
+					df_nearby = pd.DataFrame( result.get( 'data', [ ] ),
+						columns=result.get( 'fields', [ ] ) )
 					st.dataframe( df_nearby, use_container_width=True, hide_index=True )
 				
 				elif 'data' in result:
