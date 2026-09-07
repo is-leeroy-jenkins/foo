@@ -71,7 +71,6 @@ The primary modes are:
 | Environmental   | Work with air, water, climate, fire, earthquake, and environmental data.        | `fetchers.py`                  |
 | Astronomical    | Work with astronomy, sky, satellite, observatory, and space-weather data.       | `fetchers.py`                  |
 | Generation      | Run AI-provider workflows.                                                      | `generators.py`                |
-| Data Management | Inspect, create, query, update, visualize, and manage local data.               | `data.py` and `app.py` helpers |
 | Output          | Export processed results to durable artifacts.                                  | `writers.py`                   |
 
 Some modes may expose multiple source-specific panels because Foo supports many provider and
@@ -563,52 +562,6 @@ Search only official documentation sources and summarize the installation steps.
 When using reasoning or thinking controls, confirm that the selected provider and model support
 those settings. Provider support is not uniform.
 
-## 🗄️ Data Management Mode
-
-Use **Data Management** mode for local data inspection and maintenance.
-
-This mode is backed by `data.py` and database helper logic in `app.py`.
-
-Common tasks include:
-
-* Creating a local database connection.
-* Listing tables.
-* Reading tables.
-* Rendering dataframes.
-* Applying filters.
-* Creating aggregations.
-* Creating visualizations.
-* Inserting data.
-* Creating custom tables.
-* Creating indexes.
-* Adding columns.
-* Renaming columns.
-* Dropping columns.
-* Renaming tables.
-* Creating profile tables.
-* Checking query safety.
-
-A normal data-management workflow is:
-
-```text
-Select Data Management mode
-        |
-        v
-Choose an operation
-        |
-        v
-Select table or provide operation inputs
-        |
-        v
-Preview where possible
-        |
-        v
-Run read or mutation operation
-```
-
-Treat mutation actions carefully. Creating, updating, dropping, renaming, or deleting data changes
-local state.
-
 ## 🛡️ Data Safety
 
 Separate read-only actions from mutation actions.
@@ -705,7 +658,7 @@ Scraping mode
 Extract page paragraphs and links
     |
     v
-Data Management mode
+the persistence API
     |
     v
 Store metadata in SQLite
@@ -726,7 +679,7 @@ Retrieval mode
 Fetch public-data records
     |
     v
-Data Management mode
+the persistence API
     |
     v
 Filter and aggregate results

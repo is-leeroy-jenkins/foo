@@ -374,9 +374,9 @@ Examples:
 
 The generator should return generated content. The writer should save the content in a file format.
 
-## 🧩 Relationship to Data Management
+## 🧩 Relationship to Persistence
 
-Data-management workflows can provide stored records for export.
+Persistence workflows can provide stored records for export.
 
 Examples:
 

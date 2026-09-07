@@ -1939,6 +1939,8 @@ class Claude( Generator ):
 				_budget = self.thinking_budget if self.thinking_budget is not None else 1024
 				if _budget < 1024:
 					_budget = 1024
+				if _budget >= self.max_tokens:
+					raise ValueError( 'Thinking Budget must be less than Max Tokens.' )
 				
 				self.params[ 'thinking' ] = \
 					{

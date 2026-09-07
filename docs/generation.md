@@ -501,7 +501,7 @@ Review and export
 ### Query and Report
 
 ```text
-Data Management mode
+the persistence API
     |
     v
 Query local table

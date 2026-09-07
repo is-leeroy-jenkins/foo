@@ -463,7 +463,7 @@ specific HTML elements
 
 Use a scraper when the workflow needs targeted HTML extraction rather than broad document ingestion.
 
-## 🗄️ Relationship to Data Management
+## 🗄️ Relationship to Persistence
 
 Loader results can be persisted through `data.py`.
 

@@ -21,7 +21,7 @@ ___
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-0078FC?style=for-the-badge&logo=github)](https://is-leeroy-jenkins.github.io/foo/)
 
 Foo is a data loading, scraping, retrieval, geospatial, environmental,
-astronomical, demographic, generative-AI, and SQLite data-management workspace. It is designed
+astronomical, demographic, generative-AI, and data-processing workspace. It is designed
 to give users explicit, hands-on control over how content is loaded, extracted, queried, fetched,
 cleaned, analyzed, visualized, and routed into downstream machine-learning or agentic workflows.
 
@@ -107,7 +107,6 @@ ___
 | **Astronomical**    | Retrieve astronomical, satellite, star, space-weather, and near-Earth object data.           | U.S. Naval Observatory, Satellite Center, Astro Catalog, AstroQuery, StarMap, SIMBAD, Space Weather, Star Chart, Near-Earth Objects.                                                                                                           |
 | **Demographic**     | Retrieve demographic, health, population, city, and public-health records.                   | U.S. Census, CDC Socrata, U.S. Health, WHO Global, United Nations, World Population, CDC WONDER, PubMed Search, Open City Data.                                                                                                                |
 | **Generation**      | Generate or analyze text using multiple AI providers.                                        | ChatGPT, Grok, Claude, Gemini, Mistral.                                                                                                                                                                                                        |
-| **Data Management** | Manage local SQLite data and perform structured analysis.                                    | Import, Browse, CRUD, Explore, Filter, Aggregate, Visualize, Admin, SQL.                                                                                                                                                                       |
 
 ## 🏛️ Architecture
 
@@ -205,13 +204,6 @@ streamlit run app.py
 3. Enter the query and parameters.
 4. Click **Submit**.
 5. Review rendered summaries, rows, and raw results.
-
-### Manage SQLite Data
-
-1. Open **Data Management** mode.
-2. Use **Import** to load Excel sheets into SQLite.
-3. Use **Browse**, **CRUD**, **Explore**, **Filter**, **Aggregate**, or **Visualize**.
-4. Use **SQL** for read-only SELECT queries.
 
 ## 📤 Loaders
 
@@ -333,20 +325,6 @@ streamlit run app.py
 | Anthropic | **Claude**    | Text generation and analysis through the Claude wrapper.       |
 | Google    | **Gemini**    | Text generation and analysis through the Gemini wrapper.       |
 | Mistral   | **Mistral**   | Text generation and analysis through the Mistral wrapper.      |
-
-## 🗄️ Data Management
-
-| Tab              | Purpose                                                                                                       |
-| ---------------- | ------------------------------------------------------------------------------------------------------------- |
-| **📥 Import**    | Import Excel sheets into SQLite tables with optional overwrite behavior.                                      |
-| **🗂 Browse**    | Select and browse existing SQLite tables.                                                                     |
-| **💉 CRUD**      | Insert, update, and delete rows.                                                                              |
-| **📊 Explore**   | Profile data and inspect table-level information.                                                             |
-| **🔎 Filter**    | Apply interactive column filters.                                                                             |
-| **🧮 Aggregate** | Compute count, sum, average, minimum, maximum, and median summaries.                                          |
-| **📈 Visualize** | Render histogram, bar, line, scatter, box, pie, and correlation charts.                                       |
-| **⚙ Admin**      | Create tables, inspect schema, inspect indexes, add columns, rename columns, rename tables, and drop columns. |
-| **🧠 SQL**       | Run read-only SQL queries with result display and execution metrics.                                          |
 
 ## 📦 Requirements
 
