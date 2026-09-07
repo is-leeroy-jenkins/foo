@@ -475,9 +475,9 @@ Common relationships include:
 Where a loader returns LangChain `Document` objects, the Foo `Document` model should not be
 substituted unless the workflow expects the Foo model.
 
-## 🔗 Relationship to Data Management
+## 🔗 Relationship to Persistence
 
-Data-management workflows may serialize model instances into SQLite rows or vector-store metadata.
+Persistence workflows may serialize model instances into SQLite rows or vector-store metadata.
 
 Good candidates for serialization include:
 

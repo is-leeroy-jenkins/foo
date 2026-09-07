@@ -625,9 +625,9 @@ The Streamlit UI controls the user-facing output experience.
 
 `writers.py` should perform the file write.
 
-## 🗄️ Relationship to Data Management
+## 🗄️ Relationship to Persistence
 
-Data-management workflows may produce output from SQLite or Chroma.
+Persistence workflows may produce output from SQLite or Chroma.
 
 Examples include:
 

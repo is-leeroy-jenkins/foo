@@ -246,7 +246,7 @@ Examples of writer-friendly fields include:
 
 The writer layer should remain responsible for formatting and output serialization.
 
-## 🔗 Relationship to Data Management
+## 🔗 Relationship to Persistence
 
 The data-management layer can persist selected fields from a `Result` object.
 

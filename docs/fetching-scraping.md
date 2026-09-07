@@ -592,7 +592,7 @@ Fetcher -> retrieve external data
 Scraper -> extract HTML content
 ```
 
-## 🗄️ Relationship to Data Management
+## 🗄️ Relationship to Persistence
 
 Fetched and scraped results can be persisted after extraction.
 

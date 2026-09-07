@@ -535,7 +535,7 @@ Use scraping when the goal is extracting specific HTML elements.
 
 Scrapers return specific extracted page elements. Loaders return document content.
 
-## 🗄️ Relationship to Data Management
+## 🗄️ Relationship to Persistence
 
 Loaded results can be stored through the data-management layer.
 

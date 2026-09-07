@@ -27,7 +27,7 @@ It coordinates:
 * Astronomical workflows.
 * Demographic and population workflows.
 * AI generation workflows.
-* Data-management workflows.
+* Persistence workflows.
 * Result rendering.
 * Tables, charts, metrics, previews, and status messages.
 
@@ -469,71 +469,6 @@ app.py displays generated output
 The provider wrapper should own provider-specific request construction. `app.py` should own the
 controls and display.
 
-## 🗄️ Data Management Mode
-
-Data Management mode provides a UI for local data operations.
-
-This mode includes utilities and workflows for SQLite-style table operations, database inspection,
-and data display.
-
-`app.py` includes helper functions for operations such as:
-
-* Creating a connection.
-* Listing tables.
-* Creating schema.
-* Reading tables.
-* Rendering tables.
-* Making values display-safe.
-* Dropping tables.
-* Creating indexes.
-* Applying filters.
-* Creating aggregations.
-* Creating visualizations.
-* Converting dataframes.
-* Inserting data.
-* Mapping dataframe types to SQLite types.
-* Creating custom tables.
-* Checking whether SQL is safe.
-* Creating safe identifiers.
-* Listing indexes.
-* Adding columns.
-* Renaming columns.
-* Dropping columns.
-* Renaming tables.
-* Creating profile tables.
-
-The data-management UI should be treated carefully because it can modify local database state.
-
-## 🛡️ Safe Data Management
-
-Data Management mode should distinguish clearly between inspection and mutation.
-
-Read-oriented actions include:
-
-* Listing tables.
-* Reading table rows.
-* Rendering a table.
-* Filtering records.
-* Previewing data.
-* Viewing schema.
-* Viewing indexes.
-* Creating summary profiles.
-
-Mutation-oriented actions include:
-
-* Creating tables.
-* Inserting data.
-* Dropping tables.
-* Creating indexes.
-* Adding columns.
-* Renaming columns.
-* Dropping columns.
-* Renaming tables.
-* Clearing or replacing data.
-
-Mutation-oriented actions should be clearly labeled in the UI and should avoid executing unsafe SQL
-from untrusted user input.
-
 ## 🧰 Utility Functions
 
 `app.py` includes utility functions that support display, normalization, text processing, database
@@ -613,7 +548,7 @@ If text-processing behavior becomes central and reusable, consider moving it to 
 
 ## 📊 Visualization
 
-The application includes dataframe and visualization support for data-management workflows.
+The application includes dataframe and visualization support for persistence workflows.
 
 Visualization helpers may use tabular data to produce:
 
@@ -713,7 +648,6 @@ Use this checklist when reviewing changes to `app.py`.
 | Astronomical    | Object, coordinate, and radius inputs are handled safely.                |
 | Demographic     | Dataset, year, field, and geography inputs are handled safely.           |
 | Generation      | Provider, model, prompt, tools, and reasoning settings work as expected. |
-| Data Management | Read and mutation actions are clearly separated.                         |
 | Output          | Results are displayed in readable form.                                  |
 | Errors          | Failures show useful but safe user-facing messages.                      |
 

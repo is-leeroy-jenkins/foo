@@ -550,7 +550,7 @@ The fetcher should be responsible for:
 
 This separation keeps UI code maintainable.
 
-## 🗄️ Relationship to Data Management
+## 🗄️ Relationship to Persistence
 
 Fetcher results can be stored by `data.py`.
 
