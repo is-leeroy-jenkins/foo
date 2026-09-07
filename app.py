@@ -1217,7 +1217,6 @@ def rename_column( table_name: str, old_name: str, new_name: str ) -> None:
 		
 		conn.commit( )
 
-
 def drop_column( table: str, column: str ):
 	if not table or not column:
 		raise ValueError( 'Table and column required.' )
@@ -1298,7 +1297,6 @@ def drop_column( table: str, column: str ):
 				conn.execute( idx_sql )
 		
 		conn.commit( )
-
 
 def clear_if_active( loader_name: str ) -> None:
 	if st.session_state.active_loader == loader_name:
@@ -1699,7 +1697,6 @@ def get_declared_type_family( declared_type: str ) -> str:
 	if any( token in type_name for token in ('CHAR', 'CLOB', 'TEXT', 'VARCHAR', 'NVARCHAR') ):
 		return 'text'
 	return 'unknown'
-
 
 def parse_datetime_series( series: pd.Series ) -> pd.Series:
 	"""Parse datetime values without modifying the source series.
