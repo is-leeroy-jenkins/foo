@@ -7,6 +7,7 @@
     <list default="true" id="649d1b1c-e24f-435b-9576-30e7d61c1f89" name="Changes" comment="updates">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/loaders.py" beforeDir="false" afterPath="$PROJECT_DIR$/loaders.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -86,7 +87,7 @@
     &quot;node.js.selected.package.standard&quot;: &quot;&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;copyright.profiles&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.intellij.pycharm.community.ide.impl.configuration.PythonContentEntriesConfigurable&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -159,15 +160,10 @@
       <workItem from="1788625286164" duration="102000" />
       <workItem from="1788625508682" duration="8000" />
       <workItem from="1788625717475" duration="18000" />
-      <workItem from="1788625758750" duration="15836000" />
-    </task>
-    <task id="LOCAL-00103" summary="updates">
-      <option name="closed" value="true" />
-      <created>1788101579525</created>
-      <option name="number" value="00103" />
-      <option name="presentableId" value="LOCAL-00103" />
-      <option name="project" value="LOCAL" />
-      <updated>1788101579525</updated>
+      <workItem from="1788625758750" duration="15982000" />
+      <workItem from="1788803616609" duration="196000" />
+      <workItem from="1788803922174" duration="820000" />
+      <workItem from="1788807305224" duration="2213000" />
     </task>
     <task id="LOCAL-00104" summary="updates">
       <option name="closed" value="true" />
@@ -553,7 +549,15 @@
       <option name="project" value="LOCAL" />
       <updated>1788649069154</updated>
     </task>
-    <option name="localTasksCounter" value="152" />
+    <task id="LOCAL-00152" summary="updates">
+      <option name="closed" value="true" />
+      <created>1788649174041</created>
+      <option name="number" value="00152" />
+      <option name="presentableId" value="LOCAL-00152" />
+      <option name="project" value="LOCAL" />
+      <updated>1788649174041</updated>
+    </task>
+    <option name="localTasksCounter" value="153" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

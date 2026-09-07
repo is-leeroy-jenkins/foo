@@ -1976,7 +1976,8 @@ def apply_mathy_plotly_theme( figure: go.Figure, title: str = '', height: int = 
 	figure.update_yaxes( showgrid=True, gridcolor='rgba(148,163,184,0.16)', zeroline=False, showline=True, linecolor='rgba(148,163,184,0.35)' )
 	return figure
 
-def render_mathy_plotly_chart( figure: go.Figure, key: str, filename: str, title: str = '', height: int = 500 ) -> None:
+def render_mathy_plotly_chart( figure: go.Figure, key: str, filename: str,
+		title: str = '', height: int = 500 ) -> None:
 	"""Render a themed Plotly chart.
 
 	Purpose:
@@ -2849,7 +2850,7 @@ if mode == 'Loading':
 				from nltk.corpus import (brown, gutenberg, reuters, webtext, inaugural, state_union)
 				
 				st.markdown( '###### NLTK Corpora' )
-				st.badge( label='Information', help=cfg.NLTK_LOADER )
+				st.caption( 'i', help=cfg.NLTK_LOADER )
 				corpus_name = st.selectbox( 'Select corpus',
 					['Brown', 'Gutenberg', 'Reuters', 'WebText', 'Inaugural', 'State of the Union'],
 					key='nltk_corpus_name', )
@@ -4884,8 +4885,8 @@ if mode == 'Loading':
 				# --------------------------------------------------
 				if clear_aws_bucket:
 					clear_if_active( 'AwsBucketLoader' )
-				st.session_state.raw_text = rebuild_raw_text_from_documents( )
-				st.session_state[ '_loader_status' ] = 'AWS Bucket Loader state cleared.'
+					st.session_state.raw_text = rebuild_raw_text_from_documents( )
+					st.session_state[ '_loader_status' ] = 'AWS Bucket Loader state cleared.'
 				
 				# --------------------------------------------------
 				# Load
@@ -4918,11 +4919,16 @@ if mode == 'Loading':
 						document.metadata[ 'loader' ] = 'AwsBucketLoader'
 						document.metadata.setdefault( 'bucket', aws_bucket_name.strip( ) )
 						document.metadata.setdefault( 'prefix', aws_bucket_prefix.strip( ) )
-						document.metadata.setdefault( 'region_name', aws_bucket_region.strip( ) or None )
-						document.metadata.setdefault( 'api_version', aws_bucket_api_version.strip( ) or None )
+						document.metadata.setdefault( 'region_name',
+							aws_bucket_region.strip( ) or None )
+						
+						document.metadata.setdefault( 'api_version',
+							aws_bucket_api_version.strip( ) or None )
+						
 						document.metadata.setdefault( 'use_ssl', bool( aws_bucket_use_ssl ) )
 						document.metadata.setdefault( 'verify', verify_value )
-						document.metadata.setdefault( 'endpoint_url', aws_bucket_endpoint_url.strip( ) or None )
+						document.metadata.setdefault( 'endpoint_url',
+							aws_bucket_endpoint_url.strip( ) or None )
 						
 						if aws_bucket_prefix.strip( ):
 							document.metadata.setdefault( 'source',
@@ -4934,14 +4940,16 @@ if mode == 'Loading':
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
 					st.session_state.raw_text = '\n\n'.join( d.page_content for d in documents if
-							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) and d.page_content.strip( ) )
+							hasattr( d, 'page_content' ) \
+							and isinstance( d.page_content, str ) \
+							and d.page_content.strip( ) )
 					st.session_state.processed_text = None
 					st.session_state.lines = None
 					st.session_state.chunked_documents = None
 					st.session_state.df_chunks = None
 					st.session_state.active_loader = 'AwsBucketLoader'
-					st.session_state[
-						'_loader_status' ] = f'Loaded {len( documents )} AWS bucket document(s).'
+					st.session_state[ '_loader_status' ] = \
+						f'Loaded {len( documents )} AWS bucket document(s).'
 			
 			# ---------------------------
 			# ---- Expander SharePoint Loader
@@ -5078,8 +5086,9 @@ if mode == 'Loading':
 			# ------------ Top Tokens
 			with st.expander( label='Tokens', icon='🉑', expanded=True ):
 				top_tokens = counts.most_common( 10 )
-				df_top = pd.DataFrame( top_tokens, columns=[ 'token',
-						'count' ] ).set_index( 'token' )
+				df_top = pd.DataFrame( top_tokens,
+					columns=[ 'token', 'count' ] ).set_index( 'token' )
+				
 				st.bar_chart( df_top, color='#01438A' )
 			
 			st.markdown( cfg.BLUE_DIVIDER, unsafe_allow_html=True, )
@@ -5242,8 +5251,8 @@ elif mode == 'Scraping':
 		except Exception:
 			return [ ]
 	
-	def _scrape_single_page( url: str, include_title: bool, include_basic_text: bool, include_raw_html: bool, selected_methods:
-	list[ str ] ) -> dict[ str, Any ]:
+	def _scrape_single_page( url: str, include_title: bool, include_basic_text: bool,
+			include_raw_html: bool, selected_methods: list[ str ] ) -> dict[ str, Any ]:
 		page_result: dict[ str, Any ] = { 'url': url, 'status_code': None, 'encoding': None,
 				'title': '', 'plain_text': '', 'raw_html': '', 'links_discovered': [ ], 'data': { },
 				'errors': [ ], }
@@ -5302,9 +5311,10 @@ elif mode == 'Scraping':
 		
 		return page_result
 	
-	def _crawl_pages( seed_url: str, include_title: bool, include_basic_text: bool, include_raw_html: bool, selected_methods:
-	list[ str ], recursive: bool, max_depth: int, max_pages: int, same_domain_only: bool ) -> tuple[
-		list[ dict[ str, Any ] ], dict[ str, Any ] ]:
+	def _crawl_pages( seed_url: str, include_title: bool, include_basic_text: bool,
+			include_raw_html: bool, selected_methods: list[ str ], recursive: bool,
+			max_depth: int, max_pages: int,
+			same_domain_only: bool ) -> tuple[ list[ dict[ str, Any ] ], dict[ str, Any ] ]:
 		results: list[ dict[ str, Any ] ] = [ ]
 		visited: set[ str ] = set( )
 		enqueued: set[ str ] = set( )
@@ -5363,7 +5373,8 @@ elif mode == 'Scraping':
 	
 	col_left, col_right = st.columns( [ 0.35, 0.65 ], border=True, gap='xxsmall' )
 	with col_left:
-		target_url = st.text_input( 'Enter Target URL', placeholder='https://example.com', key='webfetcher_url' )
+		target_url = st.text_input( 'Enter Target URL', placeholder='https://example.com',
+			key='webfetcher_url' )
 		
 		st.markdown( '##### Core Output' )
 		include_title = st.checkbox( 'Page Title', value=True, key='wf_page_title' )
@@ -5399,13 +5410,14 @@ elif mode == 'Scraping':
 		
 		st.markdown( '##### Crawl Controls' )
 		enable_recursive = st.checkbox( 'Recursive Crawl', value=False, key='wf_recursive' )
-		max_depth = st.number_input( 'Max Depth', min_value=0, max_value=10, value=1, step=1, key='wf_max_depth', disabled=(
-			not enable_recursive) )
+		max_depth = st.number_input( 'Max Depth', min_value=0, max_value=10, value=1,
+			step=1, key='wf_max_depth', disabled=( not enable_recursive) )
 		
-		max_pages = st.number_input( 'Max Pages', min_value=1, max_value=500, value=10, step=1, key='wf_max_pages' )
+		max_pages = st.number_input( 'Max Pages', min_value=1, max_value=500,
+			value=10, step=1, key='wf_max_pages' )
 		
-		same_domain_only = st.checkbox( 'Same Domain Only', value=True, key='wf_same_domain_only', disabled=(
-			not enable_recursive) )
+		same_domain_only = st.checkbox( 'Same Domain Only', value=True,
+			key='wf_same_domain_only', disabled=( not enable_recursive) )
 		
 		b1, b2 = st.columns( 2 )
 		with b1:
@@ -5420,7 +5432,11 @@ elif mode == 'Scraping':
 				if not target_url or not target_url.strip( ):
 					raise ValueError( 'A target URL is required.' )
 				
-				results, summary = _crawl_pages( seed_url=target_url.strip( ), include_title=include_title, include_basic_text=include_basic_text, include_raw_html=include_raw_html, selected_methods=selected_methods, recursive=bool( enable_recursive ), max_depth=int( max_depth ), max_pages=int( max_pages ), same_domain_only=bool( same_domain_only ) )
+				results, summary = _crawl_pages( seed_url=target_url.strip( ),
+					include_title=include_title, include_basic_text=include_basic_text,
+					include_raw_html=include_raw_html, selected_methods=selected_methods,
+					recursive=bool( enable_recursive ), max_depth=int( max_depth ),
+					max_pages=int( max_pages ), same_domain_only=bool( same_domain_only ) )
 				
 				st.session_state[ 'webscrape_results' ] = results
 				st.session_state[ 'webscrape_summary' ] = summary
@@ -5456,12 +5472,14 @@ elif mode == 'Scraping':
 					plain_text = page.get( 'plain_text', '' )
 					if isinstance( plain_text, str ) and plain_text.strip( ):
 						st.subheader( 'Basic Text' )
-						st.text_area( label='', value=_truncate_text( plain_text, limit=12000 ), height=280, key=f'webscrape_plain_text_{idx}' )
+						st.text_area( label='', value=_truncate_text( plain_text, limit=12000 ),
+							height=280, key=f'webscrape_plain_text_{idx}' )
 					
 					raw_html = page.get( 'raw_html', '' )
 					if isinstance( raw_html, str ) and raw_html.strip( ):
 						st.subheader( 'Raw HTML' )
-						st.text_area( label='', value=_truncate_text( raw_html, limit=12000 ), height=240, key=f'webscrape_raw_html_{idx}' )
+						st.text_area( label='', value=_truncate_text( raw_html, limit=12000 ),
+							height=240, key=f'webscrape_raw_html_{idx}' )
 					
 					discovered_links = page.get( 'links_discovered', [ ] ) or [ ]
 					if discovered_links:

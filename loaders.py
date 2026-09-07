@@ -887,8 +887,7 @@ class WebLoader( Loader ):
 			'max_depth', 'timeout', 'ignore', 'with_progress', 'recursive', 'prevent_outside',
 			'verify_exists', 'resolve_paths', 'split_documents', 'load', 'load_pages', 'split', ]
 	
-	def load( self, urls: str | List[ str ], depth: int=2, timeout: int=10, ignore: bool=
-	True,
+	def load( self, urls: str | List[ str ], depth: int=2, timeout: int=10, ignore: bool=True,
 		progress: bool=True, prevent_outside: bool=True ) -> List[ Document ] | None:
 		"""Load.
 
@@ -950,8 +949,8 @@ class WebLoader( Loader ):
 			self.ignore = ignore
 			self.with_progress = progress
 			self.loader = WebBaseLoader( web_paths=self.web_paths,
-				show_progress=self.with_progress,
-				continue_on_failure=self.ignore, requests_kwargs={ 'timeout': self.timeout } )
+				show_progress=self.with_progress, continue_on_failure=self.ignore,
+				requests_kwargs={ 'timeout': self.timeout } )
 			
 			self.documents = self.loader.load( )
 			return self.documents
