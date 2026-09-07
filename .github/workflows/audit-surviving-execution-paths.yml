@@ -1,0 +1,181 @@
+name: Audit Surviving Execution Paths
+
+on:
+  push:
+    branches:
+      - remove-data-management-runtime-fixes-v2
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    if: github.event.head_commit.message != 'Record surviving execution path audit'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: remove-data-management-runtime-fixes-v2
+          fetch-depth: 0
+
+      - name: Audit local UI to wrapper contracts
+        shell: bash
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import ast
+          import json
+          from pathlib import Path
+
+          service_files = ['loaders.py', 'scrapers.py', 'fetchers.py', 'generators.py']
+          class_methods: dict[str, dict[str, ast.FunctionDef | ast.AsyncFunctionDef]] = {}
+
+          for filename in service_files:
+              tree = ast.parse(Path(filename).read_text(encoding='utf-8'), filename=filename)
+              for node in tree.body:
+                  if not isinstance(node, ast.ClassDef):
+                      continue
+                  methods: dict[str, ast.FunctionDef | ast.AsyncFunctionDef] = {}
+                  for member in node.body:
+                      if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                          methods[member.name] = member
+                  class_methods[node.name] = methods
+
+          app_path = Path('app.py')
+          app_text = app_path.read_text(encoding='utf-8')
+          app_tree = ast.parse(app_text, filename='app.py')
+
+          imported_service_classes: set[str] = set()
+          for node in app_tree.body:
+              if isinstance(node, ast.ImportFrom) and node.module in {'loaders', 'scrapers', 'fetchers', 'generators'}:
+                  imported_service_classes.update(alias.asname or alias.name for alias in node.names)
+
+          assignments: dict[str, str] = {}
+          errors: list[dict[str, object]] = []
+          checked_calls: list[dict[str, object]] = []
+
+          def signature_bounds(method: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[int, int | None, set[str], bool]:
+              args = method.args
+              positional = list(args.posonlyargs) + list(args.args)
+              if positional and positional[0].arg in {'self', 'cls'}:
+                  positional = positional[1:]
+              defaults = len(args.defaults)
+              required = max(0, len(positional) - defaults)
+              maximum = None if args.vararg is not None else len(positional)
+              keywords = {arg.arg for arg in positional} | {arg.arg for arg in args.kwonlyargs}
+              accepts_kwargs = args.kwarg is not None
+              return required, maximum, keywords, accepts_kwargs
+
+          for node in ast.walk(app_tree):
+              if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                  value = node.value if isinstance(node, ast.Assign) else node.value
+                  if isinstance(value, ast.Call) and isinstance(value.func, ast.Name):
+                      class_name = value.func.id
+                      if class_name in class_methods:
+                          targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                          for target in targets:
+                              if isinstance(target, ast.Name):
+                                  assignments[target.id] = class_name
+
+          for node in ast.walk(app_tree):
+              if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+                  continue
+              if not isinstance(node.func.value, ast.Name):
+                  continue
+              variable = node.func.value.id
+              class_name = assignments.get(variable)
+              if class_name is None:
+                  continue
+              method_name = node.func.attr
+              methods = class_methods[class_name]
+              method = methods.get(method_name)
+              if method is None:
+                  errors.append({
+                      'line': node.lineno,
+                      'class': class_name,
+                      'method': method_name,
+                      'error': 'method does not exist on local wrapper class',
+                  })
+                  continue
+
+              required, maximum, keywords, accepts_kwargs = signature_bounds(method)
+              positional_count = len(node.args)
+              supplied_keywords = {kw.arg for kw in node.keywords if kw.arg is not None}
+              checked_calls.append({
+                  'line': node.lineno,
+                  'class': class_name,
+                  'method': method_name,
+                  'positional': positional_count,
+                  'keywords': sorted(supplied_keywords),
+              })
+
+              if maximum is not None and positional_count > maximum:
+                  errors.append({
+                      'line': node.lineno,
+                      'class': class_name,
+                      'method': method_name,
+                      'error': f'{positional_count} positional arguments exceed maximum {maximum}',
+                  })
+              unknown = supplied_keywords - keywords
+              if unknown and not accepts_kwargs:
+                  errors.append({
+                      'line': node.lineno,
+                      'class': class_name,
+                      'method': method_name,
+                      'error': f'unknown keyword arguments: {sorted(unknown)}',
+                  })
+
+          mode_keys: list[str] = []
+          config_tree = ast.parse(Path('config.py').read_text(encoding='utf-8'), filename='config.py')
+          for node in config_tree.body:
+              if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == 'MODE_MAP' for target in node.targets):
+                  if isinstance(node.value, ast.Dict):
+                      mode_keys = [key.value for key in node.value.keys if isinstance(key, ast.Constant) and isinstance(key.value, str)]
+
+          branch_modes: set[str] = set()
+          for node in ast.walk(app_tree):
+              if not isinstance(node, ast.Compare) or len(node.ops) != 1 or not isinstance(node.ops[0], ast.Eq):
+                  continue
+              if not isinstance(node.left, ast.Name) or node.left.id != 'mode' or len(node.comparators) != 1:
+                  continue
+              value = node.comparators[0]
+              if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                  branch_modes.add(value.value)
+
+          missing_branches = sorted(set(mode_keys) - branch_modes)
+          stale_branches = sorted(branch_modes - set(mode_keys))
+          if missing_branches:
+              errors.append({'error': f'MODE_MAP values without execution branches: {missing_branches}'})
+          if stale_branches:
+              errors.append({'error': f'Execution branches absent from MODE_MAP: {stale_branches}'})
+
+          report = {
+              'checked_local_wrapper_calls': len(checked_calls),
+              'mode_keys': mode_keys,
+              'branch_modes': sorted(branch_modes),
+              'errors': errors,
+          }
+          Path('execution-path-audit.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(report, indent=2))
+
+          if errors:
+              raise SystemExit(1)
+          PY
+
+          python -m compileall -q app.py config.py generators.py fetchers.py loaders.py scrapers.py data.py
+
+          python - <<'PY'
+          from pathlib import Path
+          import ast
+
+          for filename in ['app.py', 'config.py', 'generators.py', 'fetchers.py', 'loaders.py', 'scrapers.py', 'data.py']:
+              ast.parse(Path(filename).read_text(encoding='utf-8'), filename=filename)
+          PY
+
+          rm .github/workflows/audit-surviving-execution-paths.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Record surviving execution path audit"
+          git push origin HEAD:remove-data-management-runtime-fixes-v2
