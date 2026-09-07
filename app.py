@@ -7195,6 +7195,7 @@ elif mode == 'Geospatial':
 		else:
 			st.caption( f'Active Source: {active_source}' )
 		
+		# -------- Geocoding
 		if active_source == 'Geocoding':
 			st.markdown( 'Results' )
 			if googlegeocoding_submit:
