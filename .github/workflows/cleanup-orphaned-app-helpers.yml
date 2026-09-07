@@ -1,0 +1,126 @@
+name: Cleanup Orphaned App Helpers
+
+on:
+  push:
+    branches:
+      - remove-data-management-runtime-fixes-v2
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.event.head_commit.message != 'Remove orphaned Data Management helpers'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: remove-data-management-runtime-fixes-v2
+          fetch-depth: 0
+
+      - name: Remove orphaned helper closure
+        shell: bash
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import ast
+          import re
+          from pathlib import Path
+
+          path = Path('app.py')
+          text = path.read_text(encoding='utf-8')
+          tree = ast.parse(text)
+          lines = text.splitlines(keepends=True)
+
+          start_marker = '# ----------  Database Utilities --------------'
+          end_marker = '# -------- Expander Utilities'
+          start_line = next(i + 1 for i, line in enumerate(lines) if start_marker in line)
+          end_line = next(i + 1 for i, line in enumerate(lines) if end_marker in line)
+
+          functions = {
+              node.name: node
+              for node in tree.body
+              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+              and start_line < node.lineno < end_line
+          }
+          candidate_names = set(functions)
+          if not candidate_names:
+              raise RuntimeError('No utility functions found in the audited section.')
+
+          dependencies: dict[str, set[str]] = {}
+          for name, node in functions.items():
+              dependencies[name] = {
+                  child.id
+                  for child in ast.walk(node)
+                  if isinstance(child, ast.Name)
+                  and isinstance(child.ctx, ast.Load)
+                  and child.id in candidate_names
+                  and child.id != name
+              }
+
+          external_references: set[str] = set()
+          for node in tree.body:
+              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in candidate_names:
+                  continue
+              for child in ast.walk(node):
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load) and child.id in candidate_names:
+                      external_references.add(child.id)
+
+          live = set(external_references)
+          changed = True
+          while changed:
+              changed = False
+              for name in list(live):
+                  for dependency in dependencies.get(name, set()):
+                      if dependency not in live:
+                          live.add(dependency)
+                          changed = True
+
+          dead = candidate_names - live
+          if not dead:
+              raise RuntimeError('No orphaned helpers were identified for removal.')
+
+          for node in sorted((functions[name] for name in dead), key=lambda item: item.lineno, reverse=True):
+              del lines[node.lineno - 1:node.end_lineno]
+
+          text = ''.join(lines)
+          text = re.sub(
+              r'(?m)^# ----------  Database Utilities --------------\s*\n(?:\s*\n)*(?=# -------- Expander Utilities)',
+              '',
+              text,
+          )
+
+          if 'sqlite3' not in text.replace('import sqlite3\n', '').replace('from sqlite3 import Connection\n', ''):
+              text = text.replace('import sqlite3\n', '')
+              text = text.replace('from sqlite3 import Connection\n', '')
+
+          path.write_text(text, encoding='utf-8')
+          ast.parse(text)
+
+          print('Removed helpers:')
+          for name in sorted(dead):
+              print(f'  - {name}')
+          print('Retained helpers referenced by surviving execution paths:')
+          for name in sorted(live):
+              print(f'  - {name}')
+          PY
+
+          python -m compileall -q app.py config.py generators.py fetchers.py loaders.py scrapers.py data.py
+
+          if grep -q "management_mode\|management_modes\|cfg.DB_MODES" app.py; then
+            echo "Stale Data Management selector state remains." >&2
+            exit 1
+          fi
+
+          if grep -Eq "(if|elif) mode == '(Data Browse|Data Upload|CRUD Ops|Data Filter|Data Aggregation|SQL Console)'" app.py; then
+            echo "Stale Data Management execution branch remains." >&2
+            exit 1
+          fi
+
+          rm .github/workflows/cleanup-orphaned-app-helpers.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Remove orphaned Data Management helpers"
+          git push origin HEAD:remove-data-management-runtime-fixes-v2
