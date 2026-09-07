@@ -3147,34 +3147,47 @@ class OneDriveDocLoader( Loader ):
 		"""
 		return [ 'pdf', 'doc', 'docx', 'txt' ]
 	
-	def load( self, id: str ) -> List[ Document ] | None:
-		"""Load.
+	def load( self, drive_id: str, folder_path: Optional[ str ],
+		object_ids: Optional[ List[ str ] ], auth_with_token: bool ) -> List[ Document ] | None:
+		"""Load Microsoft OneDrive documents.
 
 		Purpose:
-		    Loads the selected source into LangChain documents using the instance configuration.
+			Loads OneDrive content by drive, optional folder path, or optional object identifiers
+			while preserving the token-authentication control exposed by the Streamlit UI.
 
 		Args:
-		    id (str): Id supplied by the caller and interpreted according to the method contract.
+			drive_id (str): OneDrive drive identifier.
+			folder_path (Optional[str]): Optional folder path within the drive.
+			object_ids (Optional[List[str]]): Optional OneDrive object identifiers to load.
+			auth_with_token (bool): Whether OneDrive authentication uses the saved token flow.
 
 		Returns:
-		    List[Document] | None: LangChain documents produced or transformed by the operation.
+			List[Document] | None: Documents loaded from OneDrive.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+			Error: Wraps, logs, and re-raises source failures with Foo metadata.
 		"""
 		try:
-			throw_if( 'id', id )
-			self.drive_id = id
-			self.loader = OneDriveLoader( drive_id=self.drive_id )
+			throw_if( 'drive_id', drive_id )
+			self.drive_id = drive_id
+			self.folder_path = folder_path
+			self.object_ids = object_ids
+			self.auth_with_token = auth_with_token
+			self.loader = OneDriveLoader(
+				drive_id=self.drive_id,
+				folder_path=self.folder_path,
+				object_ids=self.object_ids,
+				auth_with_token=self.auth_with_token )
 			self.documents = self.loader.load( )
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
-			exception.cause = 'WikiLoader'
-			exception.method = 'load( self, path: str ) -> List[ Document ]'
+			exception.module = 'loaders'
+			exception.cause = 'OneDriveDocLoader'
+			exception.method = 'load( self, drive_id: str, folder_path: Optional[ str ], object_ids: Optional[ List[ str ] ], auth_with_token: bool )'
 			Logger( ).write( exception )
 			raise exception
+
 	
 	def load_folder( self, id: str, path: str ) -> List[ Document ] | None:
 		"""Load folder.
@@ -4054,59 +4067,69 @@ class AwsFileLoader( Loader ):
 			'overlap_amount', 'load', 'split', 'split_documents', ]
 	
 	def load( self, bucket: str, key: str, aws_access_key_id: Optional[ str ] = None,
-		aws_secret_access_key: Optional[ str ] = None, aws_session_token: Optional[ str ] = None,
-		region_name: Optional[ str ] = None ) -> List[ Document ] | None:
-		"""Load.
+		aws_secret_access_key: Optional[ str ] = None,
+		aws_session_token: Optional[ str ] = None,
+		region_name: Optional[ str ] = None, api_version: Optional[ str ] = None,
+		use_ssl: bool = True, verify: str | bool | None = None,
+		endpoint_url: Optional[ str ] = None ) -> List[ Document ] | None:
+		"""Load an Amazon S3 object.
 
 		Purpose:
-		    Loads the selected source into LangChain documents using the instance configuration.
+			Loads one S3 object through ``S3FileLoader`` while preserving the connection,
+			credential, SSL, and endpoint controls exposed by the Streamlit UI.
 
 		Args:
-		    bucket (str): Bucket supplied by the caller and interpreted according to the method contract.
-		    key (str): Key supplied by the caller and interpreted according to the method contract.
-		    aws_access_key_id (Optional[str]): Provider identifier of the target aws access key resource.
-		    aws_secret_access_key (Optional[str]): Aws secret access key supplied by the caller and interpreted according to the method contract.
-		    aws_session_token (Optional[str]): Aws session token supplied by the caller and interpreted according to the method contract.
-		    region_name (Optional[str]): Region name supplied by the caller and interpreted according to the method contract.
+			bucket (str): S3 bucket containing the object.
+			key (str): S3 object key to load.
+			aws_access_key_id (Optional[str]): Optional AWS access key identifier.
+			aws_secret_access_key (Optional[str]): Optional AWS secret access key.
+			aws_session_token (Optional[str]): Optional AWS session token.
+			region_name (Optional[str]): Optional AWS region name.
+			api_version (Optional[str]): Optional S3 API version.
+			use_ssl (bool): Whether the S3 client uses SSL.
+			verify (str | bool | None): SSL certificate verification setting.
+			endpoint_url (Optional[str]): Optional custom S3 endpoint URL.
 
 		Returns:
-		    List[Document] | None: LangChain documents produced or transformed by the operation.
+			List[Document] | None: Documents loaded from the selected S3 object.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+			Error: Wraps, logs, and re-raises source failures with Foo metadata.
 		"""
 		try:
 			throw_if( 'bucket', bucket )
 			throw_if( 'key', key )
-			
 			self.bucket = bucket
 			self.key = key
 			self.aws_access_key_id = aws_access_key_id
 			self.aws_secret_access_key = aws_secret_access_key
 			self.aws_session_token = aws_session_token
 			self.region_name = region_name
-			
-			kwargs: Dict[ str, Any ] = { }
-			if self.aws_access_key_id:
-				kwargs[ 'aws_access_key_id' ] = self.aws_access_key_id
-			if self.aws_secret_access_key:
-				kwargs[ 'aws_secret_access_key' ] = self.aws_secret_access_key
-			if self.aws_session_token:
-				kwargs[ 'aws_session_token' ] = self.aws_session_token
-			if self.region_name:
-				kwargs[ 'region_name' ] = self.region_name
-			
-			self.loader = S3FileLoader( self.bucket, self.key, **kwargs )
+			self.api_version = api_version
+			self.use_ssl = use_ssl
+			self.verify = verify
+			self.endpoint_url = endpoint_url
+			self.loader = S3FileLoader(
+				self.bucket,
+				self.key,
+				region_name=self.region_name,
+				api_version=self.api_version,
+				use_ssl=self.use_ssl,
+				verify=self.verify,
+				endpoint_url=self.endpoint_url,
+				aws_access_key_id=self.aws_access_key_id,
+				aws_secret_access_key=self.aws_secret_access_key,
+				aws_session_token=self.aws_session_token )
 			self.documents = self.loader.load( )
 			return self.documents
-		
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'AwsFileLoader'
-			exception.method = 'load( self, **args ) -> List[ Document ] | None'
+			exception.method = 'load( self, bucket: str, key: str, ... )'
 			Logger( ).write( exception )
 			raise exception
+
 	
 	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
 		"""Split.
@@ -4451,28 +4474,35 @@ class AwsBucketLoader( Loader ):
 			'chunk_size', 'overlap_amount', 'load', 'split', 'split_documents', ]
 	
 	def load( self, bucket: str, prefix: Optional[ str ] = None,
-		aws_access_key_id: Optional[ str ] = None, aws_secret_access_key: Optional[ str ] = None,
-		aws_session_token: Optional[ str ] = None, region_name: Optional[ str ] = None,
-		endpoint_url: Optional[ str ] = None ) -> List[ Document ] | None:
-		"""Load.
+		aws_access_key_id: Optional[ str ] = None,
+		aws_secret_access_key: Optional[ str ] = None,
+		aws_session_token: Optional[ str ] = None,
+		region_name: Optional[ str ] = None, endpoint_url: Optional[ str ] = None,
+		api_version: Optional[ str ] = None, use_ssl: bool = True,
+		verify: str | bool | None = None ) -> List[ Document ] | None:
+		"""Load an Amazon S3 directory.
 
 		Purpose:
-		    Loads the selected source into LangChain documents using the instance configuration.
+			Loads objects beneath an S3 prefix through ``S3DirectoryLoader`` while preserving
+			the connection, credential, SSL, and endpoint controls exposed by the UI.
 
 		Args:
-		    bucket (str): Bucket supplied by the caller and interpreted according to the method contract.
-		    prefix (Optional[str]): Prefix supplied by the caller and interpreted according to the method contract.
-		    aws_access_key_id (Optional[str]): Provider identifier of the target aws access key resource.
-		    aws_secret_access_key (Optional[str]): Aws secret access key supplied by the caller and interpreted according to the method contract.
-		    aws_session_token (Optional[str]): Aws session token supplied by the caller and interpreted according to the method contract.
-		    region_name (Optional[str]): Region name supplied by the caller and interpreted according to the method contract.
-		    endpoint_url (Optional[str]): Endpoint url supplied by the caller and interpreted according to the method contract.
+			bucket (str): S3 bucket containing the requested objects.
+			prefix (Optional[str]): Optional object-key prefix used to restrict loading.
+			aws_access_key_id (Optional[str]): Optional AWS access key identifier.
+			aws_secret_access_key (Optional[str]): Optional AWS secret access key.
+			aws_session_token (Optional[str]): Optional AWS session token.
+			region_name (Optional[str]): Optional AWS region name.
+			endpoint_url (Optional[str]): Optional custom S3 endpoint URL.
+			api_version (Optional[str]): Optional S3 API version.
+			use_ssl (bool): Whether the S3 client uses SSL.
+			verify (str | bool | None): SSL certificate verification setting.
 
 		Returns:
-		    List[Document] | None: LangChain documents produced or transformed by the operation.
+			List[Document] | None: Documents loaded beneath the selected prefix.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+			Error: Wraps, logs, and re-raises source failures with Foo metadata.
 		"""
 		try:
 			throw_if( 'bucket', bucket )
@@ -4483,31 +4513,30 @@ class AwsBucketLoader( Loader ):
 			self.aws_session_token = aws_session_token
 			self.region_name = region_name
 			self.endpoint_url = endpoint_url
-			
-			kwargs: Dict[ str, Any ] = { }
-			if self.prefix:
-				kwargs[ 'prefix' ] = self.prefix
-			if self.aws_access_key_id:
-				kwargs[ 'aws_access_key_id' ] = self.aws_access_key_id
-			if self.aws_secret_access_key:
-				kwargs[ 'aws_secret_access_key' ] = self.aws_secret_access_key
-			if self.aws_session_token:
-				kwargs[ 'aws_session_token' ] = self.aws_session_token
-			if self.region_name:
-				kwargs[ 'region_name' ] = self.region_name
-			if self.endpoint_url:
-				kwargs[ 'endpoint_url' ] = self.endpoint_url
-			
-			self.loader = S3DirectoryLoader( self.bucket, **kwargs )
+			self.api_version = api_version
+			self.use_ssl = use_ssl
+			self.verify = verify
+			self.loader = S3DirectoryLoader(
+				self.bucket,
+				prefix=self.prefix or '',
+				region_name=self.region_name,
+				api_version=self.api_version,
+				use_ssl=self.use_ssl,
+				verify=self.verify,
+				endpoint_url=self.endpoint_url,
+				aws_access_key_id=self.aws_access_key_id,
+				aws_secret_access_key=self.aws_secret_access_key,
+				aws_session_token=self.aws_session_token )
 			self.documents = self.loader.load( )
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'loaders'
-			exception.cause = 'AmazonBucketLoader'
-			exception.method = 'load( self, **args ) -> List[ Document ] | None'
+			exception.cause = 'AwsBucketLoader'
+			exception.method = 'load( self, bucket: str, prefix: Optional[ str ], ... )'
 			Logger( ).write( exception )
 			raise exception
+
 	
 	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
 		"""Split.

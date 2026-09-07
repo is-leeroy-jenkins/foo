@@ -64,7 +64,7 @@ from typing import Any, Dict, List, Tuple, Callable
 from langchain_core.documents import Document
 from lxml import etree
 from processors import PdfParser
-from loaders import (TextLoader, CsvLoader, PdfLoader, ExcelLoader, WordLoader, MarkdownLoader, HtmlLoader, JsonLoader, PowerPointLoader, WikiLoader, GithubLoader, WebLoader, ArXivLoader, XmlLoader, PubMedSearchLoader, OpenCityLoader, OutlookLoader, JupyterNotebookLoader, AwsFileLoader, OneDriveDocLoader, GoogleCloudFileLoader, GoogleSpeechToTextLoader, GoogleBucketLoader, AwsBucketLoader, EmailLoader, SpfxLoader)
+from loaders import (TextLoader, CsvLoader, PdfLoader, ExcelLoader, WordLoader, MarkdownLoader, HtmlLoader, JsonLoader, PowerPointLoader, WikiLoader, GithubLoader, WebLoader, ArXivLoader, XmlLoader, PubMedSearchLoader, OpenCityLoader, OutlookLoader, JupyterNotebookLoader, AwsFileLoader, OneDriveDocLoader, GoogleCloudFileLoader, GoogleSpeechToTextLoader, GoogleBucketLoader, AwsBucketLoader, EmailLoader, SpfxLoader, WebCrawler as LoaderWebCrawler)
 
 from generators import Chat, Claude, Grok, Mistral, Gemini
 from fetchers import (Wikipedia, TheNews, SatelliteCenter, WebFetcher, GoogleWeather, Grokipedia, OpenWeather, NavalObservatory, GoogleSearch, GoogleDrive, GoogleMaps, NearbyObjects, OpenScience, EarthObservatory, SpaceWeather, AstroCatalog, AstroQuery, StarMap, GovData, Congress, InternetArchive, StarChart, HistoricalWeather, GoogleGeocoding, USGSEarthquakes, USGSWaterData, USGSTheNationalMap, USGSScienceBase, AirNow, ClimateData, EoNet, EnviroFacts, TidesAndCurrents, UvIndex, PurpleAir, OpenAQ, Firms, CensusData, Socrata, HealthData, GlobalHealthData, UnitedNations, WorldPopulation, Wonder, OpenSky, WebCrawler)
@@ -2301,7 +2301,7 @@ if mode == 'Loading':
 					st.session_state[ '_loader_status' ] = 'Web Crawler state cleared.'
 				
 				if run_crawl and isinstance( start_url, str ) and start_url.strip( ):
-					loader = WebCrawler( url=start_url.strip( ), recursive=True,
+					loader = LoaderWebCrawler( url=start_url.strip( ), recursive=True,
 						max_depth=int( max_depth ), prevent_outside=bool( stay_on_domain ),
 						timeout=int( crawl_timeout ), ignore=True, progress=True, )
 					
