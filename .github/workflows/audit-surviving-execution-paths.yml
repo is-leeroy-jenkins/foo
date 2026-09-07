@@ -29,29 +29,40 @@ jobs:
           from pathlib import Path
 
           service_files = ['loaders.py', 'scrapers.py', 'fetchers.py', 'generators.py']
-          class_methods: dict[str, dict[str, ast.FunctionDef | ast.AsyncFunctionDef]] = {}
+          class_nodes: dict[str, ast.ClassDef] = {}
+          own_methods: dict[str, dict[str, ast.FunctionDef | ast.AsyncFunctionDef]] = {}
 
           for filename in service_files:
               tree = ast.parse(Path(filename).read_text(encoding='utf-8'), filename=filename)
               for node in tree.body:
-                  if not isinstance(node, ast.ClassDef):
-                      continue
-                  methods: dict[str, ast.FunctionDef | ast.AsyncFunctionDef] = {}
-                  for member in node.body:
-                      if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                          methods[member.name] = member
-                  class_methods[node.name] = methods
+                  if isinstance(node, ast.ClassDef):
+                      class_nodes[node.name] = node
+                      own_methods[node.name] = {
+                          member.name: member
+                          for member in node.body
+                          if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef))
+                      }
+
+          def resolve_methods(class_name: str, seen: set[str] | None = None) -> dict[str, ast.FunctionDef | ast.AsyncFunctionDef]:
+              visited = set(seen or set())
+              if class_name in visited:
+                  return {}
+              visited.add(class_name)
+              node = class_nodes.get(class_name)
+              if node is None:
+                  return {}
+              methods: dict[str, ast.FunctionDef | ast.AsyncFunctionDef] = {}
+              for base in node.bases:
+                  if isinstance(base, ast.Name) and base.id in class_nodes:
+                      methods.update(resolve_methods(base.id, visited))
+              methods.update(own_methods.get(class_name, {}))
+              return methods
+
+          class_methods = {name: resolve_methods(name) for name in class_nodes}
 
           app_path = Path('app.py')
           app_text = app_path.read_text(encoding='utf-8')
           app_tree = ast.parse(app_text, filename='app.py')
-
-          imported_service_classes: set[str] = set()
-          for node in app_tree.body:
-              if isinstance(node, ast.ImportFrom) and node.module in {'loaders', 'scrapers', 'fetchers', 'generators'}:
-                  imported_service_classes.update(alias.asname or alias.name for alias in node.names)
-
-          assignments: dict[str, str] = {}
           errors: list[dict[str, object]] = []
           checked_calls: list[dict[str, object]] = []
 
@@ -64,40 +75,24 @@ jobs:
               required = max(0, len(positional) - defaults)
               maximum = None if args.vararg is not None else len(positional)
               keywords = {arg.arg for arg in positional} | {arg.arg for arg in args.kwonlyargs}
-              accepts_kwargs = args.kwarg is not None
-              return required, maximum, keywords, accepts_kwargs
+              return required, maximum, keywords, args.kwarg is not None
 
-          for node in ast.walk(app_tree):
-              if isinstance(node, (ast.Assign, ast.AnnAssign)):
-                  value = node.value if isinstance(node, ast.Assign) else node.value
-                  if isinstance(value, ast.Call) and isinstance(value.func, ast.Name):
-                      class_name = value.func.id
-                      if class_name in class_methods:
-                          targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-                          for target in targets:
-                              if isinstance(target, ast.Name):
-                                  assignments[target.id] = class_name
-
-          for node in ast.walk(app_tree):
-              if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
-                  continue
-              if not isinstance(node.func.value, ast.Name):
-                  continue
-              variable = node.func.value.id
-              class_name = assignments.get(variable)
+          def check_call(node: ast.Call, env: dict[str, str]) -> None:
+              if not isinstance(node.func, ast.Attribute) or not isinstance(node.func.value, ast.Name):
+                  return
+              class_name = env.get(node.func.value.id)
               if class_name is None:
-                  continue
+                  return
               method_name = node.func.attr
-              methods = class_methods[class_name]
-              method = methods.get(method_name)
+              method = class_methods.get(class_name, {}).get(method_name)
               if method is None:
                   errors.append({
                       'line': node.lineno,
                       'class': class_name,
                       'method': method_name,
-                      'error': 'method does not exist on local wrapper class',
+                      'error': 'method does not exist on wrapper class or local base class',
                   })
-                  continue
+                  return
 
               required, maximum, keywords, accepts_kwargs = signature_bounds(method)
               positional_count = len(node.args)
@@ -109,7 +104,6 @@ jobs:
                   'positional': positional_count,
                   'keywords': sorted(supplied_keywords),
               })
-
               if maximum is not None and positional_count > maximum:
                   errors.append({
                       'line': node.lineno,
@@ -125,6 +119,96 @@ jobs:
                       'method': method_name,
                       'error': f'unknown keyword arguments: {sorted(unknown)}',
                   })
+
+          def inspect_expression(node: ast.AST | None, env: dict[str, str]) -> None:
+              if node is None:
+                  return
+              for child in ast.walk(node):
+                  if isinstance(child, ast.Call):
+                      check_call(child, env)
+
+          def assigned_class(value: ast.AST | None) -> str | None:
+              if isinstance(value, ast.Call) and isinstance(value.func, ast.Name) and value.func.id in class_methods:
+                  return value.func.id
+              return None
+
+          def process_block(statements: list[ast.stmt], incoming: dict[str, str]) -> dict[str, str]:
+              env = dict(incoming)
+              for stmt in statements:
+                  if isinstance(stmt, ast.Assign):
+                      inspect_expression(stmt.value, env)
+                      class_name = assigned_class(stmt.value)
+                      for target in stmt.targets:
+                          if isinstance(target, ast.Name):
+                              if class_name is None:
+                                  env.pop(target.id, None)
+                              else:
+                                  env[target.id] = class_name
+                      continue
+
+                  if isinstance(stmt, ast.AnnAssign):
+                      inspect_expression(stmt.value, env)
+                      if isinstance(stmt.target, ast.Name):
+                          class_name = assigned_class(stmt.value)
+                          if class_name is None:
+                              env.pop(stmt.target.id, None)
+                          else:
+                              env[stmt.target.id] = class_name
+                      continue
+
+                  if isinstance(stmt, ast.AugAssign):
+                      inspect_expression(stmt.value, env)
+                      continue
+
+                  if isinstance(stmt, ast.Expr):
+                      inspect_expression(stmt.value, env)
+                      continue
+
+                  if isinstance(stmt, ast.If):
+                      inspect_expression(stmt.test, env)
+                      process_block(stmt.body, dict(env))
+                      process_block(stmt.orelse, dict(env))
+                      continue
+
+                  if isinstance(stmt, (ast.For, ast.AsyncFor)):
+                      inspect_expression(stmt.iter, env)
+                      process_block(stmt.body, dict(env))
+                      process_block(stmt.orelse, dict(env))
+                      continue
+
+                  if isinstance(stmt, ast.While):
+                      inspect_expression(stmt.test, env)
+                      process_block(stmt.body, dict(env))
+                      process_block(stmt.orelse, dict(env))
+                      continue
+
+                  if isinstance(stmt, (ast.With, ast.AsyncWith)):
+                      for item in stmt.items:
+                          inspect_expression(item.context_expr, env)
+                      process_block(stmt.body, dict(env))
+                      continue
+
+                  if isinstance(stmt, ast.Try):
+                      process_block(stmt.body, dict(env))
+                      for handler in stmt.handlers:
+                          process_block(handler.body, dict(env))
+                      process_block(stmt.orelse, dict(env))
+                      process_block(stmt.finalbody, dict(env))
+                      continue
+
+                  if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                      process_block(stmt.body, {})
+                      continue
+
+                  if isinstance(stmt, ast.ClassDef):
+                      continue
+
+                  for child in ast.iter_child_nodes(stmt):
+                      if isinstance(child, ast.expr):
+                          inspect_expression(child, env)
+              return env
+
+          process_block(app_tree.body, {})
 
           mode_keys: list[str] = []
           config_tree = ast.parse(Path('config.py').read_text(encoding='utf-8'), filename='config.py')
@@ -158,20 +242,11 @@ jobs:
           }
           Path('execution-path-audit.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
           print(json.dumps(report, indent=2))
-
           if errors:
               raise SystemExit(1)
           PY
 
           python -m compileall -q app.py config.py generators.py fetchers.py loaders.py scrapers.py data.py
-
-          python - <<'PY'
-          from pathlib import Path
-          import ast
-
-          for filename in ['app.py', 'config.py', 'generators.py', 'fetchers.py', 'loaders.py', 'scrapers.py', 'data.py']:
-              ast.parse(Path(filename).read_text(encoding='utf-8'), filename=filename)
-          PY
 
           rm .github/workflows/audit-surviving-execution-paths.yml
           git config user.name "github-actions[bot]"
