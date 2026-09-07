@@ -1,0 +1,24 @@
+{
+  "checked_local_wrapper_calls": 89,
+  "mode_keys": [
+    "Loading",
+    "Scraping",
+    "Retrieval",
+    "Geospatial",
+    "Demographic",
+    "Environmental",
+    "Astronomical",
+    "Generation"
+  ],
+  "branch_modes": [
+    "Astronomical",
+    "Demographic",
+    "Environmental",
+    "Generation",
+    "Geospatial",
+    "Loading",
+    "Retrieval",
+    "Scraping"
+  ],
+  "errors": []
+}
