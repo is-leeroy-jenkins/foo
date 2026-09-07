@@ -1,0 +1,304 @@
+name: Refactor Data Management
+
+on:
+  push:
+    branches:
+      - remove-data-management-runtime-fixes
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: github.event.head_commit.message != 'Remove Data Management and fix runtime blockers'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: remove-data-management-runtime-fixes
+          fetch-depth: 0
+
+      - name: Apply source refactor
+        shell: bash
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import ast
+          import re
+          from pathlib import Path
+
+          target_modes = {
+              'Data Browse',
+              'Data Upload',
+              'CRUD Ops',
+              'Data Filter',
+              'Data Aggregation',
+              'SQL Console',
+          }
+
+          def remove_mode_branches(text: str) -> str:
+              lines = text.splitlines(keepends=True)
+              output: list[str] = []
+              index = 0
+              removed: set[str] = set()
+
+              while index < len(lines):
+                  line = lines[index]
+                  stripped = line.strip()
+                  match = re.fullmatch(r"(?:if|elif) mode == ['\"]([^'\"]+)['\"]:", stripped)
+                  if match and match.group(1) in target_modes:
+                      mode = match.group(1)
+                      removed.add(mode)
+                      indent = len(line) - len(line.lstrip(' \t'))
+                      index += 1
+                      while index < len(lines):
+                          candidate = lines[index]
+                          if not candidate.strip():
+                              index += 1
+                              continue
+                          candidate_indent = len(candidate) - len(candidate.lstrip(' \t'))
+                          if candidate_indent <= indent:
+                              break
+                          index += 1
+                      continue
+                  output.append(line)
+                  index += 1
+
+              missing = target_modes - removed
+              if missing:
+                  raise RuntimeError(f'Data Management mode branches not found: {sorted(missing)}')
+              return ''.join(output)
+
+          def replace_function(text: str, function_name: str, replacement: str) -> str:
+              tree = ast.parse(text)
+              node = next((item for item in tree.body
+                           if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
+                           and item.name == function_name), None)
+              if node is None:
+                  raise RuntimeError(f'Function not found: {function_name}')
+              lines = text.splitlines(keepends=True)
+              start = node.lineno - 1
+              end = node.end_lineno
+              return ''.join(lines[:start]) + replacement.rstrip() + '\n\n' + ''.join(lines[end:])
+
+          def remove_management_sidebar(text: str) -> str:
+              old_header = """functionality_modes = [ configured_mode for configured_mode in cfg.MODE_MAP if
+          \t\tconfigured_mode not in cfg.DB_MODES ]
+          management_modes = list( cfg.DB_MODES )
+          active_mode = st.session_state[ 'mode' ]
+          if 'functionality_mode' not in st.session_state:
+          \tst.session_state[ 'functionality_mode' ] = (
+          \t\t\tactive_mode if active_mode in functionality_modes else None)
+          if 'management_mode' not in st.session_state:
+          \tst.session_state[ 'management_mode' ] = (
+          \t\t\tactive_mode if active_mode in management_modes else None)
+          """
+              new_header = """functionality_modes = list( cfg.MODE_MAP.keys( ) )
+          active_mode = st.session_state[ 'mode' ]
+          if 'functionality_mode' not in st.session_state:
+          \tst.session_state[ 'functionality_mode' ] = (
+          \t\t\tactive_mode if active_mode in functionality_modes else None)
+          """
+              if old_header not in text:
+                  raise RuntimeError('Sidebar mode header contract was not found.')
+              text = text.replace(old_header, new_header, 1)
+
+              old_controls = """\tst.radio( label='Mode', options=functionality_modes, index=None,
+          \t\t\tkey='functionality_mode', label_visibility='collapsed',
+          \t\t\ton_change=set_sidebar_mode, args=('functionality_mode', 'management_mode') )
+          \t
+          \tst.divider( )
+          \t
+          \t# ------------- Data -------------
+          \tst.text( '🗄️ Data' )
+          \twith st.expander( label='Management', expanded=False ):
+          \t\tst.radio( label='Management Mode', options=management_modes, index=None,
+          \t\t\tkey='management_mode', label_visibility='collapsed',
+          \t\t\ton_change=set_sidebar_mode, args=( 'management_mode', 'functionality_mode') )
+          """
+              new_controls = """\tst.radio( label='Mode', options=functionality_modes, index=None,
+          \t\t\tkey='functionality_mode', label_visibility='collapsed',
+          \t\t\ton_change=set_sidebar_mode, args=('functionality_mode',) )
+          """
+              if old_controls not in text:
+                  raise RuntimeError('Management sidebar controls were not found.')
+              return text.replace(old_controls, new_controls, 1)
+
+          def remove_dead_database_helpers(text: str) -> str:
+              tokens = ('database', 'sqlite', 'crud', 'data_upload', 'schema', 'table')
+              while True:
+                  tree = ast.parse(text)
+                  loaded_names: set[str] = set()
+                  for node in ast.walk(tree):
+                      if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+                          loaded_names.add(node.id)
+
+                  candidates = [node for node in tree.body
+                                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                                and any(token in node.name.lower() for token in tokens)
+                                and node.name not in loaded_names]
+                  if not candidates:
+                      return text
+
+                  lines = text.splitlines(keepends=True)
+                  for node in sorted(candidates, key=lambda item: item.lineno, reverse=True):
+                      start = node.lineno - 1
+                      end = node.end_lineno
+                      del lines[start:end]
+                  text = ''.join(lines)
+
+          app_path = Path('app.py')
+          app = app_path.read_text(encoding='utf-8')
+          app = remove_mode_branches(app)
+          app = remove_management_sidebar(app)
+
+          set_sidebar_replacement = '''def set_sidebar_mode( source_key: str ) -> None:
+          \t"""Set the active application mode from the sidebar radio group.
+
+          \tPurpose:
+          \t\tPreserves one authoritative application mode from the remaining functionality selector.
+
+          \tArgs:
+          \t\tsource_key (str): Session-state key containing the newly selected mode.
+
+          \tReturns:
+          \t\tNone: This function updates the active mode in Streamlit session state.
+          \t"""
+          \tthrow_if( 'source_key', source_key )
+          \tselected_mode = st.session_state.get( source_key )
+          \tif selected_mode:
+          \t\tst.session_state[ 'mode' ] = selected_mode
+          '''
+          app = replace_function(app, 'set_sidebar_mode', set_sidebar_replacement)
+
+          invoke_replacement = '''def _invoke_provider( fetcher: Any, prompt: str, params: dict[ str, Any ] ) -> Any:
+          \t"""Invoke a generation provider through its public text-generation contract.
+
+          \tPurpose:
+          \t\tExecutes one provider request without retrying a caught ``TypeError`` under a different
+          \t\tcall signature. Provider-specific argument translation remains owned by the wrapper.
+
+          \tArgs:
+          \t\tfetcher (Any): Provider wrapper instance exposing ``generate_text``.
+          \t\tprompt (str): Prompt submitted to the provider wrapper.
+          \t\tparams (dict[str, Any]): UI-controlled generation parameters.
+
+          \tReturns:
+          \t\tAny: Provider wrapper result returned by ``generate_text``.
+
+          \tRaises:
+          \t\tRuntimeError: Raised when the provider does not expose ``generate_text``.
+          \t"""
+          \tthrow_if( 'fetcher', fetcher )
+          \tthrow_if( 'prompt', prompt )
+          \tthrow_if( 'params', params )
+          \tif not hasattr( fetcher, 'generate_text' ) or not callable( getattr( fetcher, 'generate_text' ) ):
+          \t\traise RuntimeError(
+          \t\t\tf"Provider '{type( fetcher ).__name__}' does not expose generate_text." )
+          \tfn = getattr( fetcher, 'generate_text' )
+          \tsafe = filter_kwargs_for_callable( fn, params )
+          \treturn fn( prompt, **safe )
+          '''
+          app = replace_function(app, '_invoke_provider', invoke_replacement)
+
+          claude_anchor = "\t\t\tif claude_submit:\n"
+          if claude_anchor not in app:
+              raise RuntimeError('Claude submit block was not found.')
+          claude_guard_anchor = "\t\t\t\ttry:\n"
+          submit_pos = app.index(claude_anchor)
+          try_pos = app.index(claude_guard_anchor, submit_pos)
+          guard = (
+              "\t\t\t\ttry:\n"
+              "\t\t\t\t\tif claude_thinking and (claude_thinking_budget is None or "
+              "int( claude_thinking_budget ) >= int( claude_max_tokens )):\n"
+              "\t\t\t\t\t\traise ValueError( 'Thinking Budget must be less than Max Tokens.' )\n"
+          )
+          app = app[:try_pos] + guard + app[try_pos + len(claude_guard_anchor):]
+
+          app = remove_dead_database_helpers(app)
+          if "import sqlite3\n" in app and not re.search(r'\bsqlite3\b', app.replace('import sqlite3\n', '')):
+              app = app.replace('import sqlite3\n', '')
+          if "from sqlite3 import Connection\n" in app and not re.search(r'\bConnection\b', app.replace('from sqlite3 import Connection\n', '')):
+              app = app.replace('from sqlite3 import Connection\n', '')
+          app_path.write_text(app, encoding='utf-8')
+
+          config_path = Path('config.py')
+          config = config_path.read_text(encoding='utf-8')
+          config = config.replace("OPENSKY_API_CLIENT_SECRET = os.getenv( 'OPENSKY_API_CLIENT_ID' )",
+                                  "OPENSKY_API_CLIENT_SECRET = os.getenv( 'OPENSKY_API_CLIENT_SECRET' )")
+          config = config.replace("'Environmntal'", "'Environmental'")
+          config = re.sub(r"\nDB_MODES = \[ 'Data Browse','Data Upload', 'CRUD Ops', 'Data Filter',\n\t'Data Aggregation', 'SQL Console' \]\n", "\n", config, count=1)
+          for mode in target_modes:
+              config = re.sub(rf"\n\t\t'{re.escape(mode)}': '[^']*',?", '', config)
+
+          remaining_app = app_path.read_text(encoding='utf-8')
+          session_keys = ('active_table', 'data_connection', 'df_tables', 'df_schema', 'df_preview', 'df_count')
+          for key in session_keys:
+              if re.search(rf"['\"]{re.escape(key)}['\"]", remaining_app) is None:
+                  config = re.sub(rf"\n\t\t'{re.escape(key)}': [^\n]+,", '', config)
+          config_path.write_text(config, encoding='utf-8')
+
+          def remove_markdown_section(text: str, heading_pattern: str) -> str:
+              pattern = re.compile(
+                  rf"(?ms)^({heading_pattern})\s*$.*?(?=^##?\s|\Z)"
+              )
+              return pattern.sub('', text)
+
+          markdown_paths = [Path('README.md')] + list(Path('docs').rglob('*.md'))
+          for path in markdown_paths:
+              if path == Path('docs/data-management.md'):
+                  continue
+              text = path.read_text(encoding='utf-8')
+              text = re.sub(r"(?m)^.*\|\s*\*\*?Data Management\*\*?.*\|.*\n?", '', text)
+              text = re.sub(r"(?m)^.*\|\s*Data Management\s*\|.*\n?", '', text)
+              text = remove_markdown_section(text, r"## 🗄️ Data Management(?: Mode)?")
+              text = remove_markdown_section(text, r"## 🛡️ Safe Data Management")
+              text = remove_markdown_section(text, r"### Manage SQLite Data")
+              text = text.replace('Data Management mode', 'the persistence API')
+              text = text.replace('data-management UI', 'persistence API')
+              text = text.replace('data-management workflows', 'persistence workflows')
+              text = text.replace('Data-management workflows', 'Persistence workflows')
+              text = text.replace('Relationship to Data Management', 'Relationship to Persistence')
+              text = text.replace('SQLite data-management workspace', 'data-processing workspace')
+              path.write_text(text, encoding='utf-8')
+
+          mkdocs_path = Path('mkdocs.yml')
+          mkdocs = mkdocs_path.read_text(encoding='utf-8')
+          mkdocs = re.sub(r"(?m)^\s*- Data Management:\s*data-management\.md\s*\n", '', mkdocs)
+          mkdocs_path.write_text(mkdocs, encoding='utf-8')
+
+          data_management_doc = Path('docs/data-management.md')
+          if data_management_doc.exists():
+              data_management_doc.unlink()
+
+          # Verification
+          app = app_path.read_text(encoding='utf-8')
+          config = config_path.read_text(encoding='utf-8')
+          for mode in target_modes:
+              if re.search(rf"(?:if|elif) mode == ['\"]{re.escape(mode)}['\"]:", app):
+                  raise RuntimeError(f'Remaining Data Management branch: {mode}')
+              if f"'{mode}':" in config:
+                  raise RuntimeError(f'Remaining Data Management MODE_MAP entry: {mode}')
+          if 'management_mode' in app or 'management_modes' in app:
+              raise RuntimeError('Management sidebar state remains in app.py.')
+          if 'cfg.DB_MODES' in app or 'DB_MODES =' in config:
+              raise RuntimeError('DB_MODES contract remains after refactor.')
+          if "OPENSKY_API_CLIENT_SECRET = os.getenv( 'OPENSKY_API_CLIENT_ID' )" in config:
+              raise RuntimeError('OpenSky client-secret binding was not corrected.')
+          if "'Environmntal'" in config:
+              raise RuntimeError('Environmental mode typo remains.')
+
+          ast.parse(app)
+          ast.parse(config)
+          PY
+
+          python -m compileall -q app.py config.py generators.py fetchers.py loaders.py scrapers.py data.py
+
+          rm .github/workflows/refactor-data-management.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Remove Data Management and fix runtime blockers"
+          git push origin HEAD:remove-data-management-runtime-fixes
