@@ -2598,11 +2598,11 @@ if mode == 'Loading':
 				if ( load_onedrive and isinstance( onedrive_drive_id, str ) \
 						and onedrive_drive_id.strip( )):
 					loader = OneDriveDocLoader( )
-					if isinstance( onedrive_folder_path, str ) and onedrive_folder_path.strip( ):
-						documents = loader.load_folder( id=onedrive_drive_id.strip( ),
-							path=onedrive_folder_path.strip( ), ) or [ ]
-					else:
-						documents = loader.load( id=onedrive_drive_id.strip( ), ) or [ ]
+					documents = loader.load(
+						drive_id=onedrive_drive_id.strip( ),
+						folder_path=onedrive_folder_path.strip( ) or None,
+						object_ids=None,
+						auth_with_token=False ) or [ ]
 					
 					for document in documents:
 						if not isinstance( getattr( document, 'metadata', None ), dict ):
