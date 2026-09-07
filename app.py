@@ -12443,7 +12443,7 @@ elif mode == 'Demographic':
 	if 'demographic_active_source' not in st.session_state:
 		st.session_state[ 'demographic_active_source' ] = ''
 	
-	with (((left))):
+	with left:
 		# ---------------------
 		# ---- Expander U.S. Census Bureau
 		# ---------------------
@@ -13653,10 +13653,10 @@ elif mode == 'Demographic':
 					clean_dataset_id = _validate_socrata_dataset_id( socrata_dataset_id )
 					f = Socrata( )
 					result = f.fetch( mode=str( socrata_mode ), domain=str( socrata_domain ),
-						dataset_id=clean_dataset_id, select=str( socrata_select ), where=str(
-							socrata_where ), order=str( socrata_order ), group=str( socrata_group
-						), limit=int( socrata_limit ), offset=int( socrata_offset ), time=int(
-							socrata_timeout ) )
+						dataset_id=clean_dataset_id, select=str( socrata_select ),
+						where=str(socrata_where ), order=str( socrata_order ),
+						group=str( socrata_group ), limit=int( socrata_limit ),
+						offset=int( socrata_offset ), time=int( socrata_timeout ) )
 					st.session_state[ 'socrata_results' ] = result or { }
 					st.rerun( )
 				except Exception as exc:
@@ -13668,18 +13668,13 @@ elif mode == 'Demographic':
 			else:
 				_render_result_metadata( result )
 				if result.get( 'mode', '' ) == 'metadata':
-					payload = result.get( 'data', { } ) if isinstance( result, dict ) else { }
+					payload = result.get( 'data', { } )
 					_render_summary_kv( '#### Summary', {
-							'Name': payload.get( 'name', '' ) if isinstance( payload, dict ) else
-							'',
-							'Description': payload.get( 'description', '' ) if isinstance(
-								payload, dict ) else '',
-							'RowsUpdatedAt': payload.get( 'rowsUpdatedAt', '' ) if isinstance(
-								payload, dict ) else '',
-							'ViewType': payload.get( 'viewType', '' ) if isinstance( payload,
-								dict ) else '',
-							'Columns': len( payload.get( 'columns', [ ] ) ) if isinstance(
-								payload, dict ) else 0, } )
+							'Name': payload.get( 'name', '' ),
+							'Description': payload.get( 'description', '' ),
+							'RowsUpdatedAt': payload.get( 'rowsUpdatedAt', '' ),
+							'ViewType': payload.get( 'viewType', '' ),
+							'Columns': len( payload.get( 'columns', [ ] ) ) } )
 					rows: List[ Dict[ str, Any ] ] = [ ]
 					columns_payload = payload.get( 'columns', [ ] ) if isinstance( payload,
 						dict ) else [ ]
