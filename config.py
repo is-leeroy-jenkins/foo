@@ -228,7 +228,7 @@ O365_CLIENT_SECRET = os.getenv( 'O365_CLIENT_SECRET' )
 OPENAQ_API_KEY = os.getenv( 'OPENAQ_API_KEY' )
 OPENSKY_API_CLIENT_ID = os.getenv( 'OPENSKY_API_CLIENT_ID' )
 OPENSKY_API_CREDENTIALS = os.getenv( 'OPENSKY_API_CREDENTIALS' )
-OPENSKY_API_CLIENT_SECRET = os.getenv( 'OPENSKY_API_CLIENT_ID' )
+OPENSKY_API_CLIENT_SECRET = os.getenv( 'OPENSKY_API_CLIENT_SECRET' )
 CENSUS_API_KEY = os.getenv( 'CENSUS_API_KEY' )
 SOCRATA_API_KEY = os.getenv( 'SOCRATA_API_KEY' )
 HEALTHDATA_API_KEY = os.getenv( 'HEALTHDATA_API_KEY' )
@@ -251,11 +251,9 @@ LOGO = r'resources/images/foo_logo.png'
 DB = r'stores/sqlite/datamodels/Data.db'
 
 MODE = [ 'Loading', 'Scraping', 'Retrieval',
-		'Geospatial', 'Demographic', 'Environmntal',
+		'Geospatial', 'Demographic', 'Environmental',
 		'Astronomical', 'Generation' ]
 
-DB_MODES = [ 'Data Browse','Data Upload', 'CRUD Ops', 'Data Filter',
-	'Data Aggregation', 'SQL Console' ]
 
 MODE_MAP = \
 {
@@ -267,12 +265,6 @@ MODE_MAP = \
 		'Environmental': 'Environmental Information',
 		'Astronomical': 'Physics & Astronomical Data',
 		'Generation': 'AI Generation',
-		'Data Browse': 'Data Browse',
-		'Data Upload': 'Data Upload',
-		'CRUD Ops': 'CRUD Ops',
-		'Data Filter': 'Data Filter',
-		'Data Aggregation': 'Data Aggregation',
-		'SQL Console': 'SQL Console'
  }
 
 CHUNKABLE_LOADERS = {
@@ -321,7 +313,6 @@ SESSION_STATE_DEFAULTS = {
 		'token_counts': None,
 		'df_synsets': None,
 		# ------------ SQLite / Excel
-		'active_table': None,
 		# ------------ Chunking
 		'lines': None,
 		'chunks': None,
@@ -340,13 +331,8 @@ SESSION_STATE_DEFAULTS = {
 		'search_results': None,
 		# ------------ DataFrames
 		'df_frequency': None,
-		'df_tables': None,
-		'df_schema': None,
-		'df_preview': None,
-		'df_count': None,
 		'df_chunks': None,
 		# ------------ Data
-		'data_connection': None,
 		# ------------ Sidebar / API Keys
 		'api_keys': {
 				'openai_api_key': None,

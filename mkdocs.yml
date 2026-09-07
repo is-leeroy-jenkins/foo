@@ -15,7 +15,6 @@ nav:
   - Loading Data: loading.md
   - Fetching and Scraping: fetching-scraping.md
   - Generation: generation.md
-  - Data Management: data-management.md
   - Outputs: outputs.md
   - Development: development.md
   - API Reference:

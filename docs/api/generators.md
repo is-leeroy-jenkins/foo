@@ -603,7 +603,7 @@ The generator classes should handle:
 
 This separation prevents provider logic from spreading across the UI code.
 
-## 🗄️ Relationship to Data Management
+## 🗄️ Relationship to Persistence
 
 Generator outputs may be persisted through `data.py`.
 
