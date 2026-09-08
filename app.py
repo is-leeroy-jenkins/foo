@@ -815,19 +815,19 @@ col_left, col_center, col_right = st.columns( [ 1, 2, 1 ], vertical_alignment='t
 # ===========================================================================
 # SIDEBAR
 # ===========================================================================
-source_modes = list( cfg.MODE_MAP.keys( ) )
+ingestion_mode = list( cfg.MODE_MAP.keys( ) )
 active_mode = st.session_state[ 'mode' ]
 if 'source_mode' not in st.session_state:
 	st.session_state[ 'source_mode' ] = (
-			active_mode if active_mode in source_modes else None)
+			active_mode if active_mode in ingestion_mode else None)
 
 with st.sidebar:
 	st.divider( )
 	
 	# ------------- Modes -------------
 	st.text( '🎮 Mode' )
-	with st.expander( label='Source', expanded=True ):
-		st.radio( label='Mode', options=source_modes, index=None,
+	with st.expander( label='Ingestion', expanded=True ):
+		st.radio( label='Mode', options=ingestion_mode, index=None,
 			key='source_mode', label_visibility='collapsed',
 			on_change=set_sidebar_mode, args=('source_mode',) )
 	
