@@ -193,11 +193,11 @@ class PineconeStore( ):
         if not self.client.indexes.exists( self.index_name ):
             raise ValueError( f'Pinecone index does not exist: {self.index_name}' )
 
+        index = self.client.index( name=self.index_name )
         self.vector_store = PineconeVectorStore(
-            index_name=self.index_name,
+            index=index,
             embedding=self.embedder,
             namespace=self.namespace or None,
-            pinecone_api_key=self.api_key,
         )
         ids = [
             str( ( document.metadata or { } ).get( 'chunk_id', f'chunk-{index:06d}' ) )
