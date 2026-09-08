@@ -27,7 +27,7 @@ jobs:
           python-version: '3.11'
 
       - name: Apply anchored app integration
-        run: python tools/apply_langchain_loading_integration_v2.py
+        run: python tools/apply_langchain_loading_integration_v3.py
 
       - name: Compile updated sources
         run: python -m py_compile app.py langchain_pipeline.py stores/vector.py
@@ -41,6 +41,7 @@ jobs:
           assert source.count('render_langchain_inputs(') == 10
           assert source.count('render_langchain_actions(') == 10
           assert source.count('render_loading_tabs( )') == 1
+          assert source.index("render_langchain_actions( 'JsonLoader', 'json' )") < source.index("with st.expander( label='Web Documents', expanded=False )")
           assert "st.tabs( [ 'Document', 'Chunks', 'Embeddings' ] )" in Path('langchain_pipeline.py').read_text(encoding='utf-8')
           PY
 
@@ -51,6 +52,7 @@ jobs:
         run: |
           rm tools/apply_langchain_loading_integration.py
           rm tools/apply_langchain_loading_integration_v2.py
+          rm tools/apply_langchain_loading_integration_v3.py
           rm .github/workflows/apply-langchain-loading-integration.yml
 
       - name: Commit integrated application
@@ -58,8 +60,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app.py langchain_pipeline.py stores/vector.py requirements.txt
-          git add -u tools/apply_langchain_loading_integration.py tools/apply_langchain_loading_integration_v2.py .github/workflows/apply-langchain-loading-integration.yml
+          git add -u tools/apply_langchain_loading_integration.py tools/apply_langchain_loading_integration_v2.py tools/apply_langchain_loading_integration_v3.py .github/workflows/apply-langchain-loading-integration.yml
           git commit -m "Integrate LangChain chunking embeddings and vector storage"
           git push origin HEAD:feature/langchain-chunking-embeddings-vector-store
 
-# Guarded integration: 8
+# Guarded integration: 9
