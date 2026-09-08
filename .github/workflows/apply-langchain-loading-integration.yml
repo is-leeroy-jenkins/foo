@@ -60,3 +60,5 @@ jobs:
           git add -u tools/apply_langchain_loading_integration.py .github/workflows/apply-langchain-loading-integration.yml
           git commit -m "Integrate LangChain chunking embeddings and vector storage"
           git push origin HEAD:feature/langchain-chunking-embeddings-vector-store
+
+# Anchored integration retry: 2
