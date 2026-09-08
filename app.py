@@ -41,6 +41,11 @@
 	******************************************************************************************
 '''
 from __future__ import annotations
+from hashlib import sha256
+import math
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from embedders import EmbeddingFactory
+from stores.vector import ChromaStore, PineconeStore
 import altair
 import inspect
 from astroquery.simbad import Simbad
@@ -272,7 +277,6 @@ def _invoke_provider( fetcher: Any, prompt: str, params: dict[ str, Any ] ) -> A
 	fn = getattr( fetcher, 'generate_text' )
 	safe = filter_kwargs_for_callable( fn, params )
 	return fn( prompt, **safe )
-
 
 def _render_output( container: Any, result: Any ) -> None:
 	if result is None:
@@ -743,6 +747,501 @@ def clear_if_active( loader_name: str ) -> None:
 		st.session_state.df_chunks = None
 		st.session_state.lines = None
 
+
+# =====================================================================
+# DOCUMENT CHUNKING / EMBEDDING / VECTOR STORAGE
+# =====================================================================
+
+DEFAULT_CHUNK_SIZE = 1000
+DEFAULT_CHUNK_OVERLAP = 200
+DEFAULT_EMBEDDING_PROVIDER = 'Hugging Face'
+DEFAULT_EMBEDDING_MODEL = 'sentence-transformers/all-MiniLM-L6-v2'
+CHROMA_DIRECTORY = Path( 'stores' ) / 'chroma'
+EMBEDDING_MODELS: Dict[ str, List[ str ] ] = {
+	'OpenAI': [ 'text-embedding-3-small', 'text-embedding-3-large' ],
+	'Google Generative AI': [ 'gemini-embedding-2-preview' ],
+	'Mistral AI': [ 'mistral-embed' ],
+	'Hugging Face': [
+		'sentence-transformers/all-MiniLM-L6-v2',
+		'sentence-transformers/all-mpnet-base-v2',
+	],
+}
+VECTOR_STORES = [ 'Chroma', 'Pinecone' ]
+
+DOCUMENT_PROCESSING_STATE: Dict[ str, Any ] = {
+	'chunked_documents': None,
+	'chunk_source_signature': '',
+	'chunk_size_used': 0,
+	'chunk_overlap_used': 0,
+	'df_chunking': None,
+	'embedder': None,
+	'embeddings': None,
+	'embedding_provider': '',
+	'embedding_model': '',
+	'embedding_model_path': '',
+	'embedding_documents': None,
+	'df_embedding': None,
+	'vector_store': None,
+	'vector_store_provider': '',
+	'vector_store_name': '',
+	'vector_store_namespace': '',
+}
+
+
+def ensure_document_processing_state( ) -> None:
+	"""Initialize document-processing session state.
+
+	Purpose:
+		Writes every chunking, embedding, and vector-storage state key before UI or execution
+		paths read it.
+
+	Returns:
+		None: This function updates Streamlit session state.
+	"""
+	for key, value in DOCUMENT_PROCESSING_STATE.items( ):
+		if key not in st.session_state:
+			st.session_state[ key ] = value
+
+
+def clear_document_processing_outputs( ) -> None:
+	"""Clear derived document-processing outputs.
+
+	Purpose:
+		Clears chunk, embedding, and vector-store state without modifying loaded source documents.
+
+	Returns:
+		None: This function updates Streamlit session state.
+	"""
+	ensure_document_processing_state( )
+	for key, value in DOCUMENT_PROCESSING_STATE.items( ):
+		st.session_state[ key ] = value
+	st.session_state[ 'chunks' ] = None
+	st.session_state[ 'df_chunks' ] = None
+
+
+def reset_document_processing_controls( key_prefix: str ) -> None:
+	"""Request a reset for one loader's processing controls.
+
+	Args:
+		key_prefix (str): Unique Streamlit key prefix assigned to the loader.
+
+	Returns:
+		None: This function updates Streamlit session state.
+	"""
+	throw_if( 'key_prefix', key_prefix )
+	clear_document_processing_outputs( )
+	st.session_state[ f'{key_prefix}_processing_reset_request' ] = True
+
+
+def document_signature( documents: List[ Document ] ) -> str:
+	"""Create a deterministic signature for loaded documents.
+
+	Args:
+		documents (List[Document]): Loaded source documents.
+
+	Returns:
+		str: SHA-256 signature representing content and metadata.
+	"""
+	throw_if( 'documents', documents )
+	digest = sha256( )
+	for document in documents:
+		digest.update( str( document.page_content or '' ).encode( 'utf-8', errors='ignore' ) )
+		metadata = json.dumps( document.metadata or { }, sort_keys=True, default=str )
+		digest.update( metadata.encode( 'utf-8', errors='ignore' ) )
+	return digest.hexdigest( )
+
+
+def create_chunk_dataframe( chunks: List[ Document ] ) -> DataFrame:
+	"""Create the read-only chunk display dataframe.
+
+	Args:
+		chunks (List[Document]): Chunk documents to project.
+
+	Returns:
+		DataFrame: Chunk metadata and text.
+	"""
+	throw_if( 'chunks', chunks )
+	rows: List[ Dict[ str, Any ] ] = [ ]
+	for chunk in chunks:
+		metadata = chunk.metadata or { }
+		rows.append( {
+			'Chunk ID': metadata.get( 'chunk_id', '' ),
+			'Document ID': metadata.get( 'document_id', '' ),
+			'Source': metadata.get( 'source', '' ),
+			'Characters': len( chunk.page_content or '' ),
+			'Chunk Text': chunk.page_content or '',
+		} )
+	return pd.DataFrame( rows )
+
+
+def create_embedding_dataframe( chunks: List[ Document ], vectors: List[ List[ float ] ],
+	provider: str, model: str ) -> DataFrame:
+	"""Create the read-only embedding display dataframe.
+
+	Args:
+		chunks (List[Document]): Chunk documents represented by the vectors.
+		vectors (List[List[float]]): Generated embedding vectors.
+		provider (str): Embedding provider used to generate the vectors.
+		model (str): Model name or local GGUF path label.
+
+	Returns:
+		DataFrame: Embedding metadata, source text, and vectors.
+	"""
+	throw_if( 'chunks', chunks )
+	throw_if( 'vectors', vectors )
+	throw_if( 'provider', provider )
+	throw_if( 'model', model )
+	rows: List[ Dict[ str, Any ] ] = [ ]
+	for index, chunk in enumerate( chunks ):
+		vector = vectors[ index ]
+		metadata = chunk.metadata or { }
+		rows.append( {
+			'Chunk ID': metadata.get( 'chunk_id', '' ),
+			'Provider': provider,
+			'Model': model,
+			'Dimensions': len( vector ),
+			'Text': chunk.page_content or '',
+			'Embedding': vector,
+		} )
+	return pd.DataFrame( rows )
+
+
+def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> None:
+	"""Render chunking, embedding, and vector-storage controls for one loader.
+
+	Args:
+		loader_name (str): Loader class name associated with the expander.
+		key_prefix (str): Unique Streamlit key prefix assigned to the loader.
+
+	Returns:
+		None: This function renders Streamlit controls.
+	"""
+	throw_if( 'loader_name', loader_name )
+	throw_if( 'key_prefix', key_prefix )
+	ensure_document_processing_state( )
+
+	size_key = f'{key_prefix}_chunk_size'
+	overlap_key = f'{key_prefix}_chunk_overlap'
+	provider_key = f'{key_prefix}_embedding_provider'
+	model_key = f'{key_prefix}_embedding_model'
+	path_key = f'{key_prefix}_embedding_model_path'
+	store_key = f'{key_prefix}_vector_store_provider'
+	index_key = f'{key_prefix}_pinecone_index'
+	namespace_key = f'{key_prefix}_pinecone_namespace'
+	reset_key = f'{key_prefix}_processing_reset_request'
+
+	if st.session_state.get( reset_key, False ):
+		st.session_state[ size_key ] = DEFAULT_CHUNK_SIZE
+		st.session_state[ overlap_key ] = DEFAULT_CHUNK_OVERLAP
+		st.session_state[ provider_key ] = DEFAULT_EMBEDDING_PROVIDER
+		st.session_state[ model_key ] = DEFAULT_EMBEDDING_MODEL
+		st.session_state[ path_key ] = ''
+		st.session_state[ store_key ] = VECTOR_STORES[ 0 ]
+		st.session_state[ index_key ] = ''
+		st.session_state[ namespace_key ] = ''
+		st.session_state[ reset_key ] = False
+
+	defaults = {
+		size_key: DEFAULT_CHUNK_SIZE,
+		overlap_key: DEFAULT_CHUNK_OVERLAP,
+		provider_key: DEFAULT_EMBEDDING_PROVIDER,
+		model_key: DEFAULT_EMBEDDING_MODEL,
+		path_key: '',
+		store_key: VECTOR_STORES[ 0 ],
+		index_key: '',
+		namespace_key: '',
+	}
+	for key, value in defaults.items( ):
+		if key not in st.session_state:
+			st.session_state[ key ] = value
+
+	if int( st.session_state[ overlap_key ] ) >= int( st.session_state[ size_key ] ):
+		st.session_state[ overlap_key ] = max( 0, int( st.session_state[ size_key ] ) // 5 )
+
+	chunk_col, overlap_col = st.columns( 2 )
+	with chunk_col:
+		st.number_input( 'Chunk Size', min_value=1, step=1, key=size_key )
+	with overlap_col:
+		st.number_input(
+			'Chunk Overlap',
+			min_value=0,
+			max_value=max( 0, int( st.session_state[ size_key ] ) - 1 ),
+			step=1,
+			key=overlap_key,
+		)
+
+	provider_col, model_col = st.columns( 2 )
+	with provider_col:
+		provider = st.selectbox(
+			'Embedding Provider',
+			options=list( EMBEDDING_MODELS.keys( ) ) + [ 'Local GGUF' ],
+			key=provider_key,
+		)
+
+	with model_col:
+		if provider == 'Local GGUF':
+			st.text_input(
+				'Local GGUF Model',
+				key=path_key,
+				placeholder='Path to a local embedding GGUF model',
+			)
+		else:
+			model_options = EMBEDDING_MODELS[ provider ]
+			if st.session_state.get( model_key, '' ) not in model_options:
+				st.session_state[ model_key ] = model_options[ 0 ]
+			st.selectbox( 'Embedding Model', options=model_options, key=model_key )
+
+	store_col, target_col = st.columns( 2 )
+	with store_col:
+		store_provider = st.selectbox( 'Vector Store', options=VECTOR_STORES, key=store_key )
+	with target_col:
+		if store_provider == 'Pinecone':
+			st.text_input( 'Pinecone Index', key=index_key, placeholder='Existing Pinecone index' )
+		else:
+			st.text_input(
+				'Chroma Directory',
+				value=str( CHROMA_DIRECTORY ),
+				disabled=True,
+				key=f'{key_prefix}_chroma_directory',
+			)
+
+	if store_provider == 'Pinecone':
+		st.text_input(
+			'Pinecone Namespace',
+			key=namespace_key,
+			placeholder='Optional namespace',
+		)
+
+
+def render_document_processing_actions( loader_name: str, key_prefix: str ) -> None:
+	"""Render and execute Chunk, Embed, and Store actions for one loader.
+
+	Args:
+		loader_name (str): Loader class name associated with the expander.
+		key_prefix (str): Unique Streamlit key prefix assigned to the loader.
+
+	Returns:
+		None: This function renders controls and updates Streamlit session state.
+	"""
+	throw_if( 'loader_name', loader_name )
+	throw_if( 'key_prefix', key_prefix )
+	ensure_document_processing_state( )
+
+	documents = st.session_state.get( 'documents' ) or [ ]
+	active_documents = st.session_state.get( 'active_loader' ) == loader_name and bool( documents )
+	current_signature = document_signature( documents ) if active_documents else ''
+	chunk_signature = st.session_state.get( 'chunk_source_signature', '' )
+	if active_documents and chunk_signature and chunk_signature != current_signature:
+		clear_document_processing_outputs( )
+		chunk_signature = ''
+
+	chunked_documents = st.session_state.get( 'chunked_documents' ) or [ ]
+	embeddings = st.session_state.get( 'embeddings' ) or [ ]
+	embedder = st.session_state.get( 'embedder' )
+	current_size = int( st.session_state[ f'{key_prefix}_chunk_size' ] )
+	current_overlap = int( st.session_state[ f'{key_prefix}_chunk_overlap' ] )
+	chunk_config_current = (
+		st.session_state.get( 'chunk_size_used', 0 ) == current_size
+		and st.session_state.get( 'chunk_overlap_used', 0 ) == current_overlap
+	)
+	can_embed = active_documents and bool( chunked_documents ) \
+		and chunk_signature == current_signature and chunk_config_current
+
+	provider = str( st.session_state[ f'{key_prefix}_embedding_provider' ] )
+	model = str( st.session_state.get( f'{key_prefix}_embedding_model', '' ) )
+	model_path = str( st.session_state.get( f'{key_prefix}_embedding_model_path', '' ) )
+	embedding_config_current = (
+		st.session_state.get( 'embedding_provider', '' ) == provider
+		and st.session_state.get( 'embedding_model', '' ) == model
+		and st.session_state.get( 'embedding_model_path', '' ) == model_path
+	)
+	can_store = can_embed and bool( embeddings ) and embedder is not None and embedding_config_current
+
+	chunk_col, embed_col, store_col = st.columns( 3 )
+	chunk_clicked = chunk_col.button(
+		'Chunk', key=f'{key_prefix}_chunk_documents', icon='✂️',
+		disabled=not active_documents, width='stretch',
+	)
+	embed_clicked = embed_col.button(
+		'Embed', key=f'{key_prefix}_embed_documents', icon='🧬',
+		disabled=not can_embed, width='stretch',
+	)
+	store_clicked = store_col.button(
+		'Store', key=f'{key_prefix}_store_vectors', icon='🗄️',
+		disabled=not can_store, width='stretch',
+	)
+
+	if chunk_clicked:
+		source_documents: List[ Document ] = [ ]
+		for index, document in enumerate( documents, start=1 ):
+			metadata = dict( document.metadata or { } )
+			metadata.setdefault( 'document_id', index )
+			source_documents.append( Document(
+				page_content=document.page_content,
+				metadata=metadata,
+			) )
+
+		splitter = RecursiveCharacterTextSplitter(
+			chunk_size=current_size,
+			chunk_overlap=current_overlap,
+		)
+		chunks = splitter.split_documents( source_documents )
+		for index, chunk in enumerate( chunks, start=1 ):
+			metadata = dict( chunk.metadata or { } )
+			metadata[ 'chunk_id' ] = f'chunk-{index:06d}'
+			metadata[ 'chunk_size' ] = current_size
+			metadata[ 'chunk_overlap' ] = current_overlap
+			chunk.metadata = metadata
+
+		st.session_state[ 'chunked_documents' ] = chunks
+		st.session_state[ 'chunks' ] = [ chunk.page_content for chunk in chunks ]
+		st.session_state[ 'df_chunking' ] = create_chunk_dataframe( chunks )
+		st.session_state[ 'df_chunks' ] = st.session_state[ 'df_chunking' ]
+		st.session_state[ 'chunk_source_signature' ] = current_signature
+		st.session_state[ 'chunk_size_used' ] = current_size
+		st.session_state[ 'chunk_overlap_used' ] = current_overlap
+		st.session_state[ 'embedder' ] = None
+		st.session_state[ 'embeddings' ] = None
+		st.session_state[ 'embedding_provider' ] = ''
+		st.session_state[ 'embedding_model' ] = ''
+		st.session_state[ 'embedding_model_path' ] = ''
+		st.session_state[ 'embedding_documents' ] = None
+		st.session_state[ 'df_embedding' ] = None
+		st.session_state[ 'vector_store' ] = None
+		st.session_state[ 'vector_store_provider' ] = ''
+		st.session_state[ 'vector_store_name' ] = ''
+		st.session_state[ 'vector_store_namespace' ] = ''
+		st.success( f'Created {len( chunks )} chunk(s).' )
+
+	if embed_clicked:
+		factory = EmbeddingFactory( )
+		embedder = factory.create(
+			provider=provider,
+			model=model,
+			model_path=model_path,
+		)
+		texts = [ chunk.page_content for chunk in chunked_documents ]
+		vectors = embedder.embed_documents( texts )
+		if len( vectors ) != len( chunked_documents ):
+			raise RuntimeError( 'Embedding count does not match the chunk count.' )
+		dimensions = { len( vector ) for vector in vectors }
+		if len( dimensions ) != 1:
+			raise RuntimeError( 'Embedding vectors do not have a consistent dimension.' )
+		if not all( math.isfinite( float( value ) ) for vector in vectors for value in vector ):
+			raise RuntimeError( 'Embedding vectors contain non-finite values.' )
+
+		display_model = model_path if provider == 'Local GGUF' else model
+		st.session_state[ 'embedder' ] = embedder
+		st.session_state[ 'embeddings' ] = vectors
+		st.session_state[ 'embedding_provider' ] = provider
+		st.session_state[ 'embedding_model' ] = model
+		st.session_state[ 'embedding_model_path' ] = model_path
+		st.session_state[ 'embedding_documents' ] = list( chunked_documents )
+		st.session_state[ 'df_embedding' ] = create_embedding_dataframe(
+			chunks=list( chunked_documents ),
+			vectors=vectors,
+			provider=provider,
+			model=display_model,
+		)
+		st.session_state[ 'vector_store' ] = None
+		st.session_state[ 'vector_store_provider' ] = ''
+		st.session_state[ 'vector_store_name' ] = ''
+		st.session_state[ 'vector_store_namespace' ] = ''
+		st.success(
+			f'Generated {len( vectors )} embedding(s) with {next( iter( dimensions ) )} dimensions.'
+		)
+
+	if store_clicked:
+		store_provider = str( st.session_state[ f'{key_prefix}_vector_store_provider' ] )
+		if store_provider == 'Chroma':
+			store_name = f'foo_{loader_name.lower( ).replace( "loader", "" )}_documents'
+			store = ChromaStore( )
+			vector_store = store.create(
+				documents=list( chunked_documents ),
+				embedder=embedder,
+				collection_name=store_name,
+				persist_directory=str( CHROMA_DIRECTORY ),
+			)
+			namespace = ''
+		else:
+			store_name = str( st.session_state[ f'{key_prefix}_pinecone_index' ] )
+			namespace = str( st.session_state[ f'{key_prefix}_pinecone_namespace' ] )
+			store = PineconeStore( )
+			vector_store = store.create(
+				documents=list( chunked_documents ),
+				embedder=embedder,
+				index_name=store_name,
+				namespace=namespace,
+				api_key=cfg.PINECONE_API_KEY,
+			)
+
+		st.session_state[ 'vector_store' ] = vector_store
+		st.session_state[ 'vector_store_provider' ] = store_provider
+		st.session_state[ 'vector_store_name' ] = store_name
+		st.session_state[ 'vector_store_namespace' ] = namespace
+		st.success( f'Stored {len( chunked_documents )} chunk(s) in {store_provider}: {store_name}.' )
+
+
+def render_loading_tabs( ) -> None:
+	"""Render Loading-mode document, chunk, and embedding tabs.
+
+	Purpose:
+		Preserves the existing document preview while exposing current chunk and embedding results.
+
+	Returns:
+		None: This function renders Streamlit content.
+	"""
+	ensure_document_processing_state( )
+	documents = st.session_state.get( 'documents' ) or [ ]
+	current_signature = document_signature( documents ) if documents else ''
+	derived_current = bool( documents ) \
+		and current_signature == st.session_state.get( 'chunk_source_signature', '' )
+	document_tab, chunk_tab, embedding_tab = st.tabs( [ 'Document', 'Chunks', 'Embeddings' ] )
+
+	with document_tab:
+		if not documents:
+			st.info( 'No documents loaded.' )
+		else:
+			st.caption( f"Active Loader: {st.session_state.get( 'active_loader', '' )}" )
+			st.write( f'Documents: {len( documents )}' )
+			for index, document in enumerate( documents[ :5 ] ):
+				with st.expander( f'Document {index + 1}', expanded=True ):
+					st.json( document.metadata )
+					st.text_area(
+						'Content', document.page_content[ : ], height=450,
+						key=f'preview_doc_{index}',
+					)
+
+	with chunk_tab:
+		df_chunking = st.session_state.get( 'df_chunking' )
+		if not derived_current or not isinstance( df_chunking, DataFrame ) or df_chunking.empty:
+			st.info( 'No chunks created for the active documents.' )
+		else:
+			st.caption( f'Chunks: {len( df_chunking )}' )
+			st.data_editor(
+				df_chunking, disabled=True, hide_index=True,
+				use_container_width=True, height=520, key='loading_df_chunking',
+			)
+
+	with embedding_tab:
+		df_embedding = st.session_state.get( 'df_embedding' )
+		if not derived_current or not isinstance( df_embedding, DataFrame ) or df_embedding.empty:
+			st.info( 'No embeddings generated for the active documents.' )
+		else:
+			provider = st.session_state.get( 'embedding_provider', '' )
+			model = st.session_state.get( 'embedding_model_path', '' ) \
+				if provider == 'Local GGUF' else st.session_state.get( 'embedding_model', '' )
+			st.caption( f'Provider: {provider} | Model: {model}' )
+			store_provider = st.session_state.get( 'vector_store_provider', '' )
+			store_name = st.session_state.get( 'vector_store_name', '' )
+			if store_provider and store_name:
+				st.caption( f'Vector Store: {store_provider} | Target: {store_name}' )
+			st.data_editor(
+				df_embedding, disabled=True, hide_index=True,
+				use_container_width=True, height=520, key='loading_df_embedding',
+			)
+
+
 _streamlit_data_editor = st.data_editor
 
 # -------- Expander Utilities
@@ -999,6 +1498,8 @@ if mode == 'Loading':
 				files = st.file_uploader( 'Upload Text File(s)', type=[ 'txt', 'text', 'log' ],
 					accept_multiple_files=True, key='txt_upload', help=cfg.TEXT_LOADER )
 				
+				render_document_processing_inputs( 'TextLoader', 'txt' )
+
 				# ------------------------------------------------------------------
 				# Buttons: Load / Clear / Save
 				# ------------------------------------------------------------------
@@ -1025,6 +1526,7 @@ if mode == 'Loading':
 				# Clear
 				# ------------------------------------------------------------------
 				if clear_txt:
+					reset_document_processing_controls( 'txt' )
 					clear_if_active( 'TextLoader' )
 					st.info( 'Text Loader state cleared.' )
 					st.rerun( )
@@ -1065,12 +1567,17 @@ if mode == 'Loading':
 			# ----------------------------
 			# ------ Expander CSV Loader
 			# ----------------------------
+
+				render_document_processing_actions( 'TextLoader', 'txt' )
+
 			with st.expander( label="CSV Loader", icon='📑', expanded=False ):
 				csv_file = st.file_uploader( label="Upload CSV", type=[ "csv" ],
 					key="csv_upload", help=cfg.CSV_LOADER )
 				delimiter = st.text_input( "Delimiter", value=",", key="csv_delim", )
 				quotechar = st.text_input( "Quote Character", value='"', key="csv_quote", )
 				
+				render_document_processing_inputs( 'CsvLoader', 'csv' )
+
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
 				# --------------------------------------------------
@@ -1093,6 +1600,7 @@ if mode == 'Loading':
 				# Clear
 				# --------------------------------------------------
 				if clear_csv:
+					reset_document_processing_controls( 'csv' )
 					clear_if_active( "CsvLoader" )
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
 					st.session_state[ "_loader_status" ] = "CSV Loader state cleared."
@@ -1124,6 +1632,9 @@ if mode == 'Loading':
 			# ----------------------------
 			# ---- XML Loader
 			# ----------------------------
+
+				render_document_processing_actions( 'CsvLoader', 'csv' )
+
 			with st.expander( label='XML Loader', icon='🧬', expanded=False ):
 				# ------------------------------------------------------------------
 				# Session-backed loader instance
@@ -1273,6 +1784,8 @@ if mode == 'Loading':
 				word_file = st.file_uploader( 'Upload Word Document', type=[ 'docx' ],
 					key='word_upload', help=cfg.WORD_LOADER )
 				
+				render_document_processing_inputs( 'WordLoader', 'word' )
+
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
 				# --------------------------------------------------
@@ -1295,6 +1808,7 @@ if mode == 'Loading':
 				# Clear
 				# --------------------------------------------------
 				if clear_word:
+					reset_document_processing_controls( 'word' )
 					clear_if_active( 'WordLoader' )
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
 					st.session_state[ '_loader_status' ] = 'Word Loader state cleared.'
@@ -1334,6 +1848,9 @@ if mode == 'Loading':
 			# ----------------------------
 			# ------ Expander PDF Loader
 			# ----------------------------
+
+				render_document_processing_actions( 'WordLoader', 'word' )
+
 			with st.expander( label='PDF Loader', icon='📕', expanded=False ):
 				pdf = st.file_uploader( 'Upload PDF', type=[ 'pdf' ], key='pdf_upload',
 					help=cfg.PDF_LOADER )
@@ -1370,6 +1887,8 @@ if mode == 'Loading':
 					key='pdf_preserve_page_breaks',
 					help='Adds explicit page-break markers between extracted pages.' )
 				
+				render_document_processing_inputs( 'PdfLoader', 'pdf' )
+
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
 				# --------------------------------------------------
@@ -1382,6 +1901,7 @@ if mode == 'Loading':
 				# Clear
 				# --------------------------------------------------
 				if clear_pdf:
+					reset_document_processing_controls( 'pdf' )
 					clear_if_active( 'PdfLoader' )
 					st.session_state.pdf_pages = None
 					st.session_state[ '_loader_status' ] = 'PDF Loader state cleared.'
@@ -1463,11 +1983,16 @@ if mode == 'Loading':
 			# ----------------------------
 			# --- Expander Power Point Loader
 			# ----------------------------
+
+				render_document_processing_actions( 'PdfLoader', 'pdf' )
+
 			with st.expander( label='Power Point Loader', icon='📽', expanded=False ):
 				pptx = st.file_uploader( 'Upload PPTX', type=[ 'pptx' ], key='pptx_upload',
 					help=cfg.POWERPOINT_LOADER )
 				mode = st.selectbox( 'Mode', [ 'single', 'elements' ], key='pptx_mode', )
 				
+				render_document_processing_inputs( 'PowerPointLoader', 'pptx' )
+
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save (same row, same style)
 				# --------------------------------------------------
@@ -1491,6 +2016,7 @@ if mode == 'Loading':
 				
 				# ---------- Clear
 				if clear_pptx:
+					reset_document_processing_controls( 'pptx' )
 					clear_if_active( 'PowerPointLoader' )
 					st.info( 'PowerPoint Loader state cleared.' )
 				
@@ -1515,6 +2041,9 @@ if mode == 'Loading':
 			# ----------------------------
 			# ------ Expander Jupyter Notebook Loader
 			# ----------------------------
+
+				render_document_processing_actions( 'PowerPointLoader', 'pptx' )
+
 			with st.expander( label='Jupyter Notebook Loader', icon='📓', expanded=False ):
 				notebook_file = st.file_uploader( 'Upload Notebook', type=[
 						'ipynb' ], key='ipynb_upload', help=cfg.NOTEBOOK_LOADER )
@@ -1619,6 +2148,8 @@ if mode == 'Loading':
 					index=0, key='excel_unstructured_mode',
 					help='Used only with "Unstructured Documents".' )
 				
+				render_document_processing_inputs( 'ExcelLoader', 'excel' )
+
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
 				# --------------------------------------------------
@@ -1641,6 +2172,7 @@ if mode == 'Loading':
 				# Clear (remove only ExcelLoader documents)
 				# --------------------------------------------------
 				if clear_excel and st.session_state.get( 'documents' ):
+					reset_document_processing_controls( 'excel' )
 					st.session_state.documents = [ d for d in st.session_state.documents if
 							d.metadata.get( 'loader' ) != 'ExcelLoader' ]
 					
@@ -1736,6 +2268,9 @@ if mode == 'Loading':
 			# ----------------------------
 			# ------ Expander Markdown Loader
 			# ----------------------------
+
+				render_document_processing_actions( 'ExcelLoader', 'excel' )
+
 			with st.expander( label='Markdown Loader', icon='🧾', expanded=False ):
 				md = st.file_uploader( 'Upload Markdown', type=[ 'md','markdown' ],
 					key='md_upload', help=cfg.MARKDOWN_LOADER )
@@ -1743,6 +2278,8 @@ if mode == 'Loading':
 				mode = st.selectbox( 'Mode', [ 'single', 'elements' ], index=0, key='md_mode',
 					help='Use "single" for one combined document or "elements" for multiple.' )
 				
+				render_document_processing_inputs( 'MarkdownLoader', 'md' )
+
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
 				# --------------------------------------------------
@@ -1767,6 +2304,7 @@ if mode == 'Loading':
 				# Clear
 				# --------------------------------------------------
 				if clear_md:
+					reset_document_processing_controls( 'md' )
 					clear_if_active( 'MarkdownLoader' )
 					st.info( "Markdown Loader state cleared." )
 				
@@ -1793,10 +2331,15 @@ if mode == 'Loading':
 			# ----------------------------
 			# ---- Expander HTML Loader
 			# ----------------------------
+
+				render_document_processing_actions( 'MarkdownLoader', 'md' )
+
 			with st.expander( label='HTML Loader', icon='🌐', expanded=False ):
 				html = st.file_uploader( 'Upload HTML', type=[ 'html', 'htm' ],
 					key='html_upload', help=cfg.HTML_LOADER )
 				
+				render_document_processing_inputs( 'HtmlLoader', 'html' )
+
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save (same row, same style)
 				# --------------------------------------------------
@@ -1820,6 +2363,7 @@ if mode == 'Loading':
 				# Clear
 				# --------------------------------------------------
 				if clear_html:
+					reset_document_processing_controls( 'html' )
 					clear_if_active( "HtmlLoader" )
 					st.info( "HTML Loader state cleared." )
 				
@@ -1844,6 +2388,9 @@ if mode == 'Loading':
 			# ----------------------------
 			# --------- Expander JSON Loader
 			# ----------------------------
+
+				render_document_processing_actions( 'HtmlLoader', 'html' )
+
 			with st.expander( label='JSON Loader', icon='🧩', expanded=False ):
 				js = st.file_uploader( 'Upload JSON', type=[ 'json', 'jsonl' ],
 					key='json_upload', help=cfg.JSON_LOADER )
@@ -1859,6 +2406,8 @@ if mode == 'Loading':
 					key='json_text_content',
 					help='Turn this off when jq_schema/content_key selects structured values' )
 				
+				render_document_processing_inputs( 'JsonLoader', 'json' )
+
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
 				# --------------------------------------------------
@@ -1883,6 +2432,7 @@ if mode == 'Loading':
 				# Clear
 				# --------------------------------------------------
 				if clear_json:
+					reset_document_processing_controls( 'json' )
 					clear_if_active( 'JsonLoader' )
 					st.info( 'JSON Loader state cleared.' )
 				
@@ -1907,10 +2457,15 @@ if mode == 'Loading':
 					st.session_state.active_loader = "JsonLoader"
 					st.success( f"Loaded {len( documents )} JSON document(s)." )
 		
+				render_document_processing_actions( 'JsonLoader', 'json' )
+
 		with st.expander( label='Web Documents', expanded=False ):
 			# ----------------------------
 			# ------- Expander ArXiv Loader
 			# ----------------------------
+
+
+
 			with st.expander( label='ArXiv Loader', icon='🧠', expanded=False ):
 				arxiv_query = st.text_input( 'Query',
 					placeholder='e.g., transformer OR llm', key='arxiv_query', )
@@ -3053,136 +3608,7 @@ if mode == 'Loading':
 	# RIGHT COLUMN — DOCUMENT RENDERING
 	# ------------------------------------------------------------------
 	with right:
-		documents = st.session_state.documents
-		if not documents:
-			st.info( 'No documents loaded.' )
-		else:
-			st.caption( f'Active Loader: {st.session_state.active_loader}' )
-			st.write( f'Documents: {len( documents )}' )
-			for i, d in enumerate( documents[ :5 ] ):
-				with st.expander( f'Document {i + 1}', expanded=True ):
-					st.json( d.metadata )
-					st.text_area( 'Content', d.page_content[
-						: ], height=450, key=f'preview_doc_{i}' )
-	
-	# ------------------------------------------------------------------
-	# NLP METRIC CALCULATIONS
-	# ------------------------------------------------------------------
-	metrics_container = st.container( )
-	with metrics_container:
-		if documents is not None:
-			# -------- Tokenization (session-cached)
-			if st.session_state.tokens is None:
-				try:
-					raw_text = rebuild_raw_text_from_documents( )
-					tokens = [ t.lower( ) for t in word_tokenize( raw_text ) if t.isalpha( ) ]
-				except LookupError:
-					st.error( 'NLTK resources missing' )
-				
-				if not tokens:
-					st.warning( 'No valid alphabetic tokens found.' )
-				
-				st.session_state.tokens = tokens
-				st.session_state.vocabulary = set( tokens )
-				st.session_state.token_counts = Counter( tokens )
-			
-			tokens = st.session_state.tokens
-			vocabulary = st.session_state.vocabulary
-			counts = st.session_state.token_counts
-			char_count = len( raw_text )
-			token_count = len( tokens )
-			vocab_size = len( vocabulary )
-			hapax_count = sum( 1 for c in counts.values( ) if c == 1 )
-			hapax_ratio = hapax_count / vocab_size if vocab_size else 0.0
-			avg_word_len = sum( len( t ) for t in tokens ) / token_count
-			ttr = vocab_size / token_count
-			stopword_ratio = 0.0
-			lexical_density = 0.0
-			try:
-				stop_words = set( stopwords.words( 'english' ) )
-				stopword_ratio = sum( 1 for t in tokens if t in stop_words ) / token_count
-				lexical_density = 1.0 - stopword_ratio
-			except LookupError:
-				pass
-			
-			st.markdown( cfg.BLUE_DIVIDER, unsafe_allow_html=True, )
-			st.markdown( '#### Top Tokens' )
-			
-			# ------------ Top Tokens
-			with st.expander( label='Tokens', icon='🉑', expanded=True ):
-				top_tokens = counts.most_common( 10 )
-				df_top = pd.DataFrame( top_tokens,
-					columns=[ 'token', 'count' ] ).set_index( 'token' )
-				
-				st.bar_chart( df_top, color='#01438A' )
-			
-			st.markdown( cfg.BLUE_DIVIDER, unsafe_allow_html=True, )
-			st.markdown( '#### Corpus Metrics' )
-			
-			# ------------ Corpus Metrics
-			with st.expander( label='Text', icon='📖', expanded=True ):
-				col1, col2, col3, col4 = st.columns( 4, border=True )
-				with col1:
-					metric_with_tooltip( 'Characters', f'{char_count:,}',
-						'Total number of characters in the selected text.' )
-				
-				with col2:
-					metric_with_tooltip( 'Tokens', f'{token_count:,}',
-						'Token Count: total number of tokenized words after cleanup.' )
-				
-				with col3:
-					metric_with_tooltip( 'Unique Tokens', f'{vocab_size:,}',
-						'Vocabulary Size: number of distinct word types in the text.' )
-				
-				with col4:
-					metric_with_tooltip( 'TTR', f'{ttr:.3f}',
-						'Type–Token Ratio: unique words ÷ total words.' )
-				
-				col5, col6, col7, col8 = st.columns( 4, border=True )
-				with col5:
-					metric_with_tooltip( 'Hapax Ratio', f'{hapax_ratio:.3f}',
-						'Hapax Ratio: proportion of words that occur only once.' )
-				
-				with col6:
-					metric_with_tooltip( 'Avg Length', f'{avg_word_len:.2f}',
-						'Average number of characters per token.' )
-				
-				with col7:
-					metric_with_tooltip( 'Stopword Ratio', f'{stopword_ratio:.2%}',
-						'Percentage of stopwords in the text.' )
-				
-				with col8:
-					metric_with_tooltip( 'Lexical Density', f'{lexical_density:.2%}',
-						'Proportion of content-bearing words.' )
-			
-			st.markdown( cfg.BLUE_DIVIDER, unsafe_allow_html=True, )
-			st.markdown( '#### Comprehension Metrics' )
-			
-			# ------------ Readability
-			with st.expander( label='Words', icon='👀', expanded=True ):
-				if TEXTSTAT_AVAILABLE:
-					r1, r2, r3, r4 = st.columns( 4, border=True )
-					with r1:
-						metric_with_tooltip( 'Flesch Reading Ease',
-							f'{textstat.flesch_reading_ease( raw_text ):.1f}',
-							'Higher scores indicate easier readability.' )
-					
-					with r2:
-						metric_with_tooltip( 'Flesch–Kincaid Grade',
-							f'{textstat.flesch_kincaid_grade( raw_text ):.1f}',
-							'Estimated U.S. grade level required.' )
-					
-					with r3:
-						metric_with_tooltip( 'Gunning Fog',
-							f'{textstat.gunning_fog( raw_text ):.1f}',
-							'Readability based on sentence length and complex words.' )
-					
-					with r4:
-						metric_with_tooltip( 'Coleman–Liau Index',
-							f'{textstat.coleman_liau_index( raw_text ):.1f}',
-							'Readability based on characters and sentences.' )
-				else:
-					st.caption( 'Install `textstat` to enable readability metrics.' )
+		render_loading_tabs( )
 
 # =============================================================================
 # SCRAPING MODE
