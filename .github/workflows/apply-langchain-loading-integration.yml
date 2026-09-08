@@ -27,7 +27,7 @@ jobs:
           python-version: '3.11'
 
       - name: Apply anchored app integration
-        run: python tools/apply_langchain_loading_integration.py
+        run: python tools/apply_langchain_loading_integration_v2.py
 
       - name: Compile updated sources
         run: python -m py_compile app.py langchain_pipeline.py stores/vector.py
@@ -50,6 +50,7 @@ jobs:
       - name: Remove integration scaffolding
         run: |
           rm tools/apply_langchain_loading_integration.py
+          rm tools/apply_langchain_loading_integration_v2.py
           rm .github/workflows/apply-langchain-loading-integration.yml
 
       - name: Commit integrated application
@@ -57,8 +58,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app.py langchain_pipeline.py stores/vector.py requirements.txt
-          git add -u tools/apply_langchain_loading_integration.py .github/workflows/apply-langchain-loading-integration.yml
+          git add -u tools/apply_langchain_loading_integration.py tools/apply_langchain_loading_integration_v2.py .github/workflows/apply-langchain-loading-integration.yml
           git commit -m "Integrate LangChain chunking embeddings and vector storage"
           git push origin HEAD:feature/langchain-chunking-embeddings-vector-store
 
-# Anchored integration retry: 2
+# Anchored integration retry: 3
