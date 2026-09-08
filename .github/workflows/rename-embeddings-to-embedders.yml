@@ -46,7 +46,9 @@ jobs:
 
       - name: Verify old module references are gone
         run: |
-          if grep -R -n -E 'from embeddings import|import embeddings|embeddings\.py' --exclude-dir=.git .; then
+          if grep -R -n -E 'from embeddings import|import embeddings|embeddings\.py' \
+            --exclude-dir=.git \
+            --exclude='rename-embeddings-to-embedders.yml' .; then
             echo 'Old embeddings module reference remains.'
             exit 1
           fi
