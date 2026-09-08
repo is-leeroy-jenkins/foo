@@ -120,12 +120,20 @@ def humanize(name: str) -> str:
     return name.replace('_', ' ').strip().capitalize() + '.'
 
 
+def normalize_docstring_headings(doc: str) -> str:
+    if not doc:
+        return doc
+    doc = re.sub(r'(?m)^(\s*)Parameters\s*:', r'\1Args:', doc)
+    doc = re.sub(r'(?m)^(\s*)Parametes\s*:', r'\1Args:', doc)
+    return doc
+
+
 def doc_has_purpose(doc: str) -> bool:
     return bool(re.search(r'(?m)^\s*Purpose\s*:', doc))
 
 
 def doc_has_args(doc: str) -> bool:
-    return bool(re.search(r'(?m)^\s*(Args|Parameters|Parametes)\s*:', doc))
+    return bool(re.search(r'(?m)^\s*Args\s*:', doc))
 
 
 def doc_has_returns(doc: str) -> bool:
@@ -133,6 +141,7 @@ def doc_has_returns(doc: str) -> bool:
 
 
 def build_missing_sections(node: ast.FunctionDef | ast.AsyncFunctionDef, doc: str) -> str:
+    doc = normalize_docstring_headings(doc)
     sections: List[str] = []
     if not doc_has_purpose(doc):
         sections.extend(['Purpose:', f'    {humanize(node.name)}'])
