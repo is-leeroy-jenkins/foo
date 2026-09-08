@@ -30,7 +30,24 @@ jobs:
         run: python .github/apply_document_processing_fix_v2.py
 
       - name: Compile updated sources
-        run: python -m py_compile app.py embeddings.py stores/vector.py
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          for path in [Path('app.py'), Path('embeddings.py'), Path('stores/vector.py')]:
+              source = path.read_text(encoding='utf-8')
+              try:
+                  compile(source, str(path), 'exec')
+              except (SyntaxError, IndentationError) as error:
+                  lines = source.splitlines()
+                  line = error.lineno or 1
+                  start = max(1, line - 8)
+                  end = min(len(lines), line + 8)
+                  print(f'{path}: {error}')
+                  for index in range(start, end + 1):
+                      print(f'{index:06d}: {lines[index - 1]!r}')
+                  raise
+          PY
 
       - name: Verify integration structure
         run: |
@@ -67,4 +84,4 @@ jobs:
           git commit -m "Integrate document chunking embeddings and vector storage"
           git push origin HEAD:fix/loading-langchain-integration
 
-# Guarded integration: 2
+# Guarded integration: 3
