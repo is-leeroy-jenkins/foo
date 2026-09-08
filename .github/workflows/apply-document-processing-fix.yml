@@ -27,7 +27,7 @@ jobs:
           python-version: '3.11'
 
       - name: Apply app integration
-        run: python .github/apply_document_processing_fix_v2.py
+        run: python .github/apply_document_processing_fix_v3.py
 
       - name: Compile updated sources
         run: |
@@ -74,6 +74,7 @@ jobs:
         run: |
           rm .github/apply_document_processing_fix.py
           rm .github/apply_document_processing_fix_v2.py
+          rm .github/apply_document_processing_fix_v3.py
           rm .github/workflows/apply-document-processing-fix.yml
 
       - name: Commit integrated application
@@ -84,4 +85,4 @@ jobs:
           git commit -m "Integrate document chunking embeddings and vector storage"
           git push origin HEAD:fix/loading-langchain-integration
 
-# Guarded integration: 3
+# Guarded integration: 4
