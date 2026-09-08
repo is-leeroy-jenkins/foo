@@ -1,0 +1,69 @@
+name: Rename embeddings module
+
+on:
+  push:
+    branches:
+      - fix/rename-embeddings-to-embedders
+    paths:
+      - .github/workflows/rename-embeddings-to-embedders.yml
+
+permissions:
+  contents: write
+
+jobs:
+  rename:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/rename-embeddings-to-embedders
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Rename module and references
+        run: |
+          git mv embeddings.py embedders.py
+          python - <<'PY'
+          from pathlib import Path
+
+          app = Path('app.py')
+          text = app.read_text(encoding='utf-8')
+          old = 'from embeddings import EmbeddingFactory'
+          new = 'from embedders import EmbeddingFactory'
+          if old not in text:
+              raise RuntimeError('Expected app.py embedding import was not found.')
+          app.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          module = Path('embedders.py')
+          text = module.read_text(encoding='utf-8')
+          text = text.replace('Filename:                embeddings.py', 'Filename:                embedders.py', 1)
+          text = text.replace('<copyright file="embeddings.py"', '<copyright file="embedders.py"', 1)
+          module.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Verify old module references are gone
+        run: |
+          if grep -R -n -E 'from embeddings import|import embeddings|embeddings\.py' --exclude-dir=.git .; then
+            echo 'Old embeddings module reference remains.'
+            exit 1
+          fi
+
+      - name: Compile affected sources
+        run: python -m py_compile app.py embedders.py stores/vector.py
+
+      - name: Check diff
+        run: git diff --check
+
+      - name: Remove temporary workflow
+        run: rm .github/workflows/rename-embeddings-to-embedders.yml
+
+      - name: Commit rename
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Rename embeddings module to embedders"
+          git push origin HEAD:fix/rename-embeddings-to-embedders
