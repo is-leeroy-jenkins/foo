@@ -3842,7 +3842,6 @@ elif mode == 'Scraping':
 		st.markdown( cfg.BLUE_DIVIDER, unsafe_allow_html=True )
 		st.markdown( '##### Structured Extraction' )
 		col1, col2 = st.columns( [ 0.5, 0.5 ] )
-		
 		REGISTRY_LABELS: dict[ str, str ] = { 'scrape_headings': 'Headings',
 				'scrape_paragraphs': 'Paragraphs', 'scrape_lists': 'Lists',
 				'scrape_tables': 'Tables', 'scrape_articles': 'Articles',
@@ -3854,7 +3853,6 @@ elif mode == 'Scraping':
 		_registry_items: list[ tuple[ str, str ] ] = list( REGISTRY_LABELS.items( ) )
 		_col1_items: list[ tuple[ str, str ] ] = _registry_items[ :5 ]
 		_col2_items: list[ tuple[ str, str ] ] = _registry_items[ 5: ]
-		
 		with col1:
 			for method_name, label in _col1_items:
 				if st.checkbox( label, key=f'wf_{method_name}' ):
@@ -3866,7 +3864,6 @@ elif mode == 'Scraping':
 					selected_methods.append( method_name )
 		
 		st.markdown( cfg.BLUE_DIVIDER, unsafe_allow_html=True )
-		
 		st.markdown( '##### Crawl Controls' )
 		enable_recursive = st.checkbox( 'Recursive Crawl', value=False, key='wf_recursive' )
 		max_depth = st.number_input( 'Max Depth', min_value=0, max_value=10, value=1,
@@ -4283,92 +4280,121 @@ elif mode == 'Retrieval':
 			
 			c1, c2, c3 = st.columns( 3 )
 			with c1:
-				google_num_results = st.number_input( 'Results / Request', min_value=1, max_value=10, value=int( st.session_state.get( 'googlesearch_num_results', 10 ) ), step=1, key='googlesearch_num_results', help='Google Custom Search returns up to 10 results per request.' )
+				google_num_results = st.number_input( 'Results / Request', min_value=1,
+					max_value=10, value=int( st.session_state.get( 'googlesearch_num_results',
+						10 ) ), step=1, key='googlesearch_num_results',
+					help='Google Custom Search returns up to 10 results per request.' )
 			
 			with c2:
-				google_start = st.number_input( 'Start Index', min_value=1, max_value=91, value=int( st.session_state.get( 'googlesearch_start', 1 ) ), step=1, key='googlesearch_start' )
+				google_start = st.number_input( 'Start Index', min_value=1, max_value=91,
+					value=int( st.session_state.get( 'googlesearch_start', 1 ) ), step=1,
+					key='googlesearch_start' )
 			
 			with c3:
-				google_timeout = st.number_input( 'Timeout', min_value=1, max_value=60, value=int( st.session_state.get( 'googlesearch_timeout', 10 ) ), step=1, key='googlesearch_timeout' )
+				google_timeout = st.number_input( 'Timeout', min_value=1, max_value=60, value=int(
+					st.session_state.get( 'googlesearch_timeout', 10 ) ), step=1,
+					key='googlesearch_timeout' )
 			
 			c4, c5 = st.columns( 2 )
 			with c4:
-				google_exact_terms = st.text_input( 'Exact Terms', value=st.session_state.get( 'googlesearch_exact_terms', '' ), key='googlesearch_exact_terms' )
+				google_exact_terms = st.text_input( 'Exact Terms', value=st.session_state.get(
+					'googlesearch_exact_terms', '' ), key='googlesearch_exact_terms' )
 			
 			with c5:
-				google_exclude_terms = st.text_input( 'Exclude Terms', value=st.session_state.get( 'googlesearch_exclude_terms', '' ), key='googlesearch_exclude_terms' )
+				google_exclude_terms = st.text_input( 'Exclude Terms', value=st.session_state.get(
+					'googlesearch_exclude_terms', '' ), key='googlesearch_exclude_terms' )
 			
 			c6, c7, c8 = st.columns( 3 )
 			with c6:
-				google_file_type = st.text_input( 'File Type', value=st.session_state.get( 'googlesearch_file_type', '' ), key='googlesearch_file_type', placeholder='pdf' )
+				google_file_type = st.text_input( 'File Type', value=st.session_state.get(
+					'googlesearch_file_type', '' ), key='googlesearch_file_type',
+					placeholder='pdf' )
 			
 			with c7:
-				google_date_restrict = st.text_input( 'Date Restrict', value=st.session_state.get( 'googlesearch_date_restrict', '' ), key='googlesearch_date_restrict', placeholder='d7, m1, y1' )
+				google_date_restrict = st.text_input( 'Date Restrict', value=st.session_state.get(
+					'googlesearch_date_restrict', '' ), key='googlesearch_date_restrict',
+					placeholder='d7, m1, y1' )
 			
 			with c8:
 				google_safe = st.selectbox( 'Safe Search', options=[ 'off', 'active' ], index=[
 						'off',
-						'active' ].index( st.session_state.get( 'googlesearch_safe', 'off' ) ), key='googlesearch_safe' )
+						'active' ].index( st.session_state.get( 'googlesearch_safe', 'off' ) ),
+					key='googlesearch_safe' )
 			
 			c9, c10, c11 = st.columns( 3 )
 			with c9:
-				google_gl = st.text_input( 'Country (gl)', value=st.session_state.get( 'googlesearch_gl', '' ), key='googlesearch_gl', placeholder='us' )
+				google_gl = st.text_input( 'Country (gl)', value=st.session_state.get(
+					'googlesearch_gl', '' ), key='googlesearch_gl', placeholder='us' )
 			
 			with c10:
-				google_lr = st.text_input( 'Language Restrict (lr)', value=st.session_state.get( 'googlesearch_lr', '' ), key='googlesearch_lr', placeholder='lang_en' )
+				google_lr = st.text_input( 'Language Restrict (lr)', value=st.session_state.get(
+					'googlesearch_lr', '' ), key='googlesearch_lr', placeholder='lang_en' )
 			
 			with c11:
 				google_search_type = st.selectbox( 'Search Type', options=[ '', 'image' ], index=[
 						'',
-						'image' ].index( st.session_state.get( 'googlesearch_search_type', '' ) ), key='googlesearch_search_type' )
+						'image' ].index( st.session_state.get( 'googlesearch_search_type', '' ) ),
+					key='googlesearch_search_type' )
 			
 			c12, c13 = st.columns( 2 )
 			with c12:
-				google_site_search = st.text_input( 'Site Search', value=st.session_state.get( 'googlesearch_site_search', '' ), key='googlesearch_site_search', placeholder='example.gov' )
+				google_site_search = st.text_input( 'Site Search', value=st.session_state.get(
+					'googlesearch_site_search', '' ), key='googlesearch_site_search',
+					placeholder='example.gov' )
 			
 			with c13:
 				google_site_search_filter = st.selectbox( 'Site Search Filter', options=[ '', 'i',
 						'e' ], index=[ '', 'i',
-						'e' ].index( st.session_state.get( 'googlesearch_site_search_filter', '' ) ), key='googlesearch_site_search_filter', help='i=include, e=exclude' )
+						'e' ].index( st.session_state.get( 'googlesearch_site_search_filter',
+					'' ) ), key='googlesearch_site_search_filter', help='i=include, e=exclude' )
 			
-			google_sort = st.text_input( 'Sort', value=st.session_state.get( 'googlesearch_sort', '' ), key='googlesearch_sort', placeholder='date' )
+			google_sort = st.text_input( 'Sort', value=st.session_state.get( 'googlesearch_sort',
+				'' ), key='googlesearch_sort', placeholder='date' )
 			
 			c14, c15 = st.columns( 2 )
 			with c14:
 				google_img_size = st.selectbox( 'Image Size', options=[ '', 'icon', 'small',
 						'medium', 'large', 'xlarge', 'xxlarge', 'huge' ], index=[ '', 'icon',
 						'small', 'medium', 'large', 'xlarge', 'xxlarge',
-						'huge' ].index( st.session_state.get( 'googlesearch_img_size', '' ) ), key='googlesearch_img_size', disabled=(
-							google_search_type != 'image') )
+						'huge' ].index( st.session_state.get( 'googlesearch_img_size', '' ) ),
+					key='googlesearch_img_size', disabled=(
+						google_search_type != 'image') )
 			
 			with c15:
 				google_img_type = st.selectbox( 'Image Type', options=[ '', 'clipart', 'face',
 						'lineart', 'stock', 'photo', 'animated' ], index=[ '', 'clipart', 'face',
 						'lineart', 'stock', 'photo',
-						'animated' ].index( st.session_state.get( 'googlesearch_img_type', '' ) ), key='googlesearch_img_type', disabled=(
-							google_search_type != 'image') )
+						'animated' ].index( st.session_state.get( 'googlesearch_img_type', '' ) ),
+					key='googlesearch_img_type', disabled=(
+						google_search_type != 'image') )
 			
 			c16, c17 = st.columns( 2 )
 			with c16:
 				google_img_color_type = st.selectbox( 'Image Color Type', options=[ '', 'color',
 						'gray', 'mono', 'trans' ], index=[ '', 'color', 'gray', 'mono',
-						'trans' ].index( st.session_state.get( 'googlesearch_img_color_type', '' ) ), key='googlesearch_img_color_type', disabled=(
-							google_search_type != 'image') )
+						'trans' ].index( st.session_state.get( 'googlesearch_img_color_type',
+					'' ) ), key='googlesearch_img_color_type', disabled=(
+						google_search_type != 'image') )
 			
 			with c17:
-				google_img_dominant_color = st.selectbox( 'Image Dominant Color', options=[ '',
-						'black', 'blue', 'brown', 'gray', 'green', 'orange', 'pink', 'purple',
-						'red', 'teal', 'white', 'yellow' ], index=[ '', 'black', 'blue', 'brown',
-						'gray', 'green', 'orange', 'pink', 'purple', 'red', 'teal', 'white',
-						'yellow' ].index( st.session_state.get( 'googlesearch_img_dominant_color', '' ) ), key='googlesearch_img_dominant_color', disabled=(
-							google_search_type != 'image') )
+				google_img_dominant_color = st.selectbox( 'Image Dominant Color',
+					options=[ '', 'black', 'blue', 'brown', 'gray', 'green', 'orange', 'pink',
+							'purple', 'red', 'teal', 'white', 'yellow' ],
+					index=[ '', 'black', 'blue', 'brown', 'gray', 'green', 'orange', 'pink',
+							'purple', 'red', 'teal', 'white', 'yellow' ].index(
+						st.session_state.get( 'googlesearch_img_dominant_color', '' ) ),
+					key='googlesearch_img_dominant_color',
+					disabled=( google_search_type != 'image') )
 			
 			c18, c19 = st.columns( 2 )
 			with c18:
-				google_api_key = st.text_input( 'API Key', value='', type='password', key='googlesearch_api_key', placeholder='Uses GOOGLE_API_KEY when left blank.' )
+				google_api_key = st.text_input( 'API Key', value='', type='password',
+					key='googlesearch_api_key',
+					placeholder='Uses GOOGLE_API_KEY when left blank.' )
 			
 			with c19:
-				google_cse_id = st.text_input( 'CSE ID', value='', key='googlesearch_cse_id', placeholder='Uses GOOGLE_CSE_ID when left blank.' )
+				google_cse_id = st.text_input( 'CSE ID', value='', key='googlesearch_cse_id',
+					placeholder='Uses GOOGLE_CSE_ID when left blank.' )
 			
 			st.caption( 'Required keys: GOOGLE_API_KEY and GOOGLE_CSE_ID. '
 			            'Endpoint updated to customsearch.googleapis.com/customsearch/v1.' )
@@ -4377,7 +4403,8 @@ elif mode == 'Retrieval':
 			with b1:
 				google_submit = st.button( 'Submit', key='googlesearch_submit', width='stretch' )
 			with b2:
-				st.button( 'Clear', key='googlesearch_clear', on_click=_clear_googlesearch_state, width='stretch' )
+				st.button( 'Clear', key='googlesearch_clear', on_click=_clear_googlesearch_state,
+					width='stretch' )
 		
 		# ----------------------------
 		# -------- Expander (Open Science)
@@ -4404,29 +4431,32 @@ elif mode == 'Retrieval':
 			
 			openscience_mode = st.selectbox( 'Mode', options=[ 'dataset', 'metadata', 'assays',
 					'data' ], index=[ 'dataset', 'metadata', 'assays',
-					'data' ].index( st.session_state.get( 'openscience_mode', 'dataset' ) ), key='openscience_mode', help=(
-				'dataset = fetch dataset metadata by accession; '
-				'metadata/assays/data = query the corresponding '
-				'OSDR API endpoint.') )
+					'data' ].index( st.session_state.get( 'openscience_mode', 'dataset' ) ),
+				key='openscience_mode', help=( 'dataset = fetch dataset metadata') )
 			
-			openscience_accession = st.text_input( 'Dataset Accession', value=st.session_state.get( 'openscience_accession', '' ), key='openscience_accession', placeholder='Example: OSD-48' )
+			openscience_accession = st.text_input( 'Dataset Accession',
+				value=st.session_state.get( 'openscience_accession', '' ),
+				key='openscience_accession', placeholder='Example: OSD-48' )
 			
-			openscience_query = st.text_area( 'Query', value=st.session_state.get( 'openscience_query', '' ), height=120, key='openscience_query', placeholder=(
-				'Example: (id.accession=OSD-48) '
-				'OR study.characteristics.organism=Mus '
-				'musculus') )
+			openscience_query = st.text_area( 'Query',
+				value=st.session_state.get( 'openscience_query', '' ),
+				height=120, key='openscience_query',
+				placeholder=( 'Example: (id.accession=OSD-48)') )
 			
 			openscience_format = st.selectbox( 'Format', options=[ 'json', 'csv', 'tsv',
 					'browser' ], index=[ 'json', 'csv', 'tsv',
-					'browser' ].index( st.session_state.get( 'openscience_format', 'json' ) ), key='openscience_format' )
+					'browser' ].index( st.session_state.get( 'openscience_format', 'json' ) ),
+				key='openscience_format' )
 			
-			openscience_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120, value=int( st.session_state.get( 'openscience_timeout', 20 ) ), step=1, key='openscience_timeout' )
+			openscience_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120,
+				value=int( st.session_state.get( 'openscience_timeout', 20 ) ), step=1, key='openscience_timeout' )
 			
 			b1, b2 = st.columns( 2 )
 			with b1:
 				openscience_submit = st.button( 'Submit', key='openscience_submit', width='stretch' )
 			with b2:
-				st.button( 'Clear', key='openscience_clear', on_click=_clear_openscience_state, width='stretch' )
+				st.button( 'Clear', key='openscience_clear',
+					on_click=_clear_openscience_state, width='stretch' )
 		
 		# ----------------------------
 		# -------- Expander (Gov Info)
@@ -4458,51 +4488,65 @@ elif mode == 'Retrieval':
 			
 			govinfo_mode = st.selectbox( 'Mode', options=[ 'search', 'package_summary',
 					'collection' ], index=[ 'search', 'package_summary',
-					'collection' ].index( st.session_state.get( 'govinfo_mode', 'search' ) ), key='govinfo_mode', help=(
-				'search = GovInfo Search Service; '
-				'package_summary = package details by package ID; '
-				'collection = browse a collection since an ISO timestamp.') )
+					'collection' ].index( st.session_state.get( 'govinfo_mode', 'search' ) ),
+				key='govinfo_mode', help=( 'search = GovInfo Search Service') )
 			
-			govinfo_query = st.text_area( 'Query', value=st.session_state.get( 'govinfo_query', '' ), height=120, key='govinfo_query', placeholder=(
-				'Example: collection:BILLS AND congress:118 '
-				'AND title:"appropriations"') )
+			govinfo_query = st.text_area( 'Query',
+				value=st.session_state.get( 'govinfo_query', '' ), height=120,
+				key='govinfo_query', placeholder=( 'Example: collection:BILLS AND congress:118 ') )
 			
 			c1, c2 = st.columns( 2 )
 			with c1:
-				govinfo_page_size = st.number_input( 'Page Size', min_value=1, max_value=1000, value=int( st.session_state.get( 'govinfo_page_size', 10 ) ), step=1, key='govinfo_page_size' )
+				govinfo_page_size = st.number_input( 'Page Size', min_value=1, max_value=1000,
+					value=int( st.session_state.get( 'govinfo_page_size', 10 ) ),
+					step=1, key='govinfo_page_size' )
 			
 			with c2:
-				govinfo_offset_mark = st.text_input( 'Offset Mark', value=st.session_state.get( 'govinfo_offset_mark', '*' ), key='govinfo_offset_mark', placeholder='*' )
+				govinfo_offset_mark = st.text_input( 'Offset Mark',
+					value=st.session_state.get( 'govinfo_offset_mark', '*' ),
+					key='govinfo_offset_mark', placeholder='*' )
 			
 			c3, c4 = st.columns( 2 )
 			
 			with c3:
-				govinfo_sort_field = st.selectbox( 'Sort Field', options=[ 'score',
-						'lastModified' ], index=[ 'score',
-						'lastModified' ].index( st.session_state.get( 'govinfo_sort_field', 'score' ) ), key='govinfo_sort_field' )
+				govinfo_sort_field = st.selectbox( 'Sort Field',
+					options=[ 'score', 'lastModified' ],
+					index=[ 'score', 'lastModified' ].index( st.session_state.get(
+						'govinfo_sort_field', 'score' ) ), key='govinfo_sort_field' )
 			
 			with c4:
-				govinfo_sort_order = st.selectbox( 'Sort Order', options=[ 'DESC', 'ASC' ], index=[
-						'DESC',
-						'ASC' ].index( st.session_state.get( 'govinfo_sort_order', 'DESC' ) ), key='govinfo_sort_order' )
+				govinfo_sort_order = st.selectbox( 'Sort Order',
+					options=[ 'DESC', 'ASC' ],
+					index=[ 'DESC', 'ASC' ].index( st.session_state.get(
+						'govinfo_sort_order', 'DESC' ) ), key='govinfo_sort_order' )
 			
-			govinfo_package_id = st.text_input( 'Package ID', value=st.session_state.get( 'govinfo_package_id', '' ), key='govinfo_package_id', placeholder='Example: CREC-2018-10-10' )
+			govinfo_package_id = st.text_input( 'Package ID',
+				value=st.session_state.get( 'govinfo_package_id', '' ),
+				key='govinfo_package_id', placeholder='Example: CREC-2018-10-10' )
 			
 			c5, c6 = st.columns( 2 )
 			with c5:
-				govinfo_collection = st.text_input( 'Collection', value=st.session_state.get( 'govinfo_collection', '' ), key='govinfo_collection', placeholder='Example: CREC' )
+				govinfo_collection = st.text_input( 'Collection',
+					value=st.session_state.get( 'govinfo_collection', '' ),
+					key='govinfo_collection', placeholder='Example: CREC' )
 			
 			with c6:
-				govinfo_start_date = st.text_input( 'Start Date (ISO)', value=st.session_state.get( 'govinfo_start_date', '2025-01-01T00:00:00Z' ), key='govinfo_start_date', placeholder='YYYY-MM-DDTHH:MM:SSZ' )
+				govinfo_start_date = st.text_input( 'Start Date (ISO)',
+					value=st.session_state.get( 'govinfo_start_date', '2025-01-01T00:00:00Z' ),
+					key='govinfo_start_date', placeholder='YYYY-MM-DDTHH:MM:SSZ' )
 			
-			govinfo_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120, value=int( st.session_state.get( 'govinfo_timeout', 20 ) ), step=1, key='govinfo_timeout' )
+			govinfo_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120,
+				value=int( st.session_state.get( 'govinfo_timeout', 20 ) ),
+				step=1, key='govinfo_timeout' )
 			
 			b1, b2 = st.columns( 2 )
 			with b1:
-				govinfo_submit = st.button( 'Submit', key='govinfo_submit', use_container_width=True, width='stretch' )
+				govinfo_submit = st.button( 'Submit', key='govinfo_submit',
+					use_container_width=True, width='stretch' )
 			
 			with b2:
-				govinfo_clear = st.button( 'Clear', key='govinfo_clear', on_click=_clear_govinfo_state, use_container_width=True, width='stretch' )
+				govinfo_clear = st.button( 'Clear', key='govinfo_clear',
+					on_click=_clear_govinfo_state, use_container_width=True, width='stretch' )
 			
 			result = st.session_state.get( 'govinfo_results', { } )
 			
@@ -4510,7 +4554,11 @@ elif mode == 'Retrieval':
 				try:
 					f = GovData( )
 					
-					result = f.fetch( mode=str( govinfo_mode ), query=str( govinfo_query ), page_size=int( govinfo_page_size ), offset_mark=str( govinfo_offset_mark ), sort_field=str( govinfo_sort_field ), sort_order=str( govinfo_sort_order ), package_id=str( govinfo_package_id ), collection=str( govinfo_collection ), start_date=str( govinfo_start_date ), time=int( govinfo_timeout ) )
+					result = f.fetch( mode=str( govinfo_mode ), query=str( govinfo_query ),
+						page_size=int( govinfo_page_size ), offset_mark=str( govinfo_offset_mark ),
+						sort_field=str( govinfo_sort_field ), sort_order=str( govinfo_sort_order ),
+						package_id=str( govinfo_package_id ), collection=str( govinfo_collection ),
+						start_date=str( govinfo_start_date ), time=int( govinfo_timeout ) )
 					
 					st.session_state[ 'govinfo_results' ] = result or { }
 					st.session_state[ 'retrieval_active_source' ] = 'Gov Info'
@@ -4548,7 +4596,8 @@ elif mode == 'Retrieval':
 					st.markdown( '#### Package Summary' )
 					
 					title_value = (
-							data.get( 'title' ) or data.get( 'packageTitle' ) or data.get( 'packageId' ) or 'Package')
+							data.get( 'title' ) or data.get( 'packageTitle' ) \
+							or data.get( 'packageId' ) or 'Package')
 					
 					st.markdown( f'### {title_value}' )
 					
@@ -4573,19 +4622,25 @@ elif mode == 'Retrieval':
 					
 					for index, item in enumerate( items, start=1 ):
 						title_value = (
-								item.get( 'title' ) or item.get( 'packageTitle' ) or item.get( 'packageId' ) or item.get( 'granuleId' ) or f'Result {index}')
+								item.get( 'title' ) or item.get( 'packageTitle' ) \
+								or item.get( 'packageId' ) or item.get( 'granuleId' ) \
+								or f'Result {index}')
 						
 						package_value = (
-								item.get( 'packageId' ) or item.get( 'granuleId' ) or item.get( 'id' ) or '')
+								item.get( 'packageId' ) or item.get( 'granuleId' ) \
+								or item.get( 'id' ) or '')
 						
 						collection_value = (
-									item.get( 'collectionCode' ) or item.get( 'collectionName' ) or item.get( 'collection' ) or '')
+									item.get( 'collectionCode' ) or item.get( 'collectionName' ) \
+									or item.get( 'collection' ) or '')
 						
 						date_value = (
-									item.get( 'lastModified' ) or item.get( 'dateIssued' ) or item.get( 'publishDate' ) or '')
+									item.get( 'lastModified' ) or item.get( 'dateIssued' ) \
+									or item.get( 'publishDate' ) or '')
 						
 						summary_value = (
-								item.get( 'summary' ) or item.get( 'description' ) or item.get( 'snippet' ) or '')
+								item.get( 'summary' ) or item.get( 'description' ) \
+								or item.get( 'snippet' ) or '')
 						
 						with st.container( border=True ):
 							st.markdown( f'**{index}. {title_value}**' )
@@ -4660,76 +4715,110 @@ elif mode == 'Retrieval':
 			congress_mode = st.selectbox( 'Mode', options=[ 'congresses', 'bills', 'bill_detail',
 					'laws', 'law_detail', 'reports', 'report_detail' ], index=[ 'congresses',
 					'bills', 'bill_detail', 'laws', 'law_detail', 'reports',
-					'report_detail' ].index( st.session_state.get( 'congress_mode', 'congresses' ) ), key='congress_mode', help=(
-				'Congress.gov is a structured endpoint API. '
-				'Choose the specific operation you want to '
-				'perform.') )
+					'report_detail' ].index( st.session_state.get(
+				'congress_mode', 'congresses' ) ), key='congress_mode',
+				help=( 'Congress.gov is a structured endpoint API. ') )
 			
-			congress_number = st.number_input( 'Congress Number', min_value=1, max_value=999, value=int( st.session_state.get( 'congress_number', 119 ) ), step=1, key='congress_number' )
+			congress_number = st.number_input( 'Congress Number', min_value=1, max_value=999,
+				value=int( st.session_state.get( 'congress_number', 119 ) ),
+				step=1, key='congress_number' )
 			
 			c1, c2 = st.columns( 2 )
 			with c1:
-				congress_bill_type = st.selectbox( 'Bill Type', options=[ '', 'hr', 's', 'hjres',
-						'sjres', 'hconres', 'sconres', 'hres', 'sres' ], index=[ '', 'hr', 's',
-						'hjres', 'sjres', 'hconres', 'sconres', 'hres',
-						'sres' ].index( st.session_state.get( 'congress_bill_type', '' ) ), key='congress_bill_type' )
+				congress_bill_type = st.selectbox( 'Bill Type',
+					options=[ '', 'hr', 's', 'hjres', 'sjres', 'hconres', 'sconres', 'hres', 'sres' ],
+					index=[ '', 'hr', 's', 'hjres', 'sjres', 'hconres', 'sconres', 'hres', 'sres' ].index(
+						st.session_state.get( 'congress_bill_type', '' ) ),
+					key='congress_bill_type' )
 			
 			with c2:
-				congress_bill_number = st.number_input( 'Bill Number', min_value=0, max_value=999999, value=int( st.session_state.get( 'congress_bill_number', 0 ) ), step=1, key='congress_bill_number' )
+				congress_bill_number = st.number_input( 'Bill Number', min_value=0, max_value=999999,
+					value=int( st.session_state.get( 'congress_bill_number', 0 ) ),
+					step=1, key='congress_bill_number' )
 			
 			c3, c4 = st.columns( 2 )
 			with c3:
-				congress_law_type = st.selectbox( 'Law Type', options=[ '', 'pub', 'priv' ], index=[
-						'', 'pub',
-						'priv' ].index( st.session_state.get( 'congress_law_type', '' ) ), key='congress_law_type' )
+				congress_law_type = st.selectbox( 'Law Type',
+					options=[ '', 'pub', 'priv' ],
+					index=[ '', 'pub', 'priv' ].index(
+						st.session_state.get( 'congress_law_type', '' ) ), key='congress_law_type' )
 			
 			with c4:
-				congress_law_number = st.number_input( 'Law Number', min_value=0, max_value=999999, value=int( st.session_state.get( 'congress_law_number', 0 ) ), step=1, key='congress_law_number' )
+				congress_law_number = st.number_input( 'Law Number', min_value=0, max_value=999999,
+					value=int( st.session_state.get( 'congress_law_number', 0 ) ),
+					step=1, key='congress_law_number' )
 			
 			c5, c6 = st.columns( 2 )
 			with c5:
-				congress_report_type = st.selectbox( 'Report Type', options=[ '', 'hrpt', 'srpt',
-						'erpt' ], index=[ '', 'hrpt', 'srpt',
-						'erpt' ].index( st.session_state.get( 'congress_report_type', '' ) ), key='congress_report_type' )
+				congress_report_type = st.selectbox( 'Report Type',
+					options=[ '', 'hrpt', 'srpt', 'erpt' ],
+					index=[ '', 'hrpt', 'srpt', 'erpt' ].index(
+						st.session_state.get( 'congress_report_type', '' ) ),
+					key='congress_report_type' )
 			
 			with c6:
-				congress_report_number = st.number_input( 'Report Number', min_value=0, max_value=999999, value=int( st.session_state.get( 'congress_report_number', 0 ) ), step=1, key='congress_report_number' )
+				congress_report_number = st.number_input( 'Report Number', min_value=0,
+					max_value=999999, value=int( st.session_state.get(
+						'congress_report_number', 0 ) ), step=1, key='congress_report_number' )
 			
 			c7, c8 = st.columns( 2 )
 			with c7:
-				congress_offset = st.number_input( 'Offset', min_value=0, max_value=1000000, value=int( st.session_state.get( 'congress_offset', 0 ) ), step=1, key='congress_offset' )
+				congress_offset = st.number_input( 'Offset', min_value=0, max_value=1000000,
+					value=int( st.session_state.get( 'congress_offset', 0 ) ),
+					step=1, key='congress_offset' )
 			
 			with c8:
-				congress_limit = st.number_input( 'Limit', min_value=1, max_value=250, value=int( st.session_state.get( 'congress_limit', 20 ) ), step=1, key='congress_limit' )
+				congress_limit = st.number_input( 'Limit', min_value=1, max_value=250,
+					value=int( st.session_state.get( 'congress_limit', 20 ) ),
+					step=1, key='congress_limit' )
 			
 			congress_sort = st.selectbox( 'Sort', options=[ 'updateDate+desc',
 					'updateDate+asc' ], index=[ 'updateDate+desc',
-					'updateDate+asc' ].index( st.session_state.get( 'congress_sort', 'updateDate+desc' ) ), key='congress_sort' )
+					'updateDate+asc' ].index( st.session_state.get(
+				'congress_sort', 'updateDate+desc' ) ), key='congress_sort' )
 			
 			c9, c10 = st.columns( 2 )
 			with c9:
-				congress_from_datetime = st.text_input( 'From DateTime (ISO)', value=st.session_state.get( 'congress_from_datetime', '' ), key='congress_from_datetime', placeholder='YYYY-MM-DDTHH:MM:SSZ' )
+				congress_from_datetime = st.text_input( 'From DateTime (ISO)',
+					value=st.session_state.get( 'congress_from_datetime', '' ),
+					key='congress_from_datetime', placeholder='YYYY-MM-DDTHH:MM:SSZ' )
 			
 			with c10:
-				congress_to_datetime = st.text_input( 'To DateTime (ISO)', value=st.session_state.get( 'congress_to_datetime', '' ), key='congress_to_datetime', placeholder='YYYY-MM-DDTHH:MM:SSZ' )
+				congress_to_datetime = st.text_input( 'To DateTime (ISO)',
+					value=st.session_state.get( 'congress_to_datetime', '' ),
+					key='congress_to_datetime', placeholder='YYYY-MM-DDTHH:MM:SSZ' )
 			
-			congress_conference = st.checkbox( 'Conference Reports', value=bool( st.session_state.get( 'congress_conference', False ) ), key='congress_conference' )
+			congress_conference = st.checkbox( 'Conference Reports',
+				value=bool( st.session_state.get( 'congress_conference', False ) ),
+				key='congress_conference' )
 			
-			congress_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120, value=int( st.session_state.get( 'congress_timeout', 20 ) ), step=1, key='congress_timeout' )
+			congress_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120,
+				value=int( st.session_state.get( 'congress_timeout', 20 ) ),
+				step=1, key='congress_timeout' )
 			
 			b1, b2 = st.columns( 2 )
 			
 			with b1:
-				congress_submit = st.button( 'Submit', key='congress_submit', use_container_width=True, width='stretch' )
+				congress_submit = st.button( 'Submit', key='congress_submit',
+					use_container_width=True, width='stretch' )
 			
 			with b2:
-				congress_clear = st.button( 'Clear', key='congress_clear', on_click=_clear_congress_state, use_container_width=True, width='stretch' )
+				congress_clear = st.button( 'Clear', key='congress_clear',
+					on_click=_clear_congress_state, use_container_width=True, width='stretch' )
 			
 			if congress_submit:
 				try:
 					f = Congress( )
 					
-					result = f.fetch( mode=str( congress_mode ), congress=int( congress_number ), bill_type=str( congress_bill_type ), bill_number=int( congress_bill_number ), law_type=str( congress_law_type ), law_number=int( congress_law_number ), report_type=str( congress_report_type ), report_number=int( congress_report_number ), offset=int( congress_offset ), limit=int( congress_limit ), sort=str( congress_sort ), from_date_time=str( congress_from_datetime ), to_date_time=str( congress_to_datetime ), conference=bool( congress_conference ), time=int( congress_timeout ) )
+					result = f.fetch( mode=str( congress_mode ), congress=int( congress_number ),
+						bill_type=str( congress_bill_type ), bill_number=int( congress_bill_number ),
+						law_type=str( congress_law_type ), law_number=int( congress_law_number ),
+						report_type=str( congress_report_type ),
+						report_number=int( congress_report_number ), offset=int( congress_offset ),
+						limit=int( congress_limit ), sort=str( congress_sort ),
+						from_date_time=str( congress_from_datetime ),
+						to_date_time=str( congress_to_datetime ),
+						conference=bool( congress_conference ), time=int( congress_timeout ) )
 					
 					st.session_state[ 'congress_results' ] = result or { }
 					st.session_state[ 'retrieval_active_source' ] = 'US Congress'

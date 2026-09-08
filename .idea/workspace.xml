@@ -86,7 +86,7 @@
     &quot;node.js.selected.package.standard&quot;: &quot;&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.intellij.pycharm.community.ide.impl.configuration.PythonContentEntriesConfigurable&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -166,15 +166,9 @@
       <workItem from="1788810295027" duration="7144000" />
       <workItem from="1788821614464" duration="10208000" />
       <workItem from="1788856451993" duration="10811000" />
-      <workItem from="1788879916680" duration="1086000" />
-    </task>
-    <task id="LOCAL-00127" summary="updates">
-      <option name="closed" value="true" />
-      <created>1788545645565</created>
-      <option name="number" value="00127" />
-      <option name="presentableId" value="LOCAL-00127" />
-      <option name="project" value="LOCAL" />
-      <updated>1788545645565</updated>
+      <workItem from="1788879916680" duration="1183000" />
+      <workItem from="1788881740382" duration="21000" />
+      <workItem from="1788881766814" duration="792000" />
     </task>
     <task id="LOCAL-00128" summary="updates">
       <option name="closed" value="true" />
@@ -560,7 +554,15 @@
       <option name="project" value="LOCAL" />
       <updated>1788879146747</updated>
     </task>
-    <option name="localTasksCounter" value="176" />
+    <task id="LOCAL-00176" summary="updates">
+      <option name="closed" value="true" />
+      <created>1788881692851</created>
+      <option name="number" value="00176" />
+      <option name="presentableId" value="LOCAL-00176" />
+      <option name="project" value="LOCAL" />
+      <updated>1788881692852</updated>
+    </task>
+    <option name="localTasksCounter" value="177" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
