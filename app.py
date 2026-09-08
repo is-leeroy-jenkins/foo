@@ -1958,8 +1958,8 @@ if mode == 'Loading':
 						st.session_state.raw_text = rebuild_raw_text_from_documents( )
 						st.session_state.active_loader = 'ArXivLoader'
 						
-						st.session_state[
-							'_loader_status' ] = f'Fetched {len( documents )} document(s).'
+						st.session_state[ '_loader_status' ] = \
+							f'Fetched {len( documents )} document(s).'
 			
 			# ----------------------------
 			# ---- Expander Wikipedia Loader
