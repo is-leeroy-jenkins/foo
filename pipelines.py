@@ -68,39 +68,17 @@ DEFAULT_EMBEDDING_MODEL = 'sentence-transformers/all-MiniLM-L6-v2'
 CHROMA_DIRECTORY = Path( 'stores' ) / 'chroma'
 
 EMBEDDING_MODELS: Dict[ str, List[ str ] ] = {
-    'OpenAI': [
-        'text-embedding-3-small',
-        'text-embedding-3-large',
-    ],
-    'GoogleGenerativeAI': [
-        'gemini-embedding-2-preview',
-    ],
-    'MistralAI': [
-        'mistral-embed',
-    ],
-    'HuggingFace': [
-        'sentence-transformers/all-MiniLM-L6-v2',
-        'sentence-transformers/all-mpnet-base-v2',
-    ],
-}
+		'OpenAI': [ 'text-embedding-3-small', 'text-embedding-3-large', ],
+		'GoogleGenerativeAI': [ 'gemini-embedding-2-preview', ], 'MistralAI': [ 'mistral-embed', ],
+		'HuggingFace': [ 'sentence-transformers/all-MiniLM-L6-v2',
+				'sentence-transformers/all-mpnet-base-v2', ], }
 
-PIPELINE_STATE_DEFAULTS: Dict[ str, Any ] = {
-    'chunk_size': DEFAULT_CHUNK_SIZE,
-    'chunk_overlap': DEFAULT_CHUNK_OVERLAP,
-    'chunk_source_signature': '',
-    'df_chunking': None,
-    'df_embedding': None,
-    'embedder': None,
-    'embeddings': None,
-    'embedding_provider': None,
-    'embedding_model': None,
-    'embedding_source': None,
-    'embedding_documents': None,
-    'df_embedding_input': None,
-    'df_embedding_output': None,
-    'vector_store': None,
-    'vector_store_collection': '',
-}
+PIPELINE_STATE_DEFAULTS: Dict[ str, Any ] = { 'chunk_size': DEFAULT_CHUNK_SIZE,
+		'chunk_overlap': DEFAULT_CHUNK_OVERLAP, 'chunk_source_signature': '', 'df_chunking': None,
+		'df_embedding': None, 'embedder': None, 'embeddings': None, 'embedding_provider': None,
+		'embedding_model': None, 'embedding_source': None, 'embedding_documents': None,
+		'df_embedding_input': None, 'df_embedding_output': None, 'vector_store': None,
+		'vector_store_collection': '', }
 
 
 def throw_if( name: str, value: object ) -> None:
@@ -367,16 +345,14 @@ def create_chunk_dataframe( chunks: List[ Document ] ) -> DataFrame:
     """
     throw_if( 'chunks', chunks )
     rows: List[ Dict[ str, Any ] ] = [ ]
-
+    
     for chunk in chunks:
-        metadata = chunk.metadata or { }
-        rows.append( {
-            'Chunk ID': metadata.get( 'chunk_id', '' ),
-            'Document ID': metadata.get( 'document_id', '' ),
-            'Source': metadata.get( 'source', '' ),
-            'Characters': len( chunk.page_content or '' ),
-            'Chunk Text': chunk.page_content or '',
-        } )
+	    metadata = chunk.metadata or { }
+	    rows.append( { 'Chunk ID': metadata.get( 'chunk_id', '' ),
+			    'Document ID': metadata.get( 'document_id', '' ),
+			    'Source': metadata.get( 'source', '' ),
+			    'Characters': len( chunk.page_content or '' ),
+			    'Chunk Text': chunk.page_content or '', } )
 
     return pd.DataFrame( rows )
 
@@ -440,79 +416,62 @@ def render_langchain_inputs( loader_name: str, key_prefix: str ) -> None:
     throw_if( 'loader_name', loader_name )
     throw_if( 'key_prefix', key_prefix )
     ensure_langchain_state( )
-
+    
     size_key = f'{key_prefix}_chunk_size'
     overlap_key = f'{key_prefix}_chunk_overlap'
     provider_key = f'{key_prefix}_embedding_provider'
     model_key = f'{key_prefix}_embedding_model'
     reset_key = f'{key_prefix}_langchain_reset_request'
-
+    
     if st.session_state.get( reset_key, False ):
-        st.session_state[ size_key ] = DEFAULT_CHUNK_SIZE
-        st.session_state[ overlap_key ] = DEFAULT_CHUNK_OVERLAP
-        st.session_state[ provider_key ] = DEFAULT_EMBEDDING_PROVIDER
-        st.session_state[ model_key ] = DEFAULT_EMBEDDING_MODEL
-        st.session_state[ reset_key ] = False
-
+	    st.session_state[ size_key ] = DEFAULT_CHUNK_SIZE
+	    st.session_state[ overlap_key ] = DEFAULT_CHUNK_OVERLAP
+	    st.session_state[ provider_key ] = DEFAULT_EMBEDDING_PROVIDER
+	    st.session_state[ model_key ] = DEFAULT_EMBEDDING_MODEL
+	    st.session_state[ reset_key ] = False
+    
     if size_key not in st.session_state:
-        st.session_state[ size_key ] = DEFAULT_CHUNK_SIZE
-
+	    st.session_state[ size_key ] = DEFAULT_CHUNK_SIZE
+    
     if overlap_key not in st.session_state:
-        st.session_state[ overlap_key ] = DEFAULT_CHUNK_OVERLAP
-
+	    st.session_state[ overlap_key ] = DEFAULT_CHUNK_OVERLAP
+    
     if provider_key not in st.session_state:
-        st.session_state[ provider_key ] = DEFAULT_EMBEDDING_PROVIDER
-
+	    st.session_state[ provider_key ] = DEFAULT_EMBEDDING_PROVIDER
+    
     provider = st.session_state.get( provider_key, DEFAULT_EMBEDDING_PROVIDER )
     if provider not in EMBEDDING_MODELS:
-        st.session_state[ provider_key ] = DEFAULT_EMBEDDING_PROVIDER
-        provider = DEFAULT_EMBEDDING_PROVIDER
-
+	    st.session_state[ provider_key ] = DEFAULT_EMBEDDING_PROVIDER
+	    provider = DEFAULT_EMBEDDING_PROVIDER
+    
     model_options = EMBEDDING_MODELS[ provider ]
     if st.session_state.get( model_key, '' ) not in model_options:
-        st.session_state[ model_key ] = model_options[ 0 ]
-
+	    st.session_state[ model_key ] = model_options[ 0 ]
+    
     if int( st.session_state[ overlap_key ] ) >= int( st.session_state[ size_key ] ):
-        st.session_state[ overlap_key ] = max( 0, int( st.session_state[ size_key ] ) // 5 )
-
+	    st.session_state[ overlap_key ] = max( 0, int( st.session_state[ size_key ] ) // 5 )
+    
     chunk_col, overlap_col = st.columns( 2 )
     with chunk_col:
-        st.number_input(
-            'Chunk Size',
-            min_value=1,
-            value=int( st.session_state[ size_key ] ),
-            step=1,
-            key=size_key,
-        )
-
+	    st.number_input( 'Chunk Size', min_value=1, value=int(
+		    st.session_state[ size_key ] ), step=1, key=size_key, )
+    
     with overlap_col:
-        st.number_input(
-            'Chunk Overlap',
-            min_value=0,
-            max_value=max( 0, int( st.session_state[ size_key ] ) - 1 ),
-            value=int( st.session_state[ overlap_key ] ),
-            step=1,
-            key=overlap_key,
-        )
-
+	    st.number_input( 'Chunk Overlap', min_value=0, max_value=max( 0, int(
+		    st.session_state[ size_key ] ) - 1 ), value=int(
+		    st.session_state[ overlap_key ] ), step=1, key=overlap_key, )
+    
     provider_col, model_col = st.columns( 2 )
     with provider_col:
-        provider = st.selectbox(
-            'Embedding Provider',
-            options=list( EMBEDDING_MODELS.keys( ) ),
-            key=provider_key,
-        )
-
+	    provider = st.selectbox( 'Embedding Provider', options=list( EMBEDDING_MODELS.keys( ) ),
+		    key=provider_key, )
+    
     model_options = EMBEDDING_MODELS[ provider ]
     if st.session_state.get( model_key, '' ) not in model_options:
-        st.session_state[ model_key ] = model_options[ 0 ]
-
+	    st.session_state[ model_key ] = model_options[ 0 ]
+    
     with model_col:
-        st.selectbox(
-            'Embedding Model',
-            options=model_options,
-            key=model_key,
-        )
+	    st.selectbox( 'Embedding Model', options=model_options, key=model_key, )
 
 
 def render_langchain_actions( loader_name: str, key_prefix: str ) -> None:
@@ -546,111 +505,81 @@ def render_langchain_actions( loader_name: str, key_prefix: str ) -> None:
     can_embed = active_documents and bool( chunked_documents ) and \
         chunk_signature == current_signature
     can_store = can_embed and bool( embeddings ) and embedder is not None
-
+    
     chunk_col, embed_col, store_col = st.columns( 3 )
-    chunk_clicked = chunk_col.button(
-        'Chunk',
-        key=f'{key_prefix}_chunk_documents',
-        icon='✂️',
-        disabled=not active_documents,
-        width='stretch',
-    )
-    embed_clicked = embed_col.button(
-        'Embed',
-        key=f'{key_prefix}_embed_documents',
-        icon='🧬',
-        disabled=not can_embed,
-        width='stretch',
-    )
-    store_clicked = store_col.button(
-        'Store',
-        key=f'{key_prefix}_store_vectors',
-        icon='🗄️',
-        disabled=not can_store,
-        width='stretch',
-    )
-
+    chunk_clicked = chunk_col.button( 'Chunk', key=f'{key_prefix}_chunk_documents', icon='✂️',
+	    disabled=not active_documents, width='stretch', )
+    embed_clicked = embed_col.button( 'Embed', key=f'{key_prefix}_embed_documents', icon='🧬',
+	    disabled=not can_embed, width='stretch', )
+    store_clicked = store_col.button( 'Store', key=f'{key_prefix}_store_vectors', icon='🗄️',
+	    disabled=not can_store, width='stretch', )
+    
     if chunk_clicked:
-        chunker = DocumentChunker( )
-        chunks = chunker.split(
-            documents=list( documents ),
-            chunk_size=int( st.session_state[ f'{key_prefix}_chunk_size' ] ),
-            chunk_overlap=int( st.session_state[ f'{key_prefix}_chunk_overlap' ] ),
-        )
-        df_chunking = create_chunk_dataframe( chunks )
-        st.session_state[ 'chunked_documents' ] = chunks
-        st.session_state[ 'chunks' ] = [ chunk.page_content for chunk in chunks ]
-        st.session_state[ 'df_chunking' ] = df_chunking
-        st.session_state[ 'df_chunks' ] = df_chunking
-        st.session_state[ 'chunk_source_signature' ] = current_signature
-        st.session_state[ 'embedder' ] = None
-        st.session_state[ 'embeddings' ] = None
-        st.session_state[ 'embedding_documents' ] = None
-        st.session_state[ 'df_embedding_input' ] = None
-        st.session_state[ 'df_embedding_output' ] = None
-        st.session_state[ 'df_embedding' ] = None
-        st.session_state[ 'vector_store' ] = None
-        st.session_state[ 'vector_store_collection' ] = ''
-        st.success( f'Created {len( chunks )} LangChain chunk(s).' )
-
+	    chunker = DocumentChunker( )
+	    chunks = chunker.split( documents=list( documents ), chunk_size=int(
+		    st.session_state[ f'{key_prefix}_chunk_size' ] ), chunk_overlap=int(
+		    st.session_state[ f'{key_prefix}_chunk_overlap' ] ), )
+	    df_chunking = create_chunk_dataframe( chunks )
+	    st.session_state[ 'chunked_documents' ] = chunks
+	    st.session_state[ 'chunks' ] = [ chunk.page_content for chunk in chunks ]
+	    st.session_state[ 'df_chunking' ] = df_chunking
+	    st.session_state[ 'df_chunks' ] = df_chunking
+	    st.session_state[ 'chunk_source_signature' ] = current_signature
+	    st.session_state[ 'embedder' ] = None
+	    st.session_state[ 'embeddings' ] = None
+	    st.session_state[ 'embedding_documents' ] = None
+	    st.session_state[ 'df_embedding_input' ] = None
+	    st.session_state[ 'df_embedding_output' ] = None
+	    st.session_state[ 'df_embedding' ] = None
+	    st.session_state[ 'vector_store' ] = None
+	    st.session_state[ 'vector_store_collection' ] = ''
+	    st.success( f'Created {len( chunks )} LangChain chunk(s).' )
+    
     if embed_clicked:
-        provider = str( st.session_state[ f'{key_prefix}_embedding_provider' ] )
-        model = str( st.session_state[ f'{key_prefix}_embedding_model' ] )
-        factory = EmbeddingFactory( )
-        embedder = factory.create( provider=provider, model=model )
-        texts = [ chunk.page_content for chunk in chunked_documents ]
-        vectors = embedder.embed_documents( texts )
-
-        if len( vectors ) != len( chunked_documents ):
-            raise RuntimeError( 'Embedding count does not match the chunk count.' )
-
-        dimensions = { len( vector ) for vector in vectors }
-        if len( dimensions ) != 1:
-            raise RuntimeError( 'Embedding vectors do not have a consistent dimension.' )
-
-        if not all( math.isfinite( float( value ) ) for vector in vectors for value in vector ):
-            raise RuntimeError( 'Embedding vectors contain non-finite values.' )
-
-        df_embedding = create_embedding_dataframe(
-            chunks=list( chunked_documents ),
-            embeddings=vectors,
-            provider=provider,
-            model=model,
-        )
-        df_embedding_input = pd.DataFrame( {
-            'Chunk ID': [
-                ( chunk.metadata or { } ).get( 'chunk_id', '' )
-                for chunk in chunked_documents
-            ],
-            'Text': texts,
-        } )
-        st.session_state[ 'embedder' ] = embedder
-        st.session_state[ 'embeddings' ] = vectors
-        st.session_state[ 'embedding_provider' ] = provider
-        st.session_state[ 'embedding_model' ] = model
-        st.session_state[ 'embedding_source' ] = loader_name
-        st.session_state[ 'embedding_documents' ] = list( chunked_documents )
-        st.session_state[ 'df_embedding_input' ] = df_embedding_input
-        st.session_state[ 'df_embedding_output' ] = df_embedding
-        st.session_state[ 'df_embedding' ] = df_embedding
-        st.session_state[ 'vector_store' ] = None
-        st.session_state[ 'vector_store_collection' ] = ''
-        st.success(
-            f'Generated {len( vectors )} embedding(s) with {next( iter( dimensions ) )} dimensions.'
-        )
-
+	    provider = str( st.session_state[ f'{key_prefix}_embedding_provider' ] )
+	    model = str( st.session_state[ f'{key_prefix}_embedding_model' ] )
+	    factory = EmbeddingFactory( )
+	    embedder = factory.create( provider=provider, model=model )
+	    texts = [ chunk.page_content for chunk in chunked_documents ]
+	    vectors = embedder.embed_documents( texts )
+	    
+	    if len( vectors ) != len( chunked_documents ):
+		    raise RuntimeError( 'Embedding count does not match the chunk count.' )
+	    
+	    dimensions = { len( vector ) for vector in vectors }
+	    if len( dimensions ) != 1:
+		    raise RuntimeError( 'Embedding vectors do not have a consistent dimension.' )
+	    
+	    if not all( math.isfinite( float( value ) ) for vector in vectors for value in vector ):
+		    raise RuntimeError( 'Embedding vectors contain non-finite values.' )
+	    
+	    df_embedding = create_embedding_dataframe( chunks=list( chunked_documents ),
+		    embeddings=vectors, provider=provider, model=model, )
+	    df_embedding_input = pd.DataFrame( {
+			    'Chunk ID': [ (chunk.metadata or { }).get( 'chunk_id', '' ) for chunk in
+					    chunked_documents ], 'Text': texts, } )
+	    st.session_state[ 'embedder' ] = embedder
+	    st.session_state[ 'embeddings' ] = vectors
+	    st.session_state[ 'embedding_provider' ] = provider
+	    st.session_state[ 'embedding_model' ] = model
+	    st.session_state[ 'embedding_source' ] = loader_name
+	    st.session_state[ 'embedding_documents' ] = list( chunked_documents )
+	    st.session_state[ 'df_embedding_input' ] = df_embedding_input
+	    st.session_state[ 'df_embedding_output' ] = df_embedding
+	    st.session_state[ 'df_embedding' ] = df_embedding
+	    st.session_state[ 'vector_store' ] = None
+	    st.session_state[ 'vector_store_collection' ] = ''
+	    st.success( f'Generated {len( vectors )} embedding(s) with {next( iter( dimensions ) )} '
+	                f'dimensions.' )
+    
     if store_clicked:
-        collection_name = f'foo_{loader_name.lower( ).replace( "loader", "" )}_documents'
-        store = ChromaStore( )
-        vector_store = store.create(
-            documents=list( chunked_documents ),
-            embedder=embedder,
-            collection_name=collection_name,
-            persist_directory=str( CHROMA_DIRECTORY ),
-        )
-        st.session_state[ 'vector_store' ] = vector_store
-        st.session_state[ 'vector_store_collection' ] = collection_name
-        st.success( f'Stored {len( chunked_documents )} chunk(s) in Chroma: {collection_name}.' )
+	    collection_name = f'foo_{loader_name.lower( ).replace( "loader", "" )}_documents'
+	    store = ChromaStore( )
+	    vector_store = store.create( documents=list( chunked_documents ), embedder=embedder,
+		    collection_name=collection_name, persist_directory=str( CHROMA_DIRECTORY ), )
+	    st.session_state[ 'vector_store' ] = vector_store
+	    st.session_state[ 'vector_store_collection' ] = collection_name
+	    st.success( f'Stored {len( chunked_documents )} chunk(s) in Chroma: {collection_name}.' )
 
 
 # =====================================================================
@@ -669,55 +598,39 @@ def render_loading_tabs( ) -> None:
     """
     ensure_langchain_state( )
     document_tab, chunk_tab, embedding_tab = st.tabs( [ 'Document', 'Chunks', 'Embeddings' ] )
-
+    
     with document_tab:
-        documents = st.session_state.get( 'documents' ) or [ ]
-        if not documents:
-            st.info( 'No documents loaded.' )
-        else:
-            st.caption( f"Active Loader: {st.session_state.get( 'active_loader', '' )}" )
-            st.write( f'Documents: {len( documents )}' )
-            for index, document in enumerate( documents[ :5 ] ):
-                with st.expander( f'Document {index + 1}', expanded=True ):
-                    st.json( document.metadata )
-                    st.text_area(
-                        'Content',
-                        document.page_content[ : ],
-                        height=450,
-                        key=f'preview_doc_{index}',
-                    )
-
+	    documents = st.session_state.get( 'documents' ) or [ ]
+	    if not documents:
+		    st.info( 'No documents loaded.' )
+	    else:
+		    st.caption( f"Active Loader: {st.session_state.get( 'active_loader', '' )}" )
+		    st.write( f'Documents: {len( documents )}' )
+		    for index, document in enumerate( documents[ :5 ] ):
+			    with st.expander( f'Document {index + 1}', expanded=True ):
+				    st.json( document.metadata )
+				    st.text_area( 'Content', document.page_content[
+					    : ], height=450, key=f'preview_doc_{index}', )
+    
     with chunk_tab:
-        df_chunking = st.session_state.get( 'df_chunking' )
-        if not isinstance( df_chunking, DataFrame ) or df_chunking.empty:
-            st.info( 'No chunks created.' )
-        else:
-            st.caption( f'Chunks: {len( df_chunking )}' )
-            st.data_editor(
-                df_chunking,
-                disabled=True,
-                hide_index=True,
-                use_container_width=True,
-                height=520,
-                key='loading_df_chunking',
-            )
-
+	    df_chunking = st.session_state.get( 'df_chunking' )
+	    if not isinstance( df_chunking, DataFrame ) or df_chunking.empty:
+		    st.info( 'No chunks created.' )
+	    else:
+		    st.caption( f'Chunks: {len( df_chunking )}' )
+		    st.data_editor( df_chunking, disabled=True, hide_index=True, use_container_width=True,
+			    height=520, key='loading_df_chunking', )
+    
     with embedding_tab:
-        df_embedding = st.session_state.get( 'df_embedding' )
-        if not isinstance( df_embedding, DataFrame ) or df_embedding.empty:
-            st.info( 'No embeddings generated.' )
-        else:
-            provider = st.session_state.get( 'embedding_provider', '' )
-            model = st.session_state.get( 'embedding_model', '' )
-            collection = st.session_state.get( 'vector_store_collection', '' )
-            st.caption( f'Provider: {provider} | Model: {model}' )
-            if collection:
-                st.caption( f'Chroma Collection: {collection}' )
-            st.data_editor(
-                df_embedding,
-                disabled=True,
-                hide_index=True,
-                use_container_width=True,
-                height=520,
-                key='loading_df_embedding',
-            )
+	    df_embedding = st.session_state.get( 'df_embedding' )
+	    if not isinstance( df_embedding, DataFrame ) or df_embedding.empty:
+		    st.info( 'No embeddings generated.' )
+	    else:
+		    provider = st.session_state.get( 'embedding_provider', '' )
+		    model = st.session_state.get( 'embedding_model', '' )
+		    collection = st.session_state.get( 'vector_store_collection', '' )
+		    st.caption( f'Provider: {provider} | Model: {model}' )
+		    if collection:
+			    st.caption( f'Chroma Collection: {collection}' )
+		    st.data_editor( df_embedding, disabled=True, hide_index=True,
+			    use_container_width=True, height=520, key='loading_df_embedding', )
