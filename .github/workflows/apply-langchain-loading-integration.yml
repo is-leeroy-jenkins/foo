@@ -30,7 +30,15 @@ jobs:
         run: python tools/apply_langchain_loading_integration_v2.py
 
       - name: Compile updated sources
+        id: compile
+        continue-on-error: true
         run: python -m py_compile app.py langchain_pipeline.py stores/vector.py
+
+      - name: Show syntax context
+        if: steps.compile.outcome == 'failure'
+        run: |
+          nl -ba app.py | sed -n '1965,2005p'
+          exit 1
 
       - name: Verify integration markers
         run: |
@@ -62,4 +70,4 @@ jobs:
           git commit -m "Integrate LangChain chunking embeddings and vector storage"
           git push origin HEAD:feature/langchain-chunking-embeddings-vector-store
 
-# Anchored integration retry: 4
+# Anchored integration diagnostic: 5
