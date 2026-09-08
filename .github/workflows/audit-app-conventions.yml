@@ -1,0 +1,71 @@
+name: Audit app conventions
+
+on:
+  push:
+    branches:
+      - maintenance/app-conventions-docs
+    paths:
+      - .github/workflows/audit-app-conventions.yml
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: maintenance/app-conventions-docs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Audit app.py functions
+        run: |
+          python - <<'PY'
+          import ast
+          import json
+          from pathlib import Path
+
+          source = Path('app.py').read_text(encoding='utf-8')
+          tree = ast.parse(source)
+          functions = []
+          loads = {}
+
+          for node in ast.walk(tree):
+              if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+                  loads[node.id] = loads.get(node.id, 0) + 1
+
+          for node in ast.walk(tree):
+              if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                  continue
+              doc = ast.get_docstring(node, clean=False) or ''
+              args = [arg.arg for arg in node.args.posonlyargs + node.args.args + node.args.kwonlyargs]
+              if node.args.vararg:
+                  args.append('*' + node.args.vararg.arg)
+              if node.args.kwarg:
+                  args.append('**' + node.args.kwarg.arg)
+              functions.append({
+                  'name': node.name,
+                  'line': node.lineno,
+                  'end_line': node.end_lineno,
+                  'references': loads.get(node.name, 0),
+                  'leading_underscore': node.name.startswith('_') and not node.name.startswith('__'),
+                  'has_docstring': bool(doc.strip()),
+                  'has_purpose': 'Purpose:' in doc or 'Purpose\n' in doc,
+                  'has_args': (not args) or ('Args:' in doc) or ('Parameters' in doc) or ('Parametes:' in doc),
+                  'has_returns': ('Returns:' in doc) or ('Returns\n' in doc),
+                  'args': args,
+              })
+
+          functions.sort(key=lambda item: item['line'])
+          label = lambda item: '{}@{}'.format(item['name'], item['line'])
+          print('APP_FUNCTION_AUDIT_BEGIN')
+          print(json.dumps(functions, indent=2))
+          print('APP_FUNCTION_AUDIT_END')
+          print('Total functions:', len(functions))
+          print('Leading underscore:', [label(item) for item in functions if item['leading_underscore']])
+          print('Unused candidates:', [label(item) for item in functions if item['references'] == 0 and not item['name'].startswith('__')])
+          print('Missing docstrings:', [label(item) for item in functions if not item['has_docstring']])
+          print('Noncompliant docstrings:', [label(item) for item in functions if item['has_docstring'] and not (item['has_purpose'] and item['has_args'] and item['has_returns'])])
+          PY
