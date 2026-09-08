@@ -26,6 +26,23 @@ jobs:
       - name: Apply housekeeping
         run: python .github/app_housekeeping.py
 
+      - name: Remove stale Data Management documentation references
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          user_guide = Path('docs/user-guide.md')
+          text = user_guide.read_text(encoding='utf-8')
+          text = text.replace('* [Data Management](data-management.md)\n', '')
+          user_guide.write_text(text, encoding='utf-8')
+
+          development = Path('docs/development.md')
+          text = development.read_text(encoding='utf-8')
+          text = text.replace('8. Update `docs/data-management.md`.', '8. Update `docs/api/data.md`.')
+          text = text.replace('Update `data-management.md` and `api/data.md`.', 'Update `api/data.md`.')
+          development.write_text(text, encoding='utf-8')
+          PY
+
       - name: Compile app
         run: python -m py_compile app.py embedders.py stores/vector.py
 
@@ -57,8 +74,8 @@ jobs:
           grep -R -n "stores/vector.py" README.md docs
           grep -R -n "Pinecone" README.md docs
           grep -R -n "Local GGUF" README.md docs
-          if grep -R -n -E "embeddings\.py|pipelines\.py" README.md docs; then
-            echo 'Stale module reference found.'
+          if grep -R -n -E "embeddings\.py|pipelines\.py|data-management\.md" README.md docs; then
+            echo 'Stale documentation reference found.'
             exit 1
           fi
 
