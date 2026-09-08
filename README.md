@@ -139,7 +139,7 @@ foo/
 └── resources/
     └── images/            # README and UI image assets
 ```
-## 🔑 API Key Set-up
+## 🔑 API Set-up
 
 - [Data sources](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/API-Setup.md) 
 - [OpenAI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/enironments.md) 
