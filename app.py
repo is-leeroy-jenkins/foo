@@ -758,34 +758,18 @@ DEFAULT_EMBEDDING_PROVIDER = 'Hugging Face'
 DEFAULT_EMBEDDING_MODEL = 'sentence-transformers/all-MiniLM-L6-v2'
 CHROMA_DIRECTORY = Path( 'stores' ) / 'chroma'
 EMBEDDING_MODELS: Dict[ str, List[ str ] ] = {
-	'OpenAI': [ 'text-embedding-3-small', 'text-embedding-3-large' ],
-	'Google Generative AI': [ 'gemini-embedding-2-preview' ],
-	'Mistral AI': [ 'mistral-embed' ],
-	'Hugging Face': [
-		'sentence-transformers/all-MiniLM-L6-v2',
-		'sentence-transformers/all-mpnet-base-v2',
-	],
-}
+		'OpenAI': [ 'text-embedding-3-small', 'text-embedding-3-large' ],
+		'Google Generative AI': [ 'gemini-embedding-2-preview' ], 'Mistral AI': [
+				'mistral-embed' ],
+		'Hugging Face': [ 'sentence-transformers/all-MiniLM-L6-v2',
+				'sentence-transformers/all-mpnet-base-v2', ], }
 VECTOR_STORES = [ 'Chroma', 'Pinecone' ]
-
-DOCUMENT_PROCESSING_STATE: Dict[ str, Any ] = {
-	'chunked_documents': None,
-	'chunk_source_signature': '',
-	'chunk_size_used': 0,
-	'chunk_overlap_used': 0,
-	'df_chunking': None,
-	'embedder': None,
-	'embeddings': None,
-	'embedding_provider': '',
-	'embedding_model': '',
-	'embedding_model_path': '',
-	'embedding_documents': None,
-	'df_embedding': None,
-	'vector_store': None,
-	'vector_store_provider': '',
-	'vector_store_name': '',
-	'vector_store_namespace': '',
-}
+DOCUMENT_PROCESSING_STATE: Dict[ str, Any ] = { 'chunked_documents': None,
+		'chunk_source_signature': '', 'chunk_size_used': 0, 'chunk_overlap_used': 0,
+		'df_chunking': None, 'embedder': None, 'embeddings': None, 'embedding_provider': '',
+		'embedding_model': '', 'embedding_model_path': '', 'embedding_documents': None,
+		'df_embedding': None, 'vector_store': None, 'vector_store_provider': '',
+		'vector_store_name': '', 'vector_store_namespace': '', }
 
 
 def ensure_document_processing_state( ) -> None:
@@ -802,7 +786,6 @@ def ensure_document_processing_state( ) -> None:
 		if key not in st.session_state:
 			st.session_state[ key ] = value
 
-
 def clear_document_processing_outputs( ) -> None:
 	"""Clear derived document-processing outputs.
 
@@ -818,7 +801,6 @@ def clear_document_processing_outputs( ) -> None:
 	st.session_state[ 'chunks' ] = None
 	st.session_state[ 'df_chunks' ] = None
 
-
 def reset_document_processing_controls( key_prefix: str ) -> None:
 	"""Request a reset for one loader's processing controls.
 
@@ -831,7 +813,6 @@ def reset_document_processing_controls( key_prefix: str ) -> None:
 	throw_if( 'key_prefix', key_prefix )
 	clear_document_processing_outputs( )
 	st.session_state[ f'{key_prefix}_processing_reset_request' ] = True
-
 
 def document_signature( documents: List[ Document ] ) -> str:
 	"""Create a deterministic signature for loaded documents.
@@ -849,7 +830,6 @@ def document_signature( documents: List[ Document ] ) -> str:
 		metadata = json.dumps( document.metadata or { }, sort_keys=True, default=str )
 		digest.update( metadata.encode( 'utf-8', errors='ignore' ) )
 	return digest.hexdigest( )
-
 
 def create_chunk_dataframe( chunks: List[ Document ] ) -> DataFrame:
 	"""Create the read-only chunk display dataframe.
@@ -872,7 +852,6 @@ def create_chunk_dataframe( chunks: List[ Document ] ) -> DataFrame:
 			'Chunk Text': chunk.page_content or '',
 		} )
 	return pd.DataFrame( rows )
-
 
 def create_embedding_dataframe( chunks: List[ Document ], vectors: List[ List[ float ] ],
 	provider: str, model: str ) -> DataFrame:
@@ -905,7 +884,6 @@ def create_embedding_dataframe( chunks: List[ Document ], vectors: List[ List[ f
 		} )
 	return pd.DataFrame( rows )
 
-
 def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> None:
 	"""Render chunking, embedding, and vector-storage controls for one loader.
 
@@ -919,7 +897,7 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 	throw_if( 'loader_name', loader_name )
 	throw_if( 'key_prefix', key_prefix )
 	ensure_document_processing_state( )
-
+	
 	size_key = f'{key_prefix}_chunk_size'
 	overlap_key = f'{key_prefix}_chunk_overlap'
 	provider_key = f'{key_prefix}_embedding_provider'
@@ -929,7 +907,7 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 	index_key = f'{key_prefix}_pinecone_index'
 	namespace_key = f'{key_prefix}_pinecone_namespace'
 	reset_key = f'{key_prefix}_processing_reset_request'
-
+	
 	if st.session_state.get( reset_key, False ):
 		st.session_state[ size_key ] = DEFAULT_CHUNK_SIZE
 		st.session_state[ overlap_key ] = DEFAULT_CHUNK_OVERLAP
@@ -940,57 +918,39 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 		st.session_state[ index_key ] = ''
 		st.session_state[ namespace_key ] = ''
 		st.session_state[ reset_key ] = False
-
-	defaults = {
-		size_key: DEFAULT_CHUNK_SIZE,
-		overlap_key: DEFAULT_CHUNK_OVERLAP,
-		provider_key: DEFAULT_EMBEDDING_PROVIDER,
-		model_key: DEFAULT_EMBEDDING_MODEL,
-		path_key: '',
-		store_key: VECTOR_STORES[ 0 ],
-		index_key: '',
-		namespace_key: '',
-	}
+	
+	defaults = { size_key: DEFAULT_CHUNK_SIZE, overlap_key: DEFAULT_CHUNK_OVERLAP,
+			provider_key: DEFAULT_EMBEDDING_PROVIDER, model_key: DEFAULT_EMBEDDING_MODEL,
+			path_key: '', store_key: VECTOR_STORES[ 0 ], index_key: '', namespace_key: '', }
 	for key, value in defaults.items( ):
 		if key not in st.session_state:
 			st.session_state[ key ] = value
-
+	
 	if int( st.session_state[ overlap_key ] ) >= int( st.session_state[ size_key ] ):
 		st.session_state[ overlap_key ] = max( 0, int( st.session_state[ size_key ] ) // 5 )
-
+	
 	chunk_col, overlap_col = st.columns( 2 )
 	with chunk_col:
 		st.number_input( 'Chunk Size', min_value=1, step=1, key=size_key )
 	with overlap_col:
-		st.number_input(
-			'Chunk Overlap',
-			min_value=0,
-			max_value=max( 0, int( st.session_state[ size_key ] ) - 1 ),
-			step=1,
-			key=overlap_key,
-		)
-
+		st.number_input( 'Chunk Overlap', min_value=0, max_value=max( 0, int(
+			st.session_state[ size_key ] ) - 1 ), step=1, key=overlap_key, )
+	
 	provider_col, model_col = st.columns( 2 )
 	with provider_col:
-		provider = st.selectbox(
-			'Embedding Provider',
-			options=list( EMBEDDING_MODELS.keys( ) ) + [ 'Local GGUF' ],
-			key=provider_key,
-		)
-
+		provider = st.selectbox( 'Embedding Provider', options=list( EMBEDDING_MODELS.keys( ) ) + [
+				'Local GGUF' ], key=provider_key, )
+	
 	with model_col:
 		if provider == 'Local GGUF':
-			st.text_input(
-				'Local GGUF Model',
-				key=path_key,
-				placeholder='Path to a local embedding GGUF model',
-			)
+			st.text_input( 'Local GGUF Model', key=path_key, placeholder='Path to a local '
+			                                                             'embedding GGUF model', )
 		else:
 			model_options = EMBEDDING_MODELS[ provider ]
 			if st.session_state.get( model_key, '' ) not in model_options:
 				st.session_state[ model_key ] = model_options[ 0 ]
 			st.selectbox( 'Embedding Model', options=model_options, key=model_key )
-
+	
 	store_col, target_col = st.columns( 2 )
 	with store_col:
 		store_provider = st.selectbox( 'Vector Store', options=VECTOR_STORES, key=store_key )
@@ -998,20 +958,11 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 		if store_provider == 'Pinecone':
 			st.text_input( 'Pinecone Index', key=index_key, placeholder='Existing Pinecone index' )
 		else:
-			st.text_input(
-				'Chroma Directory',
-				value=str( CHROMA_DIRECTORY ),
-				disabled=True,
-				key=f'{key_prefix}_chroma_directory',
-			)
-
+			st.text_input( 'Chroma Directory', value=str( CHROMA_DIRECTORY ), disabled=True,
+				key=f'{key_prefix}_chroma_directory', )
+	
 	if store_provider == 'Pinecone':
-		st.text_input(
-			'Pinecone Namespace',
-			key=namespace_key,
-			placeholder='Optional namespace',
-		)
-
+		st.text_input( 'Pinecone Namespace', key=namespace_key, placeholder='Optional namespace', )
 
 def render_document_processing_actions( loader_name: str, key_prefix: str ) -> None:
 	"""Render and execute Chunk, Embed, and Store actions for one loader.
@@ -1026,7 +977,7 @@ def render_document_processing_actions( loader_name: str, key_prefix: str ) -> N
 	throw_if( 'loader_name', loader_name )
 	throw_if( 'key_prefix', key_prefix )
 	ensure_document_processing_state( )
-
+	
 	documents = st.session_state.get( 'documents' ) or [ ]
 	active_documents = st.session_state.get( 'active_loader' ) == loader_name and bool( documents )
 	current_signature = document_signature( documents ) if active_documents else ''
@@ -1034,57 +985,46 @@ def render_document_processing_actions( loader_name: str, key_prefix: str ) -> N
 	if active_documents and chunk_signature and chunk_signature != current_signature:
 		clear_document_processing_outputs( )
 		chunk_signature = ''
-
+	
 	chunked_documents = st.session_state.get( 'chunked_documents' ) or [ ]
 	embeddings = st.session_state.get( 'embeddings' ) or [ ]
 	embedder = st.session_state.get( 'embedder' )
 	current_size = int( st.session_state[ f'{key_prefix}_chunk_size' ] )
 	current_overlap = int( st.session_state[ f'{key_prefix}_chunk_overlap' ] )
 	chunk_config_current = (
-		st.session_state.get( 'chunk_size_used', 0 ) == current_size
-		and st.session_state.get( 'chunk_overlap_used', 0 ) == current_overlap
-	)
-	can_embed = active_documents and bool( chunked_documents ) \
-		and chunk_signature == current_signature and chunk_config_current
-
+			st.session_state.get( 'chunk_size_used', 0 ) == current_size and st.session_state.get(
+		'chunk_overlap_used', 0 ) == current_overlap)
+	can_embed = (active_documents and bool( chunked_documents ) and chunk_signature ==
+	             current_signature and chunk_config_current)
+	
 	provider = str( st.session_state[ f'{key_prefix}_embedding_provider' ] )
 	model = str( st.session_state.get( f'{key_prefix}_embedding_model', '' ) )
 	model_path = str( st.session_state.get( f'{key_prefix}_embedding_model_path', '' ) )
 	embedding_config_current = (
-		st.session_state.get( 'embedding_provider', '' ) == provider
-		and st.session_state.get( 'embedding_model', '' ) == model
-		and st.session_state.get( 'embedding_model_path', '' ) == model_path
-	)
-	can_store = can_embed and bool( embeddings ) and embedder is not None and embedding_config_current
-
+			st.session_state.get( 'embedding_provider', '' ) == provider and st.session_state.get(
+		'embedding_model', '' ) == model and st.session_state.get( 'embedding_model_path',
+		'' ) == model_path)
+	can_store = (can_embed and bool( embeddings ) and embedder is not None and
+	             embedding_config_current)
+	
 	chunk_col, embed_col, store_col = st.columns( 3 )
-	chunk_clicked = chunk_col.button(
-		'Chunk', key=f'{key_prefix}_chunk_documents', icon='✂️',
-		disabled=not active_documents, width='stretch',
-	)
-	embed_clicked = embed_col.button(
-		'Embed', key=f'{key_prefix}_embed_documents', icon='🧬',
-		disabled=not can_embed, width='stretch',
-	)
-	store_clicked = store_col.button(
-		'Store', key=f'{key_prefix}_store_vectors', icon='🗄️',
-		disabled=not can_store, width='stretch',
-	)
-
+	chunk_clicked = chunk_col.button( 'Chunk', key=f'{key_prefix}_chunk_documents', icon='✂️',
+		disabled=not active_documents, width='stretch', )
+	embed_clicked = embed_col.button( 'Embed', key=f'{key_prefix}_embed_documents', icon='🧬',
+		disabled=not can_embed, width='stretch', )
+	store_clicked = store_col.button( 'Store', key=f'{key_prefix}_store_vectors', icon='🗄️',
+		disabled=not can_store, width='stretch', )
+	
 	if chunk_clicked:
 		source_documents: List[ Document ] = [ ]
 		for index, document in enumerate( documents, start=1 ):
 			metadata = dict( document.metadata or { } )
 			metadata.setdefault( 'document_id', index )
-			source_documents.append( Document(
-				page_content=document.page_content,
-				metadata=metadata,
-			) )
-
-		splitter = RecursiveCharacterTextSplitter(
-			chunk_size=current_size,
-			chunk_overlap=current_overlap,
-		)
+			source_documents.append( Document( page_content=document.page_content,
+				metadata=metadata, ) )
+		
+		splitter = RecursiveCharacterTextSplitter( chunk_size=current_size,
+			chunk_overlap=current_overlap, )
 		chunks = splitter.split_documents( source_documents )
 		for index, chunk in enumerate( chunks, start=1 ):
 			metadata = dict( chunk.metadata or { } )
@@ -1092,7 +1032,7 @@ def render_document_processing_actions( loader_name: str, key_prefix: str ) -> N
 			metadata[ 'chunk_size' ] = current_size
 			metadata[ 'chunk_overlap' ] = current_overlap
 			chunk.metadata = metadata
-
+		
 		st.session_state[ 'chunked_documents' ] = chunks
 		st.session_state[ 'chunks' ] = [ chunk.page_content for chunk in chunks ]
 		st.session_state[ 'df_chunking' ] = create_chunk_dataframe( chunks )
@@ -1112,14 +1052,10 @@ def render_document_processing_actions( loader_name: str, key_prefix: str ) -> N
 		st.session_state[ 'vector_store_name' ] = ''
 		st.session_state[ 'vector_store_namespace' ] = ''
 		st.success( f'Created {len( chunks )} chunk(s).' )
-
+	
 	if embed_clicked:
 		factory = EmbeddingFactory( )
-		embedder = factory.create(
-			provider=provider,
-			model=model,
-			model_path=model_path,
-		)
+		embedder = factory.create( provider=provider, model=model, model_path=model_path, )
 		texts = [ chunk.page_content for chunk in chunked_documents ]
 		vectors = embedder.embed_documents( texts )
 		if len( vectors ) != len( chunked_documents ):
@@ -1129,7 +1065,7 @@ def render_document_processing_actions( loader_name: str, key_prefix: str ) -> N
 			raise RuntimeError( 'Embedding vectors do not have a consistent dimension.' )
 		if not all( math.isfinite( float( value ) ) for vector in vectors for value in vector ):
 			raise RuntimeError( 'Embedding vectors contain non-finite values.' )
-
+		
 		display_model = model_path if provider == 'Local GGUF' else model
 		st.session_state[ 'embedder' ] = embedder
 		st.session_state[ 'embeddings' ] = vectors
@@ -1137,50 +1073,37 @@ def render_document_processing_actions( loader_name: str, key_prefix: str ) -> N
 		st.session_state[ 'embedding_model' ] = model
 		st.session_state[ 'embedding_model_path' ] = model_path
 		st.session_state[ 'embedding_documents' ] = list( chunked_documents )
-		st.session_state[ 'df_embedding' ] = create_embedding_dataframe(
-			chunks=list( chunked_documents ),
-			vectors=vectors,
-			provider=provider,
-			model=display_model,
-		)
+		st.session_state[
+			'df_embedding' ] = create_embedding_dataframe( chunks=list( chunked_documents ),
+			vectors=vectors, provider=provider, model=display_model, )
 		st.session_state[ 'vector_store' ] = None
 		st.session_state[ 'vector_store_provider' ] = ''
 		st.session_state[ 'vector_store_name' ] = ''
 		st.session_state[ 'vector_store_namespace' ] = ''
-		st.success(
-			f'Generated {len( vectors )} embedding(s) with {next( iter( dimensions ) )} dimensions.'
-		)
-
+		st.success( f'Generated {len( vectors )} embedding(s) with {next( iter( dimensions ) )} '
+		            f'dimensions.' )
+	
 	if store_clicked:
 		store_provider = str( st.session_state[ f'{key_prefix}_vector_store_provider' ] )
 		if store_provider == 'Chroma':
 			store_name = f'foo_{loader_name.lower( ).replace( "loader", "" )}_documents'
 			store = ChromaStore( )
-			vector_store = store.create(
-				documents=list( chunked_documents ),
-				embedder=embedder,
-				collection_name=store_name,
-				persist_directory=str( CHROMA_DIRECTORY ),
-			)
+			vector_store = store.create( documents=list( chunked_documents ), embedder=embedder,
+				collection_name=store_name, persist_directory=str( CHROMA_DIRECTORY ), )
 			namespace = ''
 		else:
 			store_name = str( st.session_state[ f'{key_prefix}_pinecone_index' ] )
 			namespace = str( st.session_state[ f'{key_prefix}_pinecone_namespace' ] )
 			store = PineconeStore( )
-			vector_store = store.create(
-				documents=list( chunked_documents ),
-				embedder=embedder,
-				index_name=store_name,
-				namespace=namespace,
-				api_key=cfg.PINECONE_API_KEY,
-			)
-
+			vector_store = store.create( documents=list( chunked_documents ), embedder=embedder,
+				index_name=store_name, namespace=namespace, api_key=cfg.PINECONE_API_KEY, )
+		
 		st.session_state[ 'vector_store' ] = vector_store
 		st.session_state[ 'vector_store_provider' ] = store_provider
 		st.session_state[ 'vector_store_name' ] = store_name
 		st.session_state[ 'vector_store_namespace' ] = namespace
-		st.success( f'Stored {len( chunked_documents )} chunk(s) in {store_provider}: {store_name}.' )
-
+		st.success( f'Stored {len( chunked_documents )} chunk(s) in {store_provider}: '
+		            f'{store_name}.' )
 
 def render_loading_tabs( ) -> None:
 	"""Render Loading-mode document, chunk, and embedding tabs.
@@ -1240,7 +1163,6 @@ def render_loading_tabs( ) -> None:
 				df_embedding, disabled=True, hide_index=True,
 				use_container_width=True, height=520, key='loading_df_embedding',
 			)
-
 
 _streamlit_data_editor = st.data_editor
 
@@ -1371,12 +1293,14 @@ if mode == 'Loading':
 				import nltk
 				from nltk.corpus import (brown, gutenberg, reuters, webtext, inaugural, state_union)
 				
-				st.markdown( '###### NLTK Corpora' )
-				corpus_name = st.selectbox( 'Select corpus',
-					['Brown', 'Gutenberg', 'Reuters', 'WebText', 'Inaugural', 'State of the Union'],
-					key='nltk_corpus_name', help=cfg.NLTK_LOADER )
-				
+				st.markdown( '###### NLTK Corpora', help=cfg.NLTK_LOADER  )
 				file_ids = [ ]
+				nltk_c1, nltk_c2,= st.columns( 2 )
+				with nltk_c1:
+					corpus_name = st.selectbox( 'Select corpus',
+						['Brown', 'Gutenberg', 'Reuters', 'WebText', 'Inaugural', 'State of the Union'],
+						key='nltk_corpus_name' )
+
 				try:
 					if corpus_name == 'Brown':
 						file_ids = brown.fileids( )
@@ -1393,12 +1317,14 @@ if mode == 'Loading':
 				except LookupError:
 					st.error( "NLTK corpus not found. Run:\n\npython -m nltk.downloader all\n\n"
 					          "or download individual corpora." )
+					
+				with nltk_c2:
+					selected_files = st.multiselect( 'Select files (leave empty to load all)',
+						options=file_ids, key='nltk_file_ids', )
 				
-				selected_files = st.multiselect( 'Select files (leave empty to load all)',
-					options=file_ids, key='nltk_file_ids', )
-				
-				st.divider( )
+
 				st.markdown( '###### Local Corpus' )
+				st.divider( )
 				local_corpus_dir = st.text_input( 'Local directory',
 					placeholder='path/to/text/files', key='nltk_local_dir', )
 				
