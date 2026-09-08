@@ -1982,10 +1982,6 @@ if mode == 'Loading':
 					save_pdf.button( 'Save', key='pdf_save_disabled',
 						disabled=True, icon='💾', width='stretch' )
 			
-			# ----------------------------
-			# --- Expander Power Point Loader
-			# ----------------------------
-
 				render_document_processing_actions( 'PdfLoader', 'pdf' )
 
 			# ----------------------------
@@ -3169,9 +3165,7 @@ if mode == 'Loading':
 				gcs_blob = st.text_input( 'Blob', value='',
 					key='gcs_file_blob', placeholder='e.g. documents/report.pdf', )
 				
-				# --------------------------------------------------
-				# Buttons: Load / Clear / Save
-				# --------------------------------------------------
+				# ---------------- Buttons: Load / Clear / Save
 				col_load, col_clear, col_save = st.columns( 3 )
 				load_gcs_file = col_load.button( 'Load', key='gcs_file_load', icon='📤', width='stretch' )
 				clear_gcs_file = col_clear.button( 'Clear', key='gcs_file_clear', icon='🧹', width='stretch' )
