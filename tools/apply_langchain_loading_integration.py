@@ -93,11 +93,13 @@ def locate_loader_section( source: str, label: str ) -> tuple[ int, int ]:
     if start < 0:
         raise RuntimeError( f'Could not locate loader expander: {label}' )
 
-    sibling_marker = '\n\t\t\t# ----------------------------\n\t\t\t# ------ Expander'
-    end = source.find( sibling_marker, start + len( start_anchor ) )
-    if end < 0:
+    sibling_pattern = re.compile(
+        r'(?m)^\t{3}# -+\n\t{3}# -+ Expander',
+    )
+    sibling = sibling_pattern.search( source, start + len( start_anchor ) )
+    if sibling is None:
         raise RuntimeError( f'Could not locate the end of loader expander: {label}' )
-    return start, end
+    return start, sibling.start( )
 
 
 def add_loader_controls( section: str, loader_name: str, key_prefix: str ) -> str:
@@ -134,9 +136,10 @@ def add_loader_controls( section: str, loader_name: str, key_prefix: str ) -> st
         )
         if button_match is None:
             raise RuntimeError( f'Could not locate Load/Clear/Save controls for {loader_name}.' )
-        separator = section.rfind( '\t\t\t\t# --------------------------------------------------\n', 0,
-            button_match.start( ) )
-        insert_at = separator if separator >= 0 else button_match.start( )
+        separator_match = None
+        for candidate in re.finditer( r'(?m)^\t{4}# -+\n', section[ :button_match.start( ) ] ):
+            separator_match = candidate
+        insert_at = separator_match.start( ) if separator_match is not None else button_match.start( )
         section = section[ :insert_at ] + input_call + section[ insert_at: ]
 
     clear_pattern = re.compile( r'(?m)^(\t{4}if clear_[A-Za-z0-9_]+[^\n]*:\n)' )
@@ -149,15 +152,25 @@ def add_loader_controls( section: str, loader_name: str, key_prefix: str ) -> st
     if reset_line not in section[ clear_match.start( ): ]:
         section = section[ :clear_block_start ] + reset_line + section[ clear_block_start: ]
 
-    load_marker = '\t\t\t\t# --------------------------------------------------\n\t\t\t\t# Load'
     clear_match = clear_pattern.search( section )
-    load_index = section.find( load_marker, clear_match.end( ) )
-    if load_index < 0:
+    load_match = re.search( r'(?m)^\t{4}# Load(?:\s.*)?$', section[ clear_match.end( ): ] )
+    if load_match is None:
         raise RuntimeError( f'Could not locate Load execution block for {loader_name}.' )
+    load_index = clear_match.end( ) + load_match.start( )
+    load_separator_match = None
+    for candidate in re.finditer(
+        r'(?m)^\t{4}# -+\n',
+        section[ clear_match.end( ):load_index ],
+    ):
+        load_separator_match = candidate
+    load_block_start = load_index
+    if load_separator_match is not None:
+        load_block_start = clear_match.end( ) + load_separator_match.start( )
 
-    clear_block = section[ clear_match.start( ):load_index ]
+    clear_block = section[ clear_match.start( ):load_block_start ]
     if 'st.rerun( )' not in clear_block:
-        section = section[ :load_index ] + '\t\t\t\t\tst.rerun( )\n\t\t\t\t\n' + section[ load_index: ]
+        section = section[ :load_block_start ] + \
+            '\t\t\t\t\tst.rerun( )\n\t\t\t\t\n' + section[ load_block_start: ]
 
     if action_call.strip( ) not in section:
         section = section.rstrip( ) + action_call
@@ -200,28 +213,23 @@ def patch_right_column( source: str ) -> str:
         str: Source text using the three-tab Loading-mode result renderer.
     """
     throw_if( 'source', source )
-    start_marker = (
-        '\t# ------------------------------------------------------------------\n'
-        '\t# RIGHT COLUMN — DOCUMENT RENDERING\n'
-        '\t# ------------------------------------------------------------------\n'
+    right_match = re.search(
+        r'(?m)^\t# -+\n\t# RIGHT COLUMN — DOCUMENT RENDERING\n\t# -+\n',
+        source,
     )
-    end_marker = (
-        '\t# ------------------------------------------------------------------\n'
-        '\t# NLP METRIC CALCULATIONS\n'
-        '\t# ------------------------------------------------------------------\n'
-    )
-    start = source.find( start_marker )
-    end = source.find( end_marker, start + len( start_marker ) )
-    if start < 0 or end < 0:
-        raise RuntimeError( 'Could not locate the complete Loading-mode right-column section.' )
+    if right_match is None:
+        raise RuntimeError( 'Could not locate the Loading-mode right-column header.' )
 
-    replacement = (
-        start_marker
-        + '\twith right:\n'
-        + '\t\trender_loading_tabs( )\n'
-        + '\t\n'
+    metrics_match = re.search(
+        r'(?m)^\t# -+\n\t# NLP METRIC CALCULATIONS\n\t# -+\n',
+        source[ right_match.end( ): ],
     )
-    return source[ :start ] + replacement + source[ end: ]
+    if metrics_match is None:
+        raise RuntimeError( 'Could not locate the Loading-mode NLP metrics boundary.' )
+
+    end = right_match.end( ) + metrics_match.start( )
+    replacement = right_match.group( 0 ) + '\twith right:\n\t\trender_loading_tabs( )\n\t\n'
+    return source[ :right_match.start( ) ] + replacement + source[ end: ]
 
 
 def main( ) -> None:
