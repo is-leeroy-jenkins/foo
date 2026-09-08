@@ -5045,7 +5045,8 @@ elif mode == 'Retrieval':
 				if docs:
 					for index, item in enumerate( docs, start=1 ):
 						title_value = (
-									item.get( 'title' ) or item.get( 'identifier' ) or f'Result {index}')
+									item.get( 'title' ) or item.get( 'identifier' ) \
+									or f'Result {index}')
 						
 						identifier_value = item.get( 'identifier', '' )
 						mediatype_value = item.get( 'mediatype', '' )
@@ -5059,7 +5060,8 @@ elif mode == 'Retrieval':
 							collection_value = str( collection_raw )
 						
 						date_value = (
-								item.get( 'publicdate' ) or item.get( 'date' ) or item.get( 'addeddate' ) or '')
+								item.get( 'publicdate' ) or item.get( 'date' ) \
+								or item.get( 'addeddate' ) or '')
 						
 						desc_value = item.get( 'description', '' )
 						if isinstance( desc_value, list ):
@@ -7075,8 +7077,8 @@ elif mode == 'Geospatial':
 			
 			if st.session_state.get( 'historicalweather_clear_request', False ):
 				st.session_state[ 'historicalweather_location' ] = ''
-				st.session_state[
-					'historicalweather_date' ] = dt.date.today( ) - dt.timedelta( days=1 )
+				st.session_state[ 'historicalweather_date' ] = \
+					dt.date.today( ) - dt.timedelta( days=1 )
 				st.session_state[ 'historicalweather_timezone' ] = 'auto'
 				st.session_state[ 'historicalweather_count' ] = 10
 				st.session_state[ 'historicalweather_results' ] = { }
@@ -7086,8 +7088,8 @@ elif mode == 'Geospatial':
 				st.session_state[ 'historicalweather_clear_request' ] = True
 			
 			historicalweather_location = st.text_area( 'Location', height=80,
-				key='historicalweather_location', placeholder=(
-				'Examples:\n'
+				key='historicalweather_location',
+				placeholder=( 'Examples:\n'
 				'Arlington, VA\n'
 				'Tokyo, Japan\n'
 				'90210') )
@@ -7333,40 +7335,58 @@ elif mode == 'Geospatial':
 			def _clear_earthobservatory_state( ) -> None:
 				st.session_state[ 'earthobservatory_clear_request' ] = True
 			
-			earth_mode = st.selectbox( 'Mode', options=[ 'events', 'categories', 'sources',
-					'layers' ], index=[ 'events', 'categories', 'sources',
-					'layers' ].index( st.session_state.get( 'earthobservatory_mode', 'events' ) ), key='earthobservatory_mode', help='Choose the current documented EONET v3 endpoint.' )
+			earth_mode = st.selectbox( 'Mode',
+				options=[ 'events', 'categories', 'sources', 'layers' ],
+				index=[ 'events', 'categories', 'sources', 'layers' ].index( st.session_state.get(
+					'earthobservatory_mode', 'events' ) ), key='earthobservatory_mode',
+				help='Choose the current documented EONET v3 endpoint.' )
 			
-			earth_status = st.selectbox( 'Status', options=[ 'open', 'closed', 'all' ], index=[
-					'open', 'closed',
-					'all' ].index( st.session_state.get( 'earthobservatory_status', 'open' ) ), key='earthobservatory_status', disabled=(
-						earth_mode != 'events') )
+			earth_status = st.selectbox( 'Status',
+				options=[ 'open', 'closed', 'all' ],
+				index=[ 'open', 'closed', 'all' ].index(
+					st.session_state.get( 'earthobservatory_status', 'open' ) ),
+				key='earthobservatory_status', disabled=( earth_mode != 'events') )
 			
-			earth_category = st.text_input( 'Category', value=st.session_state.get( 'earthobservatory_category', '' ), key='earthobservatory_category', placeholder='Examples: wildfires, severe storms, volcanoes ', help='Used for events filtering and layers category path.', disabled=(
-						earth_mode not in [ 'events', 'layers' ]) )
+			earth_category = st.text_input( 'Category',
+				value=st.session_state.get( 'earthobservatory_category', '' ),
+				key='earthobservatory_category',
+				placeholder='Examples: wildfires, severe storms, volcanoes ',
+				help='Used for events filtering and layers category path.',
+				disabled=(earth_mode not in [ 'events', 'layers' ]) )
 			
-			earth_source = st.text_input( 'Source', value=st.session_state.get( 'earthobservatory_source', '' ), key='earthobservatory_source', placeholder=(
-				'Examples: InciWeb, InciWeb, EO'), disabled=(earth_mode != 'events') )
+			earth_source = st.text_input( 'Source',
+				value=st.session_state.get( 'earthobservatory_source', '' ),
+				key='earthobservatory_source', placeholder=( 'Examples: InciWeb, InciWeb, EO'),
+				disabled=(earth_mode != 'events') )
 			
 			c1, c2 = st.columns( 2 )
 			with c1:
-				earth_limit = st.number_input( 'Limit', min_value=1, max_value=500, value=int( st.session_state.get( 'earthobservatory_limit', 20 ) ), step=1, key='earthobservatory_limit', disabled=(
-							earth_mode != 'events') )
+				earth_limit = st.number_input( 'Limit', min_value=1, max_value=500,
+					value=int( st.session_state.get( 'earthobservatory_limit', 20 ) ),
+					step=1, key='earthobservatory_limit',
+					disabled=( earth_mode != 'events') )
 			
 			with c2:
-				earth_days = st.number_input( 'Days', min_value=1, max_value=3650, value=int( st.session_state.get( 'earthobservatory_days', 30 ) ), step=1, key='earthobservatory_days', disabled=(
-							earth_mode != 'events') )
+				earth_days = st.number_input( 'Days', min_value=1, max_value=3650,
+					value=int( st.session_state.get( 'earthobservatory_days', 30 ) ),
+					step=1, key='earthobservatory_days', disabled=( earth_mode != 'events') )
 			
 			d1, d2 = st.columns( 2 )
 			with d1:
-				earth_start_date = st.text_input( 'Start Date', value=st.session_state.get( 'earthobservatory_start_date', '' ), key='earthobservatory_start_date', placeholder='2026-03-01', disabled=(
-							earth_mode != 'events') )
+				earth_start_date = st.text_input( 'Start Date',
+					value=st.session_state.get( 'earthobservatory_start_date', '' ),
+					key='earthobservatory_start_date', placeholder='2026-03-01',
+					disabled=( earth_mode != 'events') )
 			
 			with d2:
-				earth_end_date = st.text_input( 'End Date', value=st.session_state.get( 'earthobservatory_end_date', '' ), key='earthobservatory_end_date', placeholder='2026-03-15', disabled=(
-							earth_mode != 'events') )
+				earth_end_date = st.text_input( 'End Date',
+					value=st.session_state.get( 'earthobservatory_end_date', '' ),
+					key='earthobservatory_end_date', placeholder='2026-03-15',
+					disabled=( earth_mode != 'events') )
 			
-			earth_timeout = st.number_input( 'Timeout', min_value=1, max_value=120, value=int( st.session_state.get( 'earthobservatory_timeout', 20 ) ), step=1, key='earthobservatory_timeout' )
+			earth_timeout = st.number_input( 'Timeout', min_value=1, max_value=120,
+				value=int( st.session_state.get( 'earthobservatory_timeout', 20 ) ),
+				step=1, key='earthobservatory_timeout' )
 			
 			st.caption( 'Examples: use events + category=wildfires, status=open; '
 			            'use sources to list event source providers; '
@@ -7377,7 +7397,8 @@ elif mode == 'Geospatial':
 				earth_submit = st.button( 'Submit', key='earthobservatory_submit', width='stretch' )
 			
 			with b2:
-				st.button( 'Clear', key='earthobservatory_clear', on_click=_clear_earthobservatory_state, width='stretch' )
+				st.button( 'Clear', key='earthobservatory_clear',
+					on_click=_clear_earthobservatory_state, width='stretch' )
 			
 			if earth_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'NASA Earth Observatory'
@@ -8871,7 +8892,8 @@ elif mode == 'Environmental':
 			if st.session_state.get( 'climatedata_mode', 'datasets' ) not in CLIMATEDATA_MODES:
 				st.session_state[ 'climatedata_mode' ] = 'datasets'
 			
-			if st.session_state.get( 'climatedata_dataset', 'daily-summaries' ) not in CLIMATEDATA_DATASETS:
+			if st.session_state.get(
+					'climatedata_dataset', 'daily-summaries' ) not in CLIMATEDATA_DATASETS:
 				st.session_state[ 'climatedata_dataset' ] = 'daily-summaries'
 			
 			if 'climatedata_keyword' not in st.session_state:
@@ -8914,36 +8936,53 @@ elif mode == 'Environmental':
 				st.session_state[ 'climatedata_results' ] = { }
 				st.session_state[ 'climatedata_clear_request' ] = False
 			
-			climatedata_mode = st.selectbox( 'Mode', options=CLIMATEDATA_MODES, index=CLIMATEDATA_MODES.index( st.session_state.get( 'climatedata_mode', 'datasets' ) ), key='climatedata_mode' )
+			climatedata_mode = st.selectbox( 'Mode', options=CLIMATEDATA_MODES,
+				index=CLIMATEDATA_MODES.index( st.session_state.get(
+					'climatedata_mode', 'datasets' ) ), key='climatedata_mode' )
 			
-			climatedata_keyword = st.text_input( 'Keyword', value=st.session_state.get( 'climatedata_keyword', '' ), key='climatedata_keyword', disabled=(
-						climatedata_mode != 'datasets'), placeholder='Example: precipitation' )
+			climatedata_keyword = st.text_input( 'Keyword', value=st.session_state.get(
+				'climatedata_keyword', '' ), key='climatedata_keyword',
+				disabled=(climatedata_mode != 'datasets'), placeholder='Example: precipitation' )
 			
-			climatedata_dataset = st.selectbox( 'Dataset', options=CLIMATEDATA_DATASETS, index=CLIMATEDATA_DATASETS.index( st.session_state.get( 'climatedata_dataset', 'daily-summaries' ) ), key='climatedata_dataset', disabled=(
-						climatedata_mode != 'data'), help='NCEI dataset identifier passed to the Access Data Service.' )
+			climatedata_dataset = st.selectbox( 'Dataset', options=CLIMATEDATA_DATASETS,
+				index=CLIMATEDATA_DATASETS.index( st.session_state.get(
+					'climatedata_dataset', 'daily-summaries' ) ), key='climatedata_dataset',
+				disabled=( climatedata_mode != 'data'),
+				help='NCEI dataset identifier passed to the Access Data Service.' )
 			
 			date_c1, date_c2 = st.columns( 2 )
 			with date_c1:
-				climatedata_start_date = st.date_input( 'Start Date', value=st.session_state.get( 'climatedata_start_date', dt.date.today( ) - dt.timedelta( days=30 ) ), key='climatedata_start_date' )
+				climatedata_start_date = st.date_input( 'Start Date',
+					value=st.session_state.get( 'climatedata_start_date',
+						dt.date.today( ) - dt.timedelta( days=30 ) ), key='climatedata_start_date' )
 			
 			with date_c2:
-				climatedata_end_date = st.date_input( 'End Date', value=st.session_state.get( 'climatedata_end_date', dt.date.today( ) ), key='climatedata_end_date' )
+				climatedata_end_date = st.date_input( 'End Date', value=st.session_state.get(
+					'climatedata_end_date', dt.date.today( ) ), key='climatedata_end_date' )
 			
-			climatedata_stations = st.text_input( 'Stations', value=st.session_state.get( 'climatedata_stations', '' ), key='climatedata_stations', disabled=(
-						climatedata_mode != 'data'), placeholder='Comma-separated station IDs' )
+			climatedata_stations = st.text_input( 'Stations', value=st.session_state.get(
+				'climatedata_stations', '' ), key='climatedata_stations',
+				disabled=( climatedata_mode != 'data'), placeholder='Comma-separated station IDs' )
 			
-			climatedata_data_types = st.text_input( 'Data Types', value=st.session_state.get( 'climatedata_data_types', '' ), key='climatedata_data_types', disabled=(
-						climatedata_mode != 'data'), placeholder='Comma-separated datatype IDs' )
+			climatedata_data_types = st.text_input( 'Data Types',
+				value=st.session_state.get( 'climatedata_data_types', '' ),
+				key='climatedata_data_types', disabled=( climatedata_mode != 'data'),
+				placeholder='Comma-separated datatype IDs' )
 			
 			page_c1, page_c2 = st.columns( 2 )
 			with page_c1:
-				climatedata_limit = st.number_input( 'Limit', min_value=1, max_value=500, value=int( st.session_state.get( 'climatedata_limit', 25 ) ), step=1, key='climatedata_limit' )
+				climatedata_limit = st.number_input( 'Limit', min_value=1, max_value=500,
+					value=int( st.session_state.get( 'climatedata_limit', 25 ) ),
+					step=1, key='climatedata_limit' )
 			
 			with page_c2:
-				climatedata_offset = st.number_input( 'Offset', min_value=0, max_value=10000, value=int( st.session_state.get( 'climatedata_offset', 0 ) ), step=1, key='climatedata_offset', disabled=(
-							climatedata_mode != 'datasets') )
+				climatedata_offset = st.number_input( 'Offset', min_value=0, max_value=10000,
+					value=int( st.session_state.get( 'climatedata_offset', 0 ) ), step=1,
+					key='climatedata_offset', disabled=( climatedata_mode != 'datasets') )
 			
-			climatedata_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120, value=int( st.session_state.get( 'climatedata_timeout', 20 ) ), step=1, key='climatedata_timeout' )
+			climatedata_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120,
+				value=int( st.session_state.get( 'climatedata_timeout', 20 ) ),
+				step=1, key='climatedata_timeout' )
 			
 			st.caption( 'Datasets mode discovers NOAA climate datasets. Data mode retrieves '
 			            'subsetted climate records from a selected dataset.' )
@@ -8953,7 +8992,8 @@ elif mode == 'Environmental':
 				climatedata_submit = st.button( 'Submit', key='climatedata_submit', width='stretch' )
 			
 			with btn_c2:
-				st.button( 'Clear', key='climatedata_clear', on_click=_clear_climatedata_state, width='stretch' )
+				st.button( 'Clear', key='climatedata_clear',
+					on_click=_clear_climatedata_state, width='stretch' )
 			
 			if climatedata_submit:
 				st.session_state[ 'environmental_active_source' ] = 'NOAA Climate Data'
