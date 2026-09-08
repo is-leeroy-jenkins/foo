@@ -38,8 +38,8 @@ jobs:
           from pathlib import Path
 
           source = Path('app.py').read_text(encoding='utf-8')
-          assert source.count('render_langchain_inputs(') == 10
-          assert source.count('render_langchain_actions(') == 10
+          assert source.count('render_langchain_inputs(') == 9
+          assert source.count('render_langchain_actions(') == 9
           assert source.count('render_loading_tabs( )') == 1
           assert source.index("render_langchain_actions( 'JsonLoader', 'json' )") < source.index("with st.expander( label='Web Documents', expanded=False )")
           assert "st.tabs( [ 'Document', 'Chunks', 'Embeddings' ] )" in Path('langchain_pipeline.py').read_text(encoding='utf-8')
@@ -64,4 +64,4 @@ jobs:
           git commit -m "Integrate LangChain chunking embeddings and vector storage"
           git push origin HEAD:feature/langchain-chunking-embeddings-vector-store
 
-# Guarded integration: 10
+# Guarded integration: 11
