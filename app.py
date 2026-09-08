@@ -1564,12 +1564,11 @@ if mode == 'Loading':
 					st.session_state.active_loader = 'TextLoader'
 					st.success( f'Loaded {len( documents )} text document(s).' )
 			
+				render_document_processing_actions( 'TextLoader', 'txt' )
+
 			# ----------------------------
 			# ------ Expander CSV Loader
 			# ----------------------------
-
-				render_document_processing_actions( 'TextLoader', 'txt' )
-
 			with st.expander( label="CSV Loader", icon='📑', expanded=False ):
 				csv_file = st.file_uploader( label="Upload CSV", type=[ "csv" ],
 					key="csv_upload", help=cfg.CSV_LOADER )
@@ -1635,10 +1634,10 @@ if mode == 'Loading':
 
 				render_document_processing_actions( 'CsvLoader', 'csv' )
 
+			# ----------------------------
+			# ------ Expander XML Loader
+			# ----------------------------
 			with st.expander( label='XML Loader', icon='🧬', expanded=False ):
-				# ------------------------------------------------------------------
-				# Session-backed loader instance
-				# ------------------------------------------------------------------
 				if 'xml_loader' not in st.session_state or st.session_state.xml_loader is None:
 					st.session_state.xml_loader = XmlLoader( )
 				
@@ -1851,6 +1850,9 @@ if mode == 'Loading':
 
 				render_document_processing_actions( 'WordLoader', 'word' )
 
+			# ----------------------------
+			# ------- Expander PDF Loader
+			# ----------------------------
 			with st.expander( label='PDF Loader', icon='📕', expanded=False ):
 				pdf = st.file_uploader( 'Upload PDF', type=[ 'pdf' ], key='pdf_upload',
 					help=cfg.PDF_LOADER )
@@ -1986,6 +1988,9 @@ if mode == 'Loading':
 
 				render_document_processing_actions( 'PdfLoader', 'pdf' )
 
+			# ----------------------------
+			# ------- Expander PPT Loader
+			# ----------------------------
 			with st.expander( label='Power Point Loader', icon='📽', expanded=False ):
 				pptx = st.file_uploader( 'Upload PPTX', type=[ 'pptx' ], key='pptx_upload',
 					help=cfg.POWERPOINT_LOADER )
@@ -2044,6 +2049,9 @@ if mode == 'Loading':
 
 				render_document_processing_actions( 'PowerPointLoader', 'pptx' )
 
+			# ----------------------------
+			# ------- Expander Notebook Loader
+			# ----------------------------
 			with st.expander( label='Jupyter Notebook Loader', icon='📓', expanded=False ):
 				notebook_file = st.file_uploader( 'Upload Notebook', type=[
 						'ipynb' ], key='ipynb_upload', help=cfg.NOTEBOOK_LOADER )
@@ -2271,6 +2279,9 @@ if mode == 'Loading':
 
 				render_document_processing_actions( 'ExcelLoader', 'excel' )
 
+			# ----------------------------
+			# ------- Expander Markdown Loader
+			# ----------------------------
 			with st.expander( label='Markdown Loader', icon='🧾', expanded=False ):
 				md = st.file_uploader( 'Upload Markdown', type=[ 'md','markdown' ],
 					key='md_upload', help=cfg.MARKDOWN_LOADER )
@@ -2334,6 +2345,9 @@ if mode == 'Loading':
 
 				render_document_processing_actions( 'MarkdownLoader', 'md' )
 
+			# ----------------------------
+			# ------- Expander HTML Loader
+			# ----------------------------
 			with st.expander( label='HTML Loader', icon='🌐', expanded=False ):
 				html = st.file_uploader( 'Upload HTML', type=[ 'html', 'htm' ],
 					key='html_upload', help=cfg.HTML_LOADER )
@@ -2391,6 +2405,9 @@ if mode == 'Loading':
 
 				render_document_processing_actions( 'HtmlLoader', 'html' )
 
+			# ----------------------------
+			# ------- Expander JSON Loader
+			# ----------------------------
 			with st.expander( label='JSON Loader', icon='🧩', expanded=False ):
 				js = st.file_uploader( 'Upload JSON', type=[ 'json', 'jsonl' ],
 					key='json_upload', help=cfg.JSON_LOADER )
