@@ -121,6 +121,10 @@ Foo uses a Streamlit UI over modular Python classes. The application imports loa
 Shared working state is coordinated through `st.session_state`, allowing loaded documents, raw text,
 processed text, tokens, metrics, and database results to flow between controls.
 
+![](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/images/foo-architecture.png)
+
+___
+
 ## 🗂️ Directory Structure
 
 ```text
