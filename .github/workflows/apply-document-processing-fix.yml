@@ -27,7 +27,7 @@ jobs:
           python-version: '3.11'
 
       - name: Apply app integration
-        run: python .github/apply_document_processing_fix.py
+        run: python .github/apply_document_processing_fix_v2.py
 
       - name: Compile updated sources
         run: python -m py_compile app.py embeddings.py stores/vector.py
@@ -56,6 +56,7 @@ jobs:
       - name: Remove temporary integration files
         run: |
           rm .github/apply_document_processing_fix.py
+          rm .github/apply_document_processing_fix_v2.py
           rm .github/workflows/apply-document-processing-fix.yml
 
       - name: Commit integrated application
@@ -65,3 +66,5 @@ jobs:
           git add -A
           git commit -m "Integrate document chunking embeddings and vector storage"
           git push origin HEAD:fix/loading-langchain-integration
+
+# Guarded integration: 2
