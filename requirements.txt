@@ -7,6 +7,10 @@ google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib==1.3.0
 langchain-openai==1.1.11
+langchain-google-genai
+langchain-mistralai
+langchain-huggingface
+langchain-chroma
 langchain-yt-dlp>=0.0.8
 
 pydantic==2.12.5
