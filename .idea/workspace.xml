@@ -5,10 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="649d1b1c-e24f-435b-9576-30e7d61c1f89" name="Changes" comment="updates">
-      <change afterPath="$PROJECT_DIR$/resources/setup/API-Setup.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/resources/images/foo-apikeys.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -80,11 +79,13 @@
     "SHELLCHECK.PATH": "C:\\Users\\terry\\AppData\\Roaming\\JetBrains\\PyCharm2025.2\\plugins\\Shell Script\\shellcheck.exe",
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "git-widget-placeholder": "main",
-    "last_opened_file_path": "C:/Users/terry/source/repos/foo/resources/setup",
+    "last_opened_file_path": "C:/Users/terry/source/repos/foo/resources/images",
     "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.jshint": "true",
     "node.js.detected.package.standard": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.jshint": "",
     "node.js.selected.package.standard": "",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
@@ -94,11 +95,11 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\terry\source\repos\foo\resources\images" />
       <recent name="C:\Users\terry\source\repos\foo\resources\setup" />
       <recent name="C:\Users\terry\source\repos\Foo\docs\assets" />
       <recent name="C:\Users\terry\source\repos\Foo\docs\api" />
       <recent name="C:\Users\terry\source\repos\Foo\docs" />
-      <recent name="C:\Users\terry\source\repos\Foo" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\terry\source\repos\Foo\docs" />
@@ -171,15 +172,7 @@
       <workItem from="1788856451993" duration="10811000" />
       <workItem from="1788879916680" duration="1183000" />
       <workItem from="1788881740382" duration="21000" />
-      <workItem from="1788881766814" duration="4686000" />
-    </task>
-    <task id="LOCAL-00132" summary="updates">
-      <option name="closed" value="true" />
-      <created>1788547309284</created>
-      <option name="number" value="00132" />
-      <option name="presentableId" value="LOCAL-00132" />
-      <option name="project" value="LOCAL" />
-      <updated>1788547309284</updated>
+      <workItem from="1788881766814" duration="5029000" />
     </task>
     <task id="LOCAL-00133" summary="updates">
       <option name="closed" value="true" />
@@ -565,7 +558,15 @@
       <option name="project" value="LOCAL" />
       <updated>1788885617431</updated>
     </task>
-    <option name="localTasksCounter" value="181" />
+    <task id="LOCAL-00181" summary="updates">
+      <option name="closed" value="true" />
+      <created>1788886873957</created>
+      <option name="number" value="00181" />
+      <option name="presentableId" value="LOCAL-00181" />
+      <option name="project" value="LOCAL" />
+      <updated>1788886873957</updated>
+    </task>
+    <option name="localTasksCounter" value="182" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

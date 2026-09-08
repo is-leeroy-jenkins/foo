@@ -141,12 +141,12 @@ foo/
 ```
 ## 🔑 API Key Set-up
 
-- [Data sources]() 
-- [OpenAI]() 
-- [Gemini AI]() 
-- [Grok AI]() 
-- [Mistral AI]() 
-- [Claude AI]() 
+- [Data sources](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/API-Setup.md) 
+- [OpenAI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/enironments.md) 
+- [Gemini AI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/gemini.md) 
+- [Grok AI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/xai.md) 
+- [Mistral AI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/mistral.md) 
+- [Claude AI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/claude.md) 
 
 ## 🛡️ Installation
 
