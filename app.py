@@ -345,7 +345,7 @@ def _render_summary_kv( title: str, data: Dict[ str, Any ] ) -> None:
 	
 	if rows:
 		st.markdown( title )
-		st.dataframe( pd.DataFrame( rows ), use_container_width=True, hide_index=True )
+		st.data_editor( pd.DataFrame( rows ), use_container_width=True, hide_index=True )
 
 def _render_rows_table( title: str, rows: List[ Dict[ str, Any ] ] ) -> None:
 	'''
@@ -377,7 +377,7 @@ def _render_rows_table( title: str, rows: List[ Dict[ str, Any ] ] ) -> None:
 		return
 	
 	st.markdown( title )
-	st.dataframe( df_rows, use_container_width=True, hide_index=True, height=320 )
+	st.data_editor( df_rows, use_container_width=True, hide_index=True, height=320 )
 
 def _render_xml_preview( title: str, xml_text: str, max_chars: int = 12000 ) -> None:
 	'''
@@ -455,7 +455,7 @@ def _render_html_preview( title: str, html_text: str, max_chars: int = 5000 ) ->
 				links.append( { 'Label': label, 'Link': href, } )
 		
 		if links:
-			st.dataframe( pd.DataFrame( links ), use_container_width=True, hide_index=True, height=260 )
+			st.data_editor( pd.DataFrame( links ), use_container_width=True, hide_index=True, height=260 )
 		else:
 			st.code( text[ :int( max_chars ) ], language='html' )
 	except Exception:
@@ -4543,7 +4543,7 @@ elif mode == 'Retrieval':
 				elif isinstance( data, list ) and data:
 					df_ia = pd.DataFrame( data )
 					if not df_ia.empty:
-						st.dataframe( df_ia, use_container_width=True, hide_index=True )
+						st.data_editor( df_ia, use_container_width=True, hide_index=True )
 					else:
 						st.json( data )
 				elif data:
@@ -5437,7 +5437,7 @@ elif mode == 'Retrieval':
 					df_os = pd.DataFrame( data )
 					if not df_os.empty:
 						st.markdown( f'#### Result Rows ({len( df_os )})' )
-						st.dataframe( df_os, use_container_width=True, hide_index=True )
+						st.data_editor( df_os, use_container_width=True, hide_index=True )
 					else:
 						st.json( data )
 				
@@ -5454,7 +5454,7 @@ elif mode == 'Retrieval':
 						df_os = pd.DataFrame( table_candidates )
 						if not df_os.empty:
 							st.markdown( f'#### Result Rows ({len( df_os )})' )
-							st.dataframe( df_os, use_container_width=True, hide_index=True )
+							st.data_editor( df_os, use_container_width=True, hide_index=True )
 						else:
 							st.json( data )
 					else:
@@ -5535,7 +5535,7 @@ elif mode == 'Retrieval':
 									'Preview': item.get( 'Preview', '' ), } for item in items ]
 					
 					st.markdown( '#### Results' )
-					st.dataframe( table_rows, use_container_width=True, hide_index=True )
+					st.data_editor( table_rows, use_container_width=True, hide_index=True )
 					
 					first = items[ 0 ]
 					st.markdown( '#### First Notebook Preview' )
@@ -5608,7 +5608,7 @@ elif mode == 'Retrieval':
 							'Preview': item.get( 'Preview', '' ), } for item in items ]
 					
 					st.markdown( '#### Results' )
-					st.dataframe( table_rows, use_container_width=True, hide_index=True )
+					st.data_editor( table_rows, use_container_width=True, hide_index=True )
 					first = items[ 0 ]
 					st.markdown( '#### First File Preview' )
 					st.code( str( first.get( 'Content', '' ) )[ :8000 ] )
@@ -5678,7 +5678,7 @@ elif mode == 'Retrieval':
 							'Preview': item.get( 'Preview', '' ), } for item in items ]
 					
 					st.markdown( '##### Results' )
-					st.dataframe( table_rows, use_container_width=True, hide_index=True )
+					st.data_editor( table_rows, use_container_width=True, hide_index=True )
 					first = items[ 0 ]
 					st.markdown( '##### First File Preview' )
 					st.code( str( first.get( 'Content', '' ) )[ :8000 ] )
@@ -5754,7 +5754,7 @@ elif mode == 'Retrieval':
 									'Preview': item.get( 'Preview', '' ), } for item in items ]
 					
 					st.markdown( '##### Results' )
-					st.dataframe( table_rows, use_container_width=True, hide_index=True )
+					st.data_editor( table_rows, use_container_width=True, hide_index=True )
 					
 					first = items[ 0 ]
 					st.markdown( '#### First File Preview' )
@@ -5843,7 +5843,7 @@ elif mode == 'Retrieval':
 									'Preview': item.get( 'Preview', '' ), } for item in items ]
 					
 					st.markdown( '##### Results' )
-					st.dataframe( table_rows, use_container_width=True, hide_index=True )
+					st.data_editor( table_rows, use_container_width=True, hide_index=True )
 					
 					first = items[ 0 ]
 					st.markdown( '##### Transcript Preview' )
@@ -5918,7 +5918,7 @@ elif mode == 'Retrieval':
 									'Preview': item.get( 'Preview', '' ), } for item in items ]
 					
 					st.markdown( '#### Results' )
-					st.dataframe( table_rows, use_container_width=True, hide_index=True )
+					st.data_editor( table_rows, use_container_width=True, hide_index=True )
 					
 					first = items[ 0 ]
 					st.markdown( '#### First File Preview' )
@@ -5992,7 +5992,7 @@ elif mode == 'Retrieval':
 									'Preview': item.get( 'Preview', '' ), } for item in items ]
 					
 					st.markdown( '#### Results' )
-					st.dataframe( table_rows, use_container_width=True, hide_index=True )
+					st.data_editor( table_rows, use_container_width=True, hide_index=True )
 					first = items[ 0 ]
 					st.markdown( '#### First File Preview' )
 					st.code( str( first.get( 'Content', '' ) )[ :8000 ] )
@@ -7271,7 +7271,7 @@ elif mode == 'Geospatial':
 								
 								if component_rows:
 									with st.expander( 'Address Components', expanded=False ):
-										st.dataframe( pd.DataFrame( component_rows ),
+										st.data_editor( pd.DataFrame( component_rows ),
 											use_container_width=True, hide_index=True )
 							
 							with st.expander( 'Raw Item', expanded=False ):
@@ -7354,7 +7354,7 @@ elif mode == 'Geospatial':
 						summary_rows.append( { 'Field': key, 'Value': value } )
 				
 				if summary_rows:
-					st.dataframe( pd.DataFrame( summary_rows ),
+					st.data_editor( pd.DataFrame( summary_rows ),
 						use_container_width=True, hide_index=True )
 				
 				if result.get( 'mode' ) == 'geocode_location':
@@ -7403,7 +7403,7 @@ elif mode == 'Geospatial':
 												first_leg.get( 'duration', {} ).get( 'text', '' )),})
 							
 							st.markdown( '#### Routes' )
-							st.dataframe( pd.DataFrame( route_rows ),
+							st.data_editor( pd.DataFrame( route_rows ),
 								use_container_width=True, hide_index=True )
 						
 						result_payload = data.get( 'result', { } )
@@ -7490,22 +7490,22 @@ elif mode == 'Geospatial':
 					if hourly:
 						st.markdown( '#### Hourly Forecast' )
 						df_googleweather_hourly = pd.DataFrame( hourly )
-						st.dataframe( df_googleweather_hourly, use_container_width=True, hide_index=True )
+						st.data_editor( df_googleweather_hourly, use_container_width=True, hide_index=True )
 					
 					if history:
 						st.markdown( '#### Hourly History' )
 						df_googleweather_history = pd.DataFrame( history )
-						st.dataframe( df_googleweather_history, use_container_width=True, hide_index=True )
+						st.data_editor( df_googleweather_history, use_container_width=True, hide_index=True )
 					
 					if daily:
 						st.markdown( '#### Daily Forecast' )
 						df_googleweather_daily = pd.DataFrame( daily )
-						st.dataframe( df_googleweather_daily, use_container_width=True, hide_index=True )
+						st.data_editor( df_googleweather_daily, use_container_width=True, hide_index=True )
 					
 					if alerts:
 						st.markdown( '#### Weather Alerts' )
 						df_googleweather_alerts = pd.DataFrame( alerts )
-						st.dataframe( df_googleweather_alerts, use_container_width=True, hide_index=True )
+						st.data_editor( df_googleweather_alerts, use_container_width=True, hide_index=True )
 					
 					with st.expander( 'Raw Payload', expanded=False ):
 						st.json( data )
@@ -7729,7 +7729,7 @@ elif mode == 'Geospatial':
 					df_usgsearthquakes = pd.DataFrame( rows )
 					
 					if not df_usgsearthquakes.empty:
-						st.dataframe( df_usgsearthquakes, use_container_width=True, hide_index=True )
+						st.data_editor( df_usgsearthquakes, use_container_width=True, hide_index=True )
 						
 						map_rows = [ ]
 						for item in rows:
@@ -7826,22 +7826,22 @@ elif mode == 'Geospatial':
 				if result.get( 'events', [ ] ):
 					st.markdown( '#### Events' )
 					df_events = pd.DataFrame( result.get( 'events', [ ] ) )
-					st.dataframe( df_events, use_container_width=True, hide_index=True )
+					st.data_editor( df_events, use_container_width=True, hide_index=True )
 				
 				if result.get( 'categories', [ ] ):
 					st.markdown( '#### Categories' )
 					df_categories = pd.DataFrame( result.get( 'categories', [ ] ) )
-					st.dataframe( df_categories, use_container_width=True, hide_index=True )
+					st.data_editor( df_categories, use_container_width=True, hide_index=True )
 				
 				if result.get( 'sources', [ ] ):
 					st.markdown( '#### Sources' )
 					df_sources = pd.DataFrame( result.get( 'sources', [ ] ) )
-					st.dataframe( df_sources, use_container_width=True, hide_index=True )
+					st.data_editor( df_sources, use_container_width=True, hide_index=True )
 				
 				if result.get( 'layers', [ ] ):
 					st.markdown( '#### Layers' )
 					df_layers = pd.DataFrame( result.get( 'layers', [ ] ) )
-					st.dataframe( df_layers, use_container_width=True, hide_index=True )
+					st.data_editor( df_layers, use_container_width=True, hide_index=True )
 				
 				with st.expander( 'Raw Result', expanded=False ):
 					st.json( result )
@@ -7923,7 +7923,7 @@ elif mode == 'Geospatial':
 					df_usgstnm = pd.DataFrame( rows )
 					
 					if not df_usgstnm.empty:
-						st.dataframe( df_usgstnm, use_container_width=True, hide_index=True )
+						st.data_editor( df_usgstnm, use_container_width=True, hide_index=True )
 						
 						top_rows = rows[ : min( 10, len( rows ) ) ]
 						for idx, item in enumerate( top_rows, start=1 ):
@@ -8012,7 +8012,7 @@ elif mode == 'Geospatial':
 					df_usgssb = pd.DataFrame( rows )
 					
 					if not df_usgssb.empty:
-						st.dataframe( df_usgssb, use_container_width=True, hide_index=True )
+						st.data_editor( df_usgssb, use_container_width=True, hide_index=True )
 						
 						top_rows = rows[ : min( 10, len( rows ) ) ]
 						for idx, item in enumerate( top_rows, start=1 ):
@@ -8098,7 +8098,7 @@ elif mode == 'Geospatial':
 				if result.get( 'mode' ) == 'states_bbox':
 					if items:
 						st.markdown( '#### Live State Vectors' )
-						st.dataframe( items, use_container_width=True, hide_index=True )
+						st.data_editor( items, use_container_width=True, hide_index=True )
 						
 						map_rows = [ { 'lat': x.get( 'latitude' ), 'lon': x.get( 'longitude' ) } for
 								x in items if
@@ -8113,14 +8113,14 @@ elif mode == 'Geospatial':
 						'departures_airport'):
 					if items:
 						st.markdown( '#### Flights' )
-						st.dataframe( items, use_container_width=True, hide_index=True )
+						st.data_editor( items, use_container_width=True, hide_index=True )
 					else:
 						st.info( 'No flight rows were returned for that query window.' )
 				
 				elif result.get( 'mode' ) == 'track_aircraft':
 					if items:
 						st.markdown( '#### Aircraft Track' )
-						st.dataframe( items, use_container_width=True, hide_index=True )
+						st.data_editor( items, use_container_width=True, hide_index=True )
 						
 						map_rows = [ { 'lat': x.get( 'latitude' ), 'lon': x.get( 'longitude' ) } for
 								x in items if
@@ -9442,7 +9442,7 @@ elif mode == 'Environmental':
 					df_airnow = pd.DataFrame( rows )
 					
 					if not df_airnow.empty:
-						st.dataframe( df_airnow, use_container_width=True, hide_index=True )
+						st.data_editor( df_airnow, use_container_width=True, hide_index=True )
 						
 						top_rows = rows[ : min( 10, len( rows ) ) ]
 						for idx, item in enumerate( top_rows, start=1 ):
@@ -9562,7 +9562,7 @@ elif mode == 'Environmental':
 					st.markdown( '#### Climate Results' )
 					df_climatedata = pd.DataFrame( rows )
 					if not df_climatedata.empty:
-						st.dataframe( df_climatedata, use_container_width=True, hide_index=True )
+						st.data_editor( df_climatedata, use_container_width=True, hide_index=True )
 						
 						top_rows = rows[ : min( 10, len( rows ) ) ]
 						for idx, item in enumerate( top_rows, start=1 ):
@@ -9669,7 +9669,7 @@ elif mode == 'Environmental':
 					df_eonet = pd.DataFrame( rows )
 					
 					if not df_eonet.empty:
-						st.dataframe( df_eonet, use_container_width=True, hide_index=True )
+						st.data_editor( df_eonet, use_container_width=True, hide_index=True )
 						
 						map_rows = [ ]
 						for item in rows:
@@ -9768,7 +9768,7 @@ elif mode == 'Environmental':
 					df_envirofacts = pd.DataFrame( rows )
 					
 					if not df_envirofacts.empty:
-						st.dataframe( df_envirofacts, use_container_width=True, hide_index=True )
+						st.data_editor( df_envirofacts, use_container_width=True, hide_index=True )
 						
 						top_rows = rows[ : min( 10, len( rows ) ) ]
 						for idx, item in enumerate( top_rows, start=1 ):
@@ -9865,7 +9865,7 @@ elif mode == 'Environmental':
 					df_tac = pd.DataFrame( rows )
 					
 					if not df_tac.empty:
-						st.dataframe( df_tac, use_container_width=True, hide_index=True )
+						st.data_editor( df_tac, use_container_width=True, hide_index=True )
 						
 						top_rows = rows[ : min( 10, len( rows ) ) ]
 						for idx, item in enumerate( top_rows, start=1 ):
@@ -9970,7 +9970,7 @@ elif mode == 'Environmental':
 					df_uvindex = pd.DataFrame( rows )
 					
 					if not df_uvindex.empty:
-						st.dataframe( df_uvindex, use_container_width=True, hide_index=True )
+						st.data_editor( df_uvindex, use_container_width=True, hide_index=True )
 						
 						top_rows = rows[ : min( 10, len( rows ) ) ]
 						for idx, item in enumerate( top_rows, start=1 ):
@@ -10081,7 +10081,7 @@ elif mode == 'Environmental':
 					df_purpleair = pd.DataFrame( rows )
 					
 					if not df_purpleair.empty:
-						st.dataframe( df_purpleair, use_container_width=True, hide_index=True )
+						st.data_editor( df_purpleair, use_container_width=True, hide_index=True )
 						
 						map_rows = [ ]
 						for item in rows:
@@ -10200,7 +10200,7 @@ elif mode == 'Environmental':
 					df_openaq = pd.DataFrame( rows )
 					
 					if not df_openaq.empty:
-						st.dataframe( df_openaq, use_container_width=True, hide_index=True )
+						st.data_editor( df_openaq, use_container_width=True, hide_index=True )
 						
 						map_rows = [ ]
 						for item in rows:
@@ -10309,7 +10309,7 @@ elif mode == 'Environmental':
 					df_firms = pd.DataFrame( rows )
 					
 					if not df_firms.empty:
-						st.dataframe( df_firms, use_container_width=True, hide_index=True )
+						st.data_editor( df_firms, use_container_width=True, hide_index=True )
 						
 						map_rows = [ ]
 						for item in rows:
@@ -10431,7 +10431,7 @@ elif mode == 'Environmental':
 					df_usgswaterdata = pd.DataFrame( rows )
 					
 					if not df_usgswaterdata.empty:
-						st.dataframe( df_usgswaterdata, use_container_width=True, hide_index=True )
+						st.data_editor( df_usgswaterdata, use_container_width=True, hide_index=True )
 						
 						map_rows = [ ]
 						for item in rows:
@@ -10656,7 +10656,7 @@ elif mode == 'Astronomical':
 				df_local = _safe_dataframe( rows )
 				if not df_local.empty:
 					st.markdown( title )
-					st.dataframe( df_local, use_container_width=True, hide_index=True )
+					st.data_editor( df_local, use_container_width=True, hide_index=True )
 				else:
 					st.info( 'No displayable rows were found.' )
 			
@@ -11675,7 +11675,7 @@ elif mode == 'Astronomical':
 						st.markdown( '#### Celestial Bodies' )
 						df_bodies = pd.DataFrame( bodies )
 						if not df_bodies.empty:
-							st.dataframe( df_bodies, use_container_width=True, hide_index=True )
+							st.data_editor( df_bodies, use_container_width=True, hide_index=True )
 						else:
 							st.info( 'No displayable celestial body rows were found.' )
 					else:
@@ -11885,7 +11885,7 @@ elif mode == 'Astronomical':
 					st.markdown( f'#### Result Rows ({len( parsed_result )})' )
 					df_catalog = pd.DataFrame( parsed_result )
 					if not df_catalog.empty:
-						st.dataframe( df_catalog, use_container_width=True, hide_index=True )
+						st.data_editor( df_catalog, use_container_width=True, hide_index=True )
 					else:
 						st.text_area( 'Results', value=str( parsed_result ), height=320 )
 				
@@ -11903,7 +11903,7 @@ elif mode == 'Astronomical':
 						df_catalog = pd.DataFrame( candidate_rows )
 						
 						if not df_catalog.empty:
-							st.dataframe( df_catalog, use_container_width=True, hide_index=True )
+							st.data_editor( df_catalog, use_container_width=True, hide_index=True )
 						else:
 							st.json( parsed_result )
 					
@@ -12003,7 +12003,7 @@ elif mode == 'Astronomical':
 					st.markdown( f'#### Result Rows ({len( df_rows )})' )
 					
 					if not df_rows.empty:
-						st.dataframe( df_rows, use_container_width=True, hide_index=True )
+						st.data_editor( df_rows, use_container_width=True, hide_index=True )
 					else:
 						st.info( 'No displayable rows were returned.' )
 					
@@ -12140,7 +12140,7 @@ elif mode == 'Astronomical':
 				if rows:
 					st.markdown( '#### Rows' )
 					df_simbad = pd.DataFrame( rows )
-					st.dataframe( df_simbad, use_container_width=True, hide_index=True )
+					st.data_editor( df_simbad, use_container_width=True, hide_index=True )
 				else:
 					st.text( 'No rows returned.' )
 				
@@ -12182,7 +12182,7 @@ elif mode == 'Astronomical':
 						df_sat = pd.DataFrame( items )
 						if not df_sat.empty:
 							st.caption( f'Observatories returned: {len( df_sat )}' )
-							st.dataframe( df_sat, use_container_width=True, hide_index=True )
+							st.data_editor( df_sat, use_container_width=True, hide_index=True )
 						else:
 							st.info( 'No displayable observatory rows were found.' )
 						
@@ -12200,7 +12200,7 @@ elif mode == 'Astronomical':
 						df_sat = pd.DataFrame( items )
 						if not df_sat.empty:
 							st.caption( f'Ground stations returned: {len( df_sat )}' )
-							st.dataframe( df_sat, use_container_width=True, hide_index=True )
+							st.data_editor( df_sat, use_container_width=True, hide_index=True )
 						else:
 							st.info( 'No displayable ground-station rows were found.' )
 						
@@ -12227,7 +12227,7 @@ elif mode == 'Astronomical':
 						df_sat = pd.DataFrame( summary_rows )
 						if not df_sat.empty:
 							st.caption( f'Location sets returned: {len( df_sat )}' )
-							st.dataframe( df_sat, use_container_width=True, hide_index=True )
+							st.data_editor( df_sat, use_container_width=True, hide_index=True )
 						else:
 							st.info( 'No displayable location-set summary rows were found.' )
 						
@@ -12338,7 +12338,7 @@ elif mode == 'Astronomical':
 					if isinstance( data, list ):
 						df_chart = pd.DataFrame( data )
 						if not df_chart.empty:
-							st.dataframe( df_chart, use_container_width=True, hide_index=True )
+							st.data_editor( df_chart, use_container_width=True, hide_index=True )
 						else:
 							st.json( data )
 					elif isinstance( data, dict ):
@@ -12412,7 +12412,7 @@ elif mode == 'Astronomical':
 					st.markdown( '#### Results' )
 					df_nearby = pd.DataFrame( result.get( 'data', [ ] ),
 						columns=result.get( 'fields', [ ] ) )
-					st.dataframe( df_nearby, use_container_width=True, hide_index=True )
+					st.data_editor( df_nearby, use_container_width=True, hide_index=True )
 				
 				elif 'data' in result:
 					st.markdown( '#### Results' )
@@ -12420,7 +12420,7 @@ elif mode == 'Astronomical':
 					if isinstance( data, list ):
 						if data:
 							df_nearby = pd.DataFrame( data )
-							st.dataframe( df_nearby, use_container_width=True, hide_index=True )
+							st.data_editor( df_nearby, use_container_width=True, hide_index=True )
 						else:
 							st.text( 'No rows returned.' )
 					else:
@@ -14117,7 +14117,7 @@ elif mode == 'Demographic':
 									'Published': item.get( 'Published', '' ), } for item in items ]
 					df_pubmed = pd.DataFrame( table_rows )
 					st.markdown( '#### Results' )
-					st.dataframe( df_pubmed, use_container_width=True, hide_index=True )
+					st.data_editor( df_pubmed, use_container_width=True, hide_index=True )
 					first = items[ 0 ]
 					_render_summary_kv( '#### First Result', { 'Title': first.get( 'Title', '' ),
 							'Published': first.get( 'Published', '' ),
@@ -14208,7 +14208,7 @@ elif mode == 'Demographic':
 					df_open_city = pd.DataFrame( table_rows )
 					
 					st.markdown( '#### Results' )
-					st.dataframe( df_open_city, use_container_width=True, hide_index=True )
+					st.data_editor( df_open_city, use_container_width=True, hide_index=True )
 					
 					first = items[ 0 ]
 					st.markdown( '#### First Row Preview' )
