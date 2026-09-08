@@ -2598,8 +2598,7 @@ if mode == 'Loading':
 				gh_fetch = col_fetch.button( "Load", key="gh_fetch", icon='📤', width='stretch' )
 				gh_clear = col_clear.button( "Clear", key="gh_clear", icon='🧹', width='stretch' )
 				
-				can_save = (
-						st.session_state.get( "active_loader" ) == "GithubLoader" \
+				can_save = ( st.session_state.get( "active_loader" ) == "GithubLoader" \
 						and isinstance( st.session_state.get( "raw_text" ), str ) \
 						and st.session_state.get( "raw_text" ).strip( ) )
 				
