@@ -11,6 +11,7 @@ langchain-google-genai
 langchain-mistralai
 langchain-huggingface
 langchain-chroma
+langchain-pinecone
 langchain-yt-dlp>=0.0.8
 
 pydantic==2.12.5
@@ -23,6 +24,7 @@ google-genai>=1,<2
 xai-sdk==1.8.2
 mistralai>=1,<2
 googlemaps>=4.10,<5
+llama-cpp-python
 
 requests>=2.31.0,<3
 urllib3>=2.0.7,<3
