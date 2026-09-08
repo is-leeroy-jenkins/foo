@@ -82,8 +82,8 @@ def normalize_generated_whitespace( source: str ) -> str:
     """Normalize whitespace-only lines introduced by the integration transformer.
 
     Purpose:
-        Removes indentation from blank lines created immediately after generated LangChain input
-        calls and generated Clear reruns without modifying unrelated pre-existing whitespace.
+        Removes indentation from blank lines created adjacent to generated LangChain input,
+        action, reset, and rerun statements without changing unrelated source whitespace.
 
     Args:
         source (str): Complete transformed app.py source text.
@@ -92,19 +92,28 @@ def normalize_generated_whitespace( source: str ) -> str:
         str: Source text with generated whitespace-only lines normalized to empty lines.
     """
     lines = source.splitlines( keepends=True )
+    generated_markers = (
+        'render_langchain_inputs(',
+        'render_langchain_actions(',
+        'reset_langchain_controls(',
+        'st.rerun( )',
+    )
 
     for index, line in enumerate( lines ):
         if line.strip( ):
             continue
 
-        previous = lines[ index - 1 ] if index > 0 else ''
-        if 'render_langchain_inputs(' in previous:
+        window_start = max( 0, index - 2 )
+        window_end = min( len( lines ), index + 3 )
+        nearby = ''.join( lines[ window_start:window_end ] )
+        if any( marker in nearby for marker in generated_markers ):
             lines[ index ] = '\n'
             continue
 
+        previous = lines[ index - 1 ] if index > 0 else ''
         if 'st.rerun( )' in previous:
-            window_start = max( 0, index - 20 )
-            recent = ''.join( lines[ window_start:index ] )
+            history_start = max( 0, index - 20 )
+            recent = ''.join( lines[ history_start:index ] )
             if 'reset_langchain_controls(' in recent:
                 lines[ index ] = '\n'
 
