@@ -2463,9 +2463,6 @@ if mode == 'Loading':
 			# ----------------------------
 			# ------- Expander ArXiv Loader
 			# ----------------------------
-
-
-
 			with st.expander( label='ArXiv Loader', icon='🧠', expanded=False ):
 				arxiv_query = st.text_input( 'Query',
 					placeholder='e.g., transformer OR llm', key='arxiv_query', )
@@ -4072,7 +4069,8 @@ elif mode == 'Retrieval':
 			def _clear_googledrive_state( ) -> None:
 				st.session_state[ 'googledrive_clear_request' ] = True
 			
-			gd_query = st.text_area( 'Google Drive Query', height=90, key='googledrive_query', placeholder=(
+			gd_query = st.text_area( 'Google Drive Query', height=90, key='googledrive_query',
+				placeholder=(
 				'Examples:\n'
 				'machine learning\n'
 				'budget execution\n'
@@ -4084,11 +4082,16 @@ elif mode == 'Retrieval':
 			c1, c2 = st.columns( 2 )
 			
 			with c1:
-				gd_folder_id = st.text_input( 'Folder ID', value=st.session_state.get( 'googledrive_folder_id', cfg.GOOGLE_DRIVE_FOLDER_ID or 'root' ), key='googledrive_folder_id', placeholder='root or a Google Drive folder id', help='Use "root" for your My Drive root, or provide a specific folder '
+				gd_folder_id = st.text_input( 'Folder ID', value=st.session_state.get(
+					'googledrive_folder_id', cfg.GOOGLE_DRIVE_FOLDER_ID or 'root' ),
+					key='googledrive_folder_id', placeholder='root or a Google Drive folder id',
+					help='Use "root" for your My Drive root, or provide a specific folder '
 				                                                                                                                                                                                                                          'id.' )
 			
 			with c2:
-				gd_results_limit = st.number_input( 'Max Docs', min_value=1, max_value=100, value=int( st.session_state.get( 'googledrive_results_limit', 10 ) ), step=1, key='googledrive_results_limit', )
+				gd_results_limit = st.number_input( 'Max Docs', min_value=1, max_value=100,
+					value=int( st.session_state.get( 'googledrive_results_limit', 10 ) ), step=1,
+					key='googledrive_results_limit', )
 			
 			c3, c4 = st.columns( 2 )
 			with c3:
@@ -4096,11 +4099,13 @@ elif mode == 'Retrieval':
 						'gdrive-query', 'gdrive-by-name', 'gdrive-query-in-folder',
 						'gdrive-mime-type', 'gdrive-mime-type-in-folder',
 						'gdrive-query-with-mime-type',
-						'gdrive-query-with-mime-type-and-folder', ], index=1, key='googledrive_template', help='Select the Drive retrieval strategy.' )
+						'gdrive-query-with-mime-type-and-folder', ], index=1,
+					key='googledrive_template', help='Select the Drive retrieval strategy.' )
 			
 			with c4:
-				gd_mode = st.selectbox( 'Mode', options=[ 'documents',
-						'snippets' ], index=0, key='googledrive_mode', help='Use snippets for short metadata-driven returns.' )
+				gd_mode = st.selectbox( 'Mode', options=[ 'documents', 'snippets' ],
+					index=0, key='googledrive_mode',
+					help='Use snippets for short metadata-driven returns.' )
 			
 			gd_mime_type = st.selectbox( 'MIME Type Filter', options=[ '', 'text/text',
 					'text/plain', 'text/html', 'text/csv', 'text/markdown', 'image/png',
@@ -4111,8 +4116,8 @@ elif mode == 'Retrieval':
 					'application/vnd.google.colaboratory',
 					'application/vnd.openxmlformats-officedocument.presentationml'
 					'.presentation',
-					'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-					'', ], index=0, key='googledrive_mime_type', help='Optional MIME type restriction.' )
+					'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ],
+				index=0, key='googledrive_mime_type', help='Optional MIME type restriction.' )
 			
 			st.caption( 'Expected auth: GOOGLE_ACCOUNT_FILE for credentials JSON. '
 			            'Optional: GOOGLE_DRIVE_TOKEN_PATH for token persistence.' )
@@ -4122,14 +4127,17 @@ elif mode == 'Retrieval':
 				gd_submit = st.button( 'Submit', key='googledrive_submit', width='stretch' )
 			
 			with b2:
-				st.button( 'Clear', key='googledrive_clear', on_click=_clear_googledrive_state, width='stretch' )
+				st.button( 'Clear', key='googledrive_clear', on_click=_clear_googledrive_state,
+					width='stretch' )
 			
 			if gd_submit:
 				try:
 					from fetchers import GoogleDrive
 					
 					fetcher = GoogleDrive( )
-					docs = fetcher.fetch( question=gd_query, folder_id=gd_folder_id or 'root', results=int( gd_results_limit ), template=gd_template, mime_type=gd_mime_type or None, mode=gd_mode, )
+					docs = fetcher.fetch( question=gd_query, folder_id=gd_folder_id or 'root',
+						results=int( gd_results_limit ), template=gd_template,
+						mime_type=gd_mime_type or None, mode=gd_mode, )
 					
 					st.session_state[ 'googledrive_results' ] = docs or [ ]
 					st.session_state[ 'retrieval_active_source' ] = 'Google Drive'
