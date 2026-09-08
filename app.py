@@ -887,6 +887,10 @@ def create_embedding_dataframe( chunks: List[ Document ], vectors: List[ List[ f
 def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> None:
 	"""Render chunking, embedding, and vector-storage controls for one loader.
 
+	Purpose:
+		Renders document-processing controls using paired columns for compatible finite-choice
+		inputs while preserving full-width rows for manually entered paths and identifiers.
+
 	Args:
 		loader_name (str): Loader class name associated with the expander.
 		key_prefix (str): Unique Streamlit key prefix assigned to the loader.
@@ -922,48 +926,60 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 	defaults = { size_key: DEFAULT_CHUNK_SIZE, overlap_key: DEFAULT_CHUNK_OVERLAP,
 			provider_key: DEFAULT_EMBEDDING_PROVIDER, model_key: DEFAULT_EMBEDDING_MODEL,
 			path_key: '', store_key: VECTOR_STORES[ 0 ], index_key: '', namespace_key: '', }
+	
 	for key, value in defaults.items( ):
 		if key not in st.session_state:
 			st.session_state[ key ] = value
 	
 	if int( st.session_state[ overlap_key ] ) >= int( st.session_state[ size_key ] ):
-		st.session_state[ overlap_key ] = max( 0, int( st.session_state[ size_key ] ) // 5 )
+		st.session_state[ overlap_key ] = max( 0, int( st.session_state[ size_key ] ) // 5, )
+	
+	chunk_max = max( 5000, int( st.session_state[ size_key ] ) )
 	
 	chunk_col, overlap_col = st.columns( 2 )
 	with chunk_col:
-		st.number_input( 'Chunk Size', min_value=1, step=1, key=size_key )
+		st.slider( 'Chunk Size', min_value=1, max_value=chunk_max, step=1, key=size_key, )
+	
 	with overlap_col:
-		st.number_input( 'Chunk Overlap', min_value=0, max_value=max( 0, int(
+		st.slider( 'Chunk Overlap', min_value=0, max_value=max( 0, int(
 			st.session_state[ size_key ] ) - 1 ), step=1, key=overlap_key, )
 	
-	provider_col, model_col = st.columns( 2 )
-	with provider_col:
-		provider = st.selectbox( 'Embedding Provider', options=list( EMBEDDING_MODELS.keys( ) ) + [
-				'Local GGUF' ], key=provider_key, )
+	provider_options = list( EMBEDDING_MODELS.keys( ) ) + [ 'Local GGUF' ]
+	provider = st.session_state[ provider_key ]
 	
-	with model_col:
-		if provider == 'Local GGUF':
-			st.text_input( 'Local GGUF Model', key=path_key, placeholder='Path to a local '
-			                                                             'embedding GGUF model', )
-		else:
-			model_options = EMBEDDING_MODELS[ provider ]
-			if st.session_state.get( model_key, '' ) not in model_options:
-				st.session_state[ model_key ] = model_options[ 0 ]
-			st.selectbox( 'Embedding Model', options=model_options, key=model_key )
+	if provider != 'Local GGUF':
+		provider_col, model_col = st.columns( 2 )
+		
+		with provider_col:
+			provider = st.selectbox( 'Embedding Provider', options=provider_options,
+				key=provider_key, )
+		
+		with model_col:
+			if provider != 'Local GGUF':
+				model_options = EMBEDDING_MODELS[ provider ]
+				
+				if st.session_state.get( model_key, '' ) not in model_options:
+					st.session_state[ model_key ] = model_options[ 0 ]
+				
+				st.selectbox( 'Embedding Model', options=model_options, key=model_key, )
+	else:
+		provider = st.selectbox( 'Embedding Provider', options=provider_options,
+			key=provider_key, )
 	
-	store_col, target_col = st.columns( 2 )
-	with store_col:
-		store_provider = st.selectbox( 'Vector Store', options=VECTOR_STORES, key=store_key )
-	with target_col:
-		if store_provider == 'Pinecone':
-			st.text_input( 'Pinecone Index', key=index_key, placeholder='Existing Pinecone index' )
-		else:
-			st.text_input( 'Chroma Directory', value=str( CHROMA_DIRECTORY ), disabled=True,
-				key=f'{key_prefix}_chroma_directory', )
+	if provider == 'Local GGUF':
+		st.text_input( 'Local GGUF Model', key=path_key, placeholder='Path to a local embedding '
+		                                                             'GGUF model', )
+	
+	store_provider = st.selectbox( 'Vector Store', options=VECTOR_STORES, key=store_key, )
 	
 	if store_provider == 'Pinecone':
+		st.text_input( 'Pinecone Index', key=index_key, placeholder='Existing Pinecone index', )
+		
 		st.text_input( 'Pinecone Namespace', key=namespace_key, placeholder='Optional namespace', )
-
+	else:
+		st.text_input( 'Chroma Directory', value=str( CHROMA_DIRECTORY ), disabled=True,
+			key=f'{key_prefix}_chroma_directory', )
+		
 def render_document_processing_actions( loader_name: str, key_prefix: str ) -> None:
 	"""Render and execute Chunk, Embed, and Store actions for one loader.
 

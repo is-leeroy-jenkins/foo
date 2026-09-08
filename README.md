@@ -31,8 +31,6 @@ supports local files, web pages, public archives, Google services, government da
 geospatial APIs, environmental APIs, astronomical APIs, demographic APIs, and multiple LLM
 providers.
 
-
-
 ## 🎥 Demo
 
 ![](https://github.com/is-leeroy-jenkins/Foo/blob/main/resources/images/foo-demo.gif)
@@ -141,6 +139,14 @@ foo/
 └── resources/
     └── images/            # README and UI image assets
 ```
+## 🔑 API Key Set-up
+
+- [Data sources]() 
+- [OpenAI]() 
+- [Gemini AI]() 
+- [Grok AI]() 
+- [Mistral AI]() 
+- [Claude AI]() 
 
 ## 🛡️ Installation
 
