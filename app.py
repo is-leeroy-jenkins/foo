@@ -218,7 +218,6 @@ for corpus in cfg.REQUIRED_CORPORA:
 # =====================================================================
 # UTILITIES
 # =====================================================================
-
 def throw_if( name: str, value: object ) -> None:
 	"""Throw if.
 
