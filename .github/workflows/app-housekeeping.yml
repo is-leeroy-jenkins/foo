@@ -1,0 +1,94 @@
+name: App housekeeping
+
+on:
+  push:
+    branches:
+      - maintenance/app-conventions-docs-2
+    paths:
+      - .github/workflows/app-housekeeping.yml
+
+permissions:
+  contents: write
+
+jobs:
+  housekeeping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: maintenance/app-conventions-docs-2
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Apply housekeeping
+        run: python .github/app_housekeeping.py
+
+      - name: Compile app
+        run: python -m py_compile app.py embedders.py stores/vector.py
+
+      - name: Validate conventions
+        run: |
+          python - <<'PY'
+          import ast
+          import re
+          from pathlib import Path
+
+          source = Path('app.py').read_text(encoding='utf-8')
+          tree = ast.parse(source)
+          failures = []
+          for node in ast.walk(tree):
+              if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                  continue
+              if node.name.startswith('_'):
+                  failures.append(f'Leading underscore: {node.name}@{node.lineno}')
+              doc = ast.get_docstring(node, clean=True) or ''
+              for heading in ('Purpose:', 'Args:', 'Returns:'):
+                  if heading not in doc:
+                      failures.append(f'{node.name}@{node.lineno} missing {heading}')
+          if failures:
+              raise RuntimeError('\n'.join(failures))
+          PY
+
+      - name: Validate documentation references
+        run: |
+          grep -R -n "embedders.py" README.md docs
+          grep -R -n "stores/vector.py" README.md docs
+          grep -R -n "Pinecone" README.md docs
+          grep -R -n "Local GGUF" README.md docs
+          if grep -R -n -E "embeddings\.py|pipelines\.py" README.md docs; then
+            echo 'Stale module reference found.'
+            exit 1
+          fi
+
+      - name: Install documentation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-docs.txt
+
+      - name: Build documentation
+        run: mkdocs build --strict
+
+      - name: Check diff
+        run: git diff --check
+
+      - name: Guard app diff size
+        run: |
+          changes=$(git diff --numstat -- app.py | awk '{print $1+$2}')
+          echo "app.py changed lines: ${changes:-0}"
+          test "${changes:-0}" -lt 2500
+
+      - name: Remove temporary files
+        run: |
+          rm .github/app_housekeeping.py
+          rm .github/workflows/app-housekeeping.yml
+
+      - name: Commit housekeeping
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Clean app conventions and update documentation"
+          git push origin HEAD:maintenance/app-conventions-docs-2
