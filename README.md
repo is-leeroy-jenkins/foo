@@ -141,8 +141,8 @@ foo/
 ```
 ## 🔑 API Set-up
 
-- [Data sources](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/API-Setup.md) 
-- [OpenAI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/enironments.md) 
+- [Science APIs](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/API-Setup.md) 
+- [OpenAI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/environments.md) 
 - [Gemini AI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/gemini.md) 
 - [Grok AI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/xai.md) 
 - [Mistral AI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/mistral.md) 
