@@ -1,0 +1,67 @@
+name: Apply Document Processing Fix
+
+on:
+  push:
+    branches:
+      - fix/loading-langchain-integration
+    paths:
+      - .github/workflows/apply-document-processing-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout corrective branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/loading-langchain-integration
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Apply app integration
+        run: python .github/apply_document_processing_fix.py
+
+      - name: Compile updated sources
+        run: python -m py_compile app.py embeddings.py stores/vector.py
+
+      - name: Verify integration structure
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          app = Path('app.py').read_text(encoding='utf-8')
+          assert app.count("render_document_processing_inputs( '") == 9
+          assert app.count("render_document_processing_actions( '") == 9
+          assert app.count('\t\trender_loading_tabs( )') == 1
+          assert 'NLP METRIC CALCULATIONS' not in app
+          assert "'Local GGUF'" in app
+          assert "VECTOR_STORES = [ 'Chroma', 'Pinecone' ]" in app
+          assert 'from embeddings import EmbeddingFactory' in app
+          assert 'from stores.vector import ChromaStore, PineconeStore' in app
+          assert not Path('pipelines.py').exists()
+          assert not Path('langchain_pipeline.py').exists()
+          PY
+
+      - name: Check whitespace errors
+        run: git diff --check
+
+      - name: Remove temporary integration files
+        run: |
+          rm .github/apply_document_processing_fix.py
+          rm .github/workflows/apply-document-processing-fix.yml
+
+      - name: Commit integrated application
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Integrate document chunking embeddings and vector storage"
+          git push origin HEAD:fix/loading-langchain-integration
