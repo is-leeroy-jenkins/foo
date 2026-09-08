@@ -33,7 +33,6 @@ jobs:
         run: |
           python - <<'PY'
           import ast
-          import re
           from pathlib import Path
 
           source = Path('app.py').read_text(encoding='utf-8')
