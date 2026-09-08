@@ -4840,7 +4840,6 @@ elif mode == 'Retrieval':
 				st.json( { 'mode': mode_value, 'url': result.get( 'url', '' ), 'params': params, } )
 				
 				items: List[ Dict[ str, Any ] ] = [ ]
-				
 				if isinstance( data, dict ):
 					for key in [ 'bills', 'laws', 'reports', 'committeeReports', 'congresses',
 							'sessions', 'results', 'items' ]:
@@ -4856,7 +4855,10 @@ elif mode == 'Retrieval':
 					
 					for index, item in enumerate( items, start=1 ):
 						title_value = (
-									item.get( 'title' ) or item.get( 'name' ) or item.get( 'number' ) or item.get( 'billNumber' ) or item.get( 'lawNumber' ) or item.get( 'reportNumber' ) or f'Result {index}')
+									item.get( 'title' ) or item.get( 'name' ) \
+									or item.get( 'number' ) or item.get( 'billNumber' ) \
+									or item.get( 'lawNumber' ) or item.get( 'reportNumber' ) \
+									or f'Result {index}')
 						
 						id_parts: List[ str ] = [ ]
 						for key in [ 'congress', 'type', 'number', 'billType', 'billNumber',
@@ -4865,7 +4867,8 @@ elif mode == 'Retrieval':
 								id_parts.append( f'{key}={item.get( key )}' )
 						
 						action_value = (
-									item.get( 'latestAction' ) or item.get( 'latestActionText' ) or item.get( 'actionDate' ) or '')
+									item.get( 'latestAction' ) or item.get( 'latestActionText' ) \
+									or item.get( 'actionDate' ) or '')
 						
 						with st.container( border=True ):
 							st.markdown( f'**{index}. {title_value}**' )
@@ -4885,7 +4888,9 @@ elif mode == 'Retrieval':
 					st.markdown( '#### Detail' )
 					
 					title_value = (
-								data.get( 'title' ) or data.get( 'name' ) or data.get( 'number' ) or data.get( 'billNumber' ) or data.get( 'lawNumber' ) or data.get( 'reportNumber' ) or 'Result')
+								data.get( 'title' ) or data.get( 'name' ) or data.get( 'number' ) \
+								or data.get( 'billNumber' ) or data.get( 'lawNumber' ) \
+								or data.get( 'reportNumber' ) or 'Result')
 					
 					st.markdown( f'### {title_value}' )
 					
@@ -4940,7 +4945,9 @@ elif mode == 'Retrieval':
 			def _clear_internetarchive_state( ) -> None:
 				st.session_state[ 'internetarchive_clear_request' ] = True
 			
-			ia_query = st.text_area( 'Query', value=st.session_state.get( 'internetarchive_query', '' ), height=80, key='internetarchive_query', placeholder=(
+			ia_query = st.text_area( 'Query', value=st.session_state.get(
+				'internetarchive_query', '' ), height=80, key='internetarchive_query',
+				placeholder=(
 				'Examples:\n'
 				'climate change\n'
 				'title:"appropriations" AND '
@@ -4949,32 +4956,45 @@ elif mode == 'Retrieval':
 			
 			c1, c2 = st.columns( 2 )
 			with c1:
-				ia_rows = st.number_input( 'Rows', min_value=1, max_value=100, value=int( st.session_state.get( 'internetarchive_rows', 10 ) ), step=1, key='internetarchive_rows' )
+				ia_rows = st.number_input( 'Rows', min_value=1, max_value=100,
+					value=int( st.session_state.get( 'internetarchive_rows', 10 ) ),
+					step=1, key='internetarchive_rows' )
 			
 			with c2:
-				ia_page = st.number_input( 'Page', min_value=1, max_value=100000, value=int( st.session_state.get( 'internetarchive_page', 1 ) ), step=1, key='internetarchive_page' )
+				ia_page = st.number_input( 'Page', min_value=1, max_value=100000,
+					value=int( st.session_state.get( 'internetarchive_page', 1 ) ),
+					step=1, key='internetarchive_page' )
 			
 			ia_sort = st.selectbox( 'Sort', options=[ 'downloads desc', 'downloads asc',
 					'publicdate desc', 'publicdate asc', 'titleSorter asc',
 					'titleSorter desc' ], index=[ 'downloads desc', 'downloads asc',
 					'publicdate desc', 'publicdate asc', 'titleSorter asc',
-					'titleSorter desc' ].index( st.session_state.get( 'internetarchive_sort', 'downloads desc' ) ), key='internetarchive_sort' )
+					'titleSorter desc' ].index( st.session_state.get(
+				'internetarchive_sort', 'downloads desc' ) ), key='internetarchive_sort' )
 			
 			c3, c4 = st.columns( 2 )
 			with c3:
-				ia_media_type = st.text_input( 'Mediatype', value=st.session_state.get( 'internetarchive_media_type', '' ), key='internetarchive_media_type', placeholder='Example: texts' )
+				ia_media_type = st.text_input( 'Mediatype',
+					value=st.session_state.get( 'internetarchive_media_type', '' ),
+					key='internetarchive_media_type', placeholder='Example: texts' )
 			
 			with c4:
-				ia_collection = st.text_input( 'Collection', value=st.session_state.get( 'internetarchive_collection', '' ), key='internetarchive_collection', placeholder='Example: americana' )
+				ia_collection = st.text_input( 'Collection',
+					value=st.session_state.get( 'internetarchive_collection', '' ),
+					key='internetarchive_collection', placeholder='Example: americana' )
 			
-			ia_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120, value=int( st.session_state.get( 'internetarchive_timeout', 20 ) ), step=1, key='internetarchive_timeout' )
+			ia_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120,
+				value=int( st.session_state.get( 'internetarchive_timeout', 20 ) ),
+				step=1, key='internetarchive_timeout' )
 			
 			b1, b2 = st.columns( 2 )
 			with b1:
-				ia_submit = st.button( 'Submit', key='internetarchive_submit', use_container_width=True, width='stretch' )
+				ia_submit = st.button( 'Submit', key='internetarchive_submit',
+					use_container_width=True, width='stretch' )
 			
 			with b2:
-				ia_clear = st.button( 'Clear', key='internetarchive_clear', on_click=_clear_internetarchive_state, use_container_width=True, width='stretch' )
+				ia_clear = st.button( 'Clear', key='internetarchive_clear',
+					on_click=_clear_internetarchive_state, use_container_width=True, width='stretch' )
 			
 			result = st.session_state.get( 'internetarchive_results', { } )
 			
@@ -4982,7 +5002,9 @@ elif mode == 'Retrieval':
 				try:
 					f = InternetArchive( )
 					
-					result = f.fetch( keywords=str( ia_query ), rows=int( ia_rows ), page=int( ia_page ), sort=str( ia_sort ), media_type=str( ia_media_type ), collection=str( ia_collection ), time=int( ia_timeout ) )
+					result = f.fetch( keywords=str( ia_query ), rows=int( ia_rows ),
+						page=int( ia_page ), sort=str( ia_sort ), media_type=str( ia_media_type ),
+						collection=str( ia_collection ), time=int( ia_timeout ) )
 					
 					st.session_state[ 'internetarchive_results' ] = result or { }
 					st.session_state[ 'retrieval_active_source' ] = 'Internet Archive'
