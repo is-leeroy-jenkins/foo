@@ -172,7 +172,15 @@ def add_loader_controls( section: str, loader_name: str, key_prefix: str ) -> st
         section = section[ :load_if_index ] + '\t\t\t\t\tst.rerun( )\n\t\t\t\t\n' + section[ load_if_index: ]
 
     if action_call.strip( ) not in section:
-        section = section.rstrip( ) + action_call
+        if loader_name == 'JsonLoader':
+            web_documents = "\n\t\t\twith st.expander( label='Web Documents', expanded=False ):"
+            boundary = section.find( web_documents )
+            if boundary >= 0:
+                section = section[ :boundary ].rstrip( ) + action_call + section[ boundary: ]
+            else:
+                section = section.rstrip( ) + action_call
+        else:
+            section = section.rstrip( ) + action_call
     return section
 
 
