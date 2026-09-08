@@ -78,12 +78,46 @@ def correct_json_boundary( source: str ) -> str:
     return ''.join( lines )
 
 
+def normalize_generated_whitespace( source: str ) -> str:
+    """Normalize whitespace-only lines introduced by the integration transformer.
+
+    Purpose:
+        Removes indentation from blank lines created immediately after generated LangChain input
+        calls and generated Clear reruns without modifying unrelated pre-existing whitespace.
+
+    Args:
+        source (str): Complete transformed app.py source text.
+
+    Returns:
+        str: Source text with generated whitespace-only lines normalized to empty lines.
+    """
+    lines = source.splitlines( keepends=True )
+
+    for index, line in enumerate( lines ):
+        if line.strip( ):
+            continue
+
+        previous = lines[ index - 1 ] if index > 0 else ''
+        if 'render_langchain_inputs(' in previous:
+            lines[ index ] = '\n'
+            continue
+
+        if 'st.rerun( )' in previous:
+            window_start = max( 0, index - 20 )
+            recent = ''.join( lines[ window_start:index ] )
+            if 'reset_langchain_controls(' in recent:
+                lines[ index ] = '\n'
+
+    return ''.join( lines )
+
+
 def main( ) -> None:
     """Apply and finalize the Loading-mode integration.
 
     Purpose:
-        Executes the anchored integration, applies the JSON container-boundary correction, and
-        writes the final complete app.py source for compilation and structural validation.
+        Executes the anchored integration, applies the JSON container-boundary correction,
+        normalizes generated blank-line whitespace, and writes the final complete app.py source
+        for compilation and structural validation.
 
     Returns:
         None: This function updates app.py on disk.
@@ -92,6 +126,7 @@ def main( ) -> None:
     transformer.main( )
     source = APP_PATH.read_text( encoding='utf-8' )
     source = correct_json_boundary( source )
+    source = normalize_generated_whitespace( source )
     APP_PATH.write_text( source, encoding='utf-8' )
 
 
