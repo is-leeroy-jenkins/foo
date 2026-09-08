@@ -215,6 +215,10 @@ streamlit run app.py
 4. Click **Submit**.
 5. Review rendered summaries, rows, and raw results.
 
+![](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/images/foo-workflows.png)
+
+___
+
 ## 📤 Loaders
 
 | Loader                | Input                                                | Purpose                                                                                        |
