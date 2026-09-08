@@ -27,10 +27,8 @@ jobs:
           import json
           from pathlib import Path
 
-          path = Path('app.py')
-          source = path.read_text(encoding='utf-8')
+          source = Path('app.py').read_text(encoding='utf-8')
           tree = ast.parse(source)
-
           functions = []
           loads = {}
 
@@ -54,19 +52,20 @@ jobs:
                   'references': loads.get(node.name, 0),
                   'leading_underscore': node.name.startswith('_') and not node.name.startswith('__'),
                   'has_docstring': bool(doc.strip()),
-                  'has_purpose': 'Purpose:' in doc or 'Purpose\n' in doc or 'Purpose\r\n' in doc,
+                  'has_purpose': 'Purpose:' in doc or 'Purpose\n' in doc,
                   'has_args': (not args) or ('Args:' in doc) or ('Parameters' in doc) or ('Parametes:' in doc),
-                  'has_returns': ('Returns:' in doc) or ('Returns\n' in doc) or ('Returns\r\n' in doc),
+                  'has_returns': ('Returns:' in doc) or ('Returns\n' in doc),
                   'args': args,
               })
 
           functions.sort(key=lambda item: item['line'])
+          label = lambda item: '{}@{}'.format(item['name'], item['line'])
           print('APP_FUNCTION_AUDIT_BEGIN')
           print(json.dumps(functions, indent=2))
           print('APP_FUNCTION_AUDIT_END')
-          print(f'Total functions: {len(functions)}')
-          print('Leading underscore:', [f"{item["name"]}@{item["line"]}" for item in functions if item['leading_underscore']])
-          print('Unused candidates:', [f"{item["name"]}@{item["line"]}" for item in functions if item['references'] == 0 and not item['name'].startswith('__')])
-          print('Missing docstrings:', [f"{item["name"]}@{item["line"]}" for item in functions if not item['has_docstring']])
-          print('Noncompliant docstrings:', [f"{item["name"]}@{item["line"]}" for item in functions if item['has_docstring'] and not (item['has_purpose'] and item['has_args'] and item['has_returns'])])
+          print('Total functions:', len(functions))
+          print('Leading underscore:', [label(item) for item in functions if item['leading_underscore']])
+          print('Unused candidates:', [label(item) for item in functions if item['references'] == 0 and not item['name'].startswith('__')])
+          print('Missing docstrings:', [label(item) for item in functions if not item['has_docstring']])
+          print('Noncompliant docstrings:', [label(item) for item in functions if item['has_docstring'] and not (item['has_purpose'] and item['has_args'] and item['has_returns'])])
           PY
