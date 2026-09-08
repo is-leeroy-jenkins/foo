@@ -68,11 +68,12 @@ def load_transformer( ) -> ModuleType:
 
 
 def locate_loader_section( source: str, label: str ) -> tuple[ int, int ]:
-    """Locate one loader section using either Python quote style.
+    """Locate one complete same-level loader section.
 
     Purpose:
-        Anchors the complete loader expander without requiring its pre-existing Streamlit label
-        to use a specific quote character.
+        Anchors the selected loader expander and stops at the earliest following same-level loader
+        marker or same-level Streamlit expander. This preserves container boundaries such as the
+        transition from Local Documents to Web Documents.
 
     Args:
         source (str): Complete app.py source text.
@@ -90,11 +91,20 @@ def locate_loader_section( source: str, label: str ) -> tuple[ int, int ]:
     if start_match is None:
         raise RuntimeError( f'Could not locate loader expander: {label}' )
 
+    candidates: list[ int ] = [ ]
     sibling_pattern = re.compile( r'(?m)^\t{3}# -+\n\t{3}# -+ Expander' )
     sibling_match = sibling_pattern.search( source, start_match.end( ) )
-    if sibling_match is None:
+    if sibling_match is not None:
+        candidates.append( sibling_match.start( ) )
+
+    expander_pattern = re.compile( r'(?m)^\t{3}with st\.expander\(' )
+    expander_match = expander_pattern.search( source, start_match.end( ) )
+    if expander_match is not None:
+        candidates.append( expander_match.start( ) )
+
+    if not candidates:
         raise RuntimeError( f'Could not locate the end of loader expander: {label}' )
-    return start_match.start( ), sibling_match.start( )
+    return start_match.start( ), min( candidates )
 
 
 def add_loader_controls( section: str, loader_name: str, key_prefix: str ) -> str:
