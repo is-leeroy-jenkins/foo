@@ -873,10 +873,9 @@ if mode == 'Loading':
 				from nltk.corpus import (brown, gutenberg, reuters, webtext, inaugural, state_union)
 				
 				st.markdown( '###### NLTK Corpora' )
-				st.caption( 'i', help=cfg.NLTK_LOADER )
 				corpus_name = st.selectbox( 'Select corpus',
 					['Brown', 'Gutenberg', 'Reuters', 'WebText', 'Inaugural', 'State of the Union'],
-					key='nltk_corpus_name', )
+					key='nltk_corpus_name', help=cfg.NLTK_LOADER )
 				
 				file_ids = [ ]
 				try:
@@ -997,9 +996,8 @@ if mode == 'Loading':
 			# ------ Expander Text Loader
 			# ----------------------------
 			with st.expander( label='Text Loader', icon='📝', expanded=False ):
-				st.badge( label='Information', help=cfg.TEXT_LOADER )
 				files = st.file_uploader( 'Upload Text File(s)', type=[ 'txt', 'text', 'log' ],
-					accept_multiple_files=True, key='txt_upload' )
+					accept_multiple_files=True, key='txt_upload', help=cfg.TEXT_LOADER )
 				
 				# ------------------------------------------------------------------
 				# Buttons: Load / Clear / Save
@@ -1068,8 +1066,8 @@ if mode == 'Loading':
 			# ------ Expander CSV Loader
 			# ----------------------------
 			with st.expander( label="CSV Loader", icon='📑', expanded=False ):
-				st.badge( label='Information', help=cfg.CSV_LOADER )
-				csv_file = st.file_uploader( label="Upload CSV", type=[ "csv" ], key="csv_upload" )
+				csv_file = st.file_uploader( label="Upload CSV", type=[ "csv" ],
+					key="csv_upload", help=cfg.CSV_LOADER )
 				delimiter = st.text_input( "Delimiter", value=",", key="csv_delim", )
 				quotechar = st.text_input( "Quote Character", value='"', key="csv_quote", )
 				
@@ -1120,8 +1118,8 @@ if mode == 'Loading':
 					st.session_state.processed_text = None
 					st.session_state.active_loader = "CsvLoader"
 					
-					st.session_state[
-						"_loader_status" ] = f"Loaded {len( documents )} CSV document(s)."
+					st.session_state[ "_loader_status" ] = \
+						f"Loaded {len( documents )} CSV document(s)."
 			
 			# ----------------------------
 			# ---- XML Loader
@@ -1130,13 +1128,12 @@ if mode == 'Loading':
 				# ------------------------------------------------------------------
 				# Session-backed loader instance
 				# ------------------------------------------------------------------
-				st.badge( label='Information', help=cfg.XML_LOADER )
 				if 'xml_loader' not in st.session_state or st.session_state.xml_loader is None:
 					st.session_state.xml_loader = XmlLoader( )
 				
 				loader = st.session_state.xml_loader
 				xml_file = st.file_uploader( label='Select XML file', type=[ 'xml' ],
-					accept_multiple_files=False, key='xml_file_uploader' )
+					accept_multiple_files=False, key='xml_file_uploader', help=cfg.XML_LOADER )
 				st.text( 'Semantic XML Loading (Unstructured)' )
 				col1, col2 = st.columns( 2 )
 				with col1:
@@ -1274,7 +1271,7 @@ if mode == 'Loading':
 			# ----------------------------
 			with st.expander( label='Word Document Loader', icon='📘', expanded=False ):
 				word_file = st.file_uploader( 'Upload Word Document', type=[ 'docx' ],
-					key='word_upload', )
+					key='word_upload', help=cfg.WORD_LOADER )
 				
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
@@ -1338,9 +1335,9 @@ if mode == 'Loading':
 			# ------ Expander PDF Loader
 			# ----------------------------
 			with st.expander( label='PDF Loader', icon='📕', expanded=False ):
-				pdf = st.file_uploader( 'Upload PDF', type=[ 'pdf' ], key='pdf_upload' )
-				mode = st.selectbox( 'Mode', [ 'single', 'page' ], key='pdf_mode',
-					help='Used only when legacy extraction is enabled.' )
+				pdf = st.file_uploader( 'Upload PDF', type=[ 'pdf' ], key='pdf_upload',
+					help=cfg.PDF_LOADER )
+				mode = st.selectbox( 'Mode', [ 'single', 'page' ], key='pdf_mode' )
 				
 				extract = st.selectbox( 'Extract', [ 'plain', 'layout' ], key='pdf_extract',
 					help='Used only when legacy extraction is enabled.' )
@@ -1467,7 +1464,8 @@ if mode == 'Loading':
 			# --- Expander Power Point Loader
 			# ----------------------------
 			with st.expander( label='Power Point Loader', icon='📽', expanded=False ):
-				pptx = st.file_uploader( 'Upload PPTX', type=[ 'pptx' ], key='pptx_upload', )
+				pptx = st.file_uploader( 'Upload PPTX', type=[ 'pptx' ], key='pptx_upload',
+					help=cfg.POWERPOINT_LOADER )
 				mode = st.selectbox( 'Mode', [ 'single', 'elements' ], key='pptx_mode', )
 				
 				# --------------------------------------------------
@@ -1519,7 +1517,7 @@ if mode == 'Loading':
 			# ----------------------------
 			with st.expander( label='Jupyter Notebook Loader', icon='📓', expanded=False ):
 				notebook_file = st.file_uploader( 'Upload Notebook', type=[
-						'ipynb' ], key='ipynb_upload', )
+						'ipynb' ], key='ipynb_upload', help=cfg.NOTEBOOK_LOADER )
 				
 				include_outputs = st.checkbox( 'Include Outputs',
 					value=False, key='ipynb_include_outputs', )
@@ -1603,7 +1601,7 @@ if mode == 'Loading':
 			# ----------------------------
 			with st.expander( label='Excel Loader', icon='📊', expanded=False ):
 				excel_file = st.file_uploader( 'Upload Excel file', type=[ 'xlsx', 'xls' ],
-					key='excel_upload', )
+					key='excel_upload', help=cfg.EXCEL_LOADER )
 				
 				load_mode = st.selectbox( 'Load Mode', ['Tabular + SQLite', 'Unstructured Document'],
 					index=0, key='excel_load_mode', help=(
@@ -1739,8 +1737,8 @@ if mode == 'Loading':
 			# ------ Expander Markdown Loader
 			# ----------------------------
 			with st.expander( label='Markdown Loader', icon='🧾', expanded=False ):
-				md = st.file_uploader( 'Upload Markdown', type=[ 'md',
-						'markdown' ], key='md_upload', )
+				md = st.file_uploader( 'Upload Markdown', type=[ 'md','markdown' ],
+					key='md_upload', help=cfg.MARKDOWN_LOADER )
 				
 				mode = st.selectbox( 'Mode', [ 'single', 'elements' ], index=0, key='md_mode',
 					help='Use "single" for one combined document or "elements" for multiple.' )
@@ -1796,7 +1794,8 @@ if mode == 'Loading':
 			# ---- Expander HTML Loader
 			# ----------------------------
 			with st.expander( label='HTML Loader', icon='🌐', expanded=False ):
-				html = st.file_uploader( 'Upload HTML', type=[ 'html', 'htm' ], key='html_upload' )
+				html = st.file_uploader( 'Upload HTML', type=[ 'html', 'htm' ],
+					key='html_upload', help=cfg.HTML_LOADER )
 				
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save (same row, same style)
@@ -1818,14 +1817,14 @@ if mode == 'Loading':
 						icon='💾', width='stretch' )
 				
 				# --------------------------------------------------
-				# Clear (UNCHANGED behavior)
+				# Clear
 				# --------------------------------------------------
 				if clear_html:
 					clear_if_active( "HtmlLoader" )
 					st.info( "HTML Loader state cleared." )
 				
 				# --------------------------------------------------
-				# Load (UNCHANGED behavior)
+				# Load
 				# --------------------------------------------------
 				if load_html and html:
 					with tempfile.TemporaryDirectory( ) as tmp:
@@ -1846,7 +1845,8 @@ if mode == 'Loading':
 			# --------- Expander JSON Loader
 			# ----------------------------
 			with st.expander( label='JSON Loader', icon='🧩', expanded=False ):
-				js = st.file_uploader( 'Upload JSON', type=[ 'json', 'jsonl' ], key='json_upload', )
+				js = st.file_uploader( 'Upload JSON', type=[ 'json', 'jsonl' ],
+					key='json_upload', help=cfg.JSON_LOADER )
 				
 				jq_schema = st.text_input( 'jq Schema', value='.', key='json_jq_schema',
 					help='Examples: ., .[], .messages[], .content' )
@@ -1922,8 +1922,7 @@ if mode == 'Loading':
 				col_fetch, col_clear, col_save = st.columns( 3 )
 				arxiv_fetch = col_fetch.button( 'Load', key='arxiv_fetch', icon='📤', width='stretch' )
 				arxiv_clear = col_clear.button( 'Clear', key='arxiv_clear', icon='🧹', width='stretch' )
-				can_save = (
-							st.session_state.get( 'active_loader' ) == 'ArXivLoader' \
+				can_save = (st.session_state.get( 'active_loader' ) == 'ArXivLoader' \
 							and isinstance( st.session_state.get( 'raw_text' ), str ) \
 							and st.session_state.get( 'raw_text' ).strip( ) )
 				

@@ -848,7 +848,11 @@ NLTK_LOADER = r'''The Natural Language Toolkit (NLTK) is a comprehensive, open-s
 '''
 
 HTML_LOADER = r'''Provides Langchain's UnstructuredHTMLLoader's functionality to parse HTML files
-		into Document objects.
+		into Document objects. You can run the loader in one of two modes: "single" and "elements".
+		If you use "single" mode, the document will be returned as a single langchain Document object.
+		If you use "elements" mode, the unstructured library will split the document into elements
+		such as Title and NarrativeText. You can pass in additional unstructured kwargs after mode
+		to apply different unstructured settings.
 		
 		https://reference.langchain.com/python/langchain-community/document_loaders/html/UnstructuredHTMLLoader
 '''
@@ -858,6 +862,8 @@ WEB_CRAWLER = r'''Web fetching with optional Playwright-backed page rendering.
 
 WEB_LOADER = r'''Functionality to load all text from HTML webpages into
 		a document format that can be used downstream.
+		
+		https://reference.langchain.com/python/langchain-community/document_loaders/web_base/WebBaseLoader
 '''
 
 GITHUB_LOADER = r'''The LangChain GitHub Loader is a suite of integrations designed to ingest data
@@ -904,7 +910,9 @@ POWERPOINT_LOADER = r'''The UnstructuredPowerPointLoader (within LangChain) is a
 
 JSON_LOADER = r'''The LangChain JSONLoader is a specialized document loader used to transform JSON
 		and JSON Lines data into standardized LangChain Document objects. It is a critical component
-		for building applications like Retrieval-Augmented Generation (RAG) that need to process structured data
+		for building applications like Retrieval-Augmented Generation (RAG) that need to process structured data.
+		
+		https://reference.langchain.com/python/langchain-community/document_loaders/json_loader/JSONLoader
 '''
 
 MARKDOWN_LOADER = r'''LangChain's Markdown document loaders are specialized tools used to convert
@@ -931,6 +939,18 @@ CSV_LOADER = r'''The LangChain CSVLoader is a standard utility within the langch
 		https://reference.langchain.com/python/langchain-community/document_loaders/csv_loader/CSVLoader
 '''
 
+WORD_LOADER = '''Works with both .docx and .doc files. You can run the loader in one of two modes:
+		"single" and "elements". If you use "single" mode, the document will be returned as a
+		single langchain Document object. If you use "elements" mode, the unstructured library will
+		split the document into elements such as Title and NarrativeText.
+		
+		https://reference.langchain.com/python/langchain-community/document_loaders/word_document/UnstructuredWordDocumentLoader
+'''
+
+NOTEBOOK_LOADER = '''Loads .ipynb notebook files.
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/notebook/NotebookLoader
+'''
 
 # -------- GENERATION PARAMETER DEFINITIONS -------------------
 
