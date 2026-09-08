@@ -44,7 +44,7 @@ from __future__ import annotations
 from hashlib import sha256
 import math
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from embeddings import EmbeddingFactory
+from embedders import EmbeddingFactory
 from stores.vector import ChromaStore, PineconeStore
 import altair
 import inspect
