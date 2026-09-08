@@ -7,7 +7,6 @@ Purpose:
 from __future__ import annotations
 import importlib.util
 from pathlib import Path
-import re
 from types import ModuleType
 
 
@@ -49,19 +48,34 @@ def correct_json_boundary( source: str ) -> str:
     Returns:
         str: Source text with the JSON action block preceding the Web Documents expander.
     """
-    pattern = re.compile(
-        r"(?m)"
-        r"(^\t{3}with st\.expander\( label='Web Documents', expanded=False \):\n)"
-        r"(\t{4}# -+\n"
-        r"\t{4}# LangChain Actions\n"
-        r"\t{4}# -+\n"
-        r"\t{4}render_langchain_actions\( 'JsonLoader', 'json' \)\n)"
-    )
-    match = pattern.search( source )
-    if match is None:
+    lines = source.splitlines( keepends=True )
+    web_index = -1
+    action_index = -1
+
+    for index, line in enumerate( lines ):
+        if "with st.expander( label='Web Documents'" in line:
+            web_index = index
+        if "render_langchain_actions( 'JsonLoader', 'json' )" in line:
+            action_index = index
+
+    if web_index < 0 or action_index < 0:
         raise RuntimeError( 'Could not locate the generated JSON/Web Documents boundary.' )
 
-    return source[ :match.start( ) ] + match.group( 2 ) + match.group( 1 ) + source[ match.end( ): ]
+    if action_index < web_index:
+        return source
+
+    action_start = action_index - 3
+    if action_start < 0:
+        raise RuntimeError( 'The generated JSON action block is incomplete.' )
+
+    action_block = lines[ action_start:action_index + 1 ]
+    del lines[ action_start:action_index + 1 ]
+
+    if action_start < web_index:
+        web_index -= len( action_block )
+
+    lines[ web_index:web_index ] = action_block
+    return ''.join( lines )
 
 
 def main( ) -> None:
