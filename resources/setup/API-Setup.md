@@ -1,4 +1,4 @@
-## API Signup and API Key Reference
+## Signup and Reference
 
 ![](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/images/foo-apikeys.png)
 
