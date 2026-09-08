@@ -1,13 +1,13 @@
 '''
     ******************************************************************************************
       Assembly:                Foo
-      Filename:                embeddings.py
+      Filename:                embedders.py
       Author:                  Terry D. Eppler
       Created:                 09-08-2026
       Last Modified By:        Terry D. Eppler
       Last Modified On:        09-08-2026
     ******************************************************************************************
-    <copyright file="embeddings.py" company="Terry D. Eppler">
+    <copyright file="embedders.py" company="Terry D. Eppler">
 
          Foo is a python framework for web scraping information into ML pipelines.
 
