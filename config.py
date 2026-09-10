@@ -232,7 +232,7 @@ OPENSKY_API_CLIENT_SECRET = os.getenv( 'OPENSKY_API_CLIENT_SECRET' )
 CENSUS_API_KEY = os.getenv( 'CENSUS_API_KEY' )
 SOCRATA_API_KEY = os.getenv( 'SOCRATA_API_KEY' )
 HEALTHDATA_API_KEY = os.getenv( 'HEALTHDATA_API_KEY' )
-USGS_WATERDATA_API_KEY = os.getenv( 'USGS_API_KEY' )
+USGS_WATERDATA_API_KEY = os.getenv( 'USGS_WATERDATA_API_KEY' ) or os.getenv( 'USGS_API_KEY' )
 DATA_GOV_API_KEY = os.getenv( 'DATAGOV_API_KEY' )
 GOVINFO_API_KEY = os.getenv( 'GOVINFO_API_KEY' )
 FIRMS_MAP_KEY = os.getenv( 'FIRMS_MAP_KEY' )
@@ -287,6 +287,7 @@ REQUIRED_CORPORA = [
 		'inaugural',
 		'state_union',
 		'punkt',
+		'punkt_tab',
 		'stopwords',
 ]
 

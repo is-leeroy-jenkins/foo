@@ -40,12 +40,10 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import Any, List
+from functools import wraps
 
+from boogr import Error, Logger
 from langchain_core.embeddings import Embeddings
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_mistralai import MistralAIEmbeddings
-from langchain_openai import OpenAIEmbeddings
 
 
 def throw_if( name: str, value: object ) -> None:
@@ -72,6 +70,26 @@ def throw_if( name: str, value: object ) -> None:
         raise ValueError( f'Argument "{name}" cannot be empty!' )
 
 
+def log_embedding_errors( cause: str, method: str ) -> Any:
+    """Decorate an embedding boundary with Foo's single-log error convention."""
+    def decorate( function: Any ) -> Any:
+        @wraps( function )
+        def execute( *args: Any, **kwargs: Any ) -> Any:
+            try:
+                return function( *args, **kwargs )
+            except Error:
+                raise
+            except Exception as e:
+                exception = Error( e )
+                exception.module = 'embedders'
+                exception.cause = cause
+                exception.method = method
+                Logger( ).write( exception )
+                raise exception
+        return execute
+    return decorate
+
+
 class LocalGGUFEmbeddings( Embeddings ):
     """LangChain-compatible local GGUF embedding implementation.
 
@@ -85,6 +103,7 @@ class LocalGGUFEmbeddings( Embeddings ):
     client: Any
     response: object | None
 
+    @log_embedding_errors( 'LocalGGUFEmbeddings', '__init__( self, model_path ) -> None' )
     def __init__( self, model_path: str ) -> None:
         """Initialize the local GGUF embedding implementation.
 
@@ -102,6 +121,7 @@ class LocalGGUFEmbeddings( Embeddings ):
         self.client = None
         self.response = None
 
+    @log_embedding_errors( 'LocalGGUFEmbeddings', 'load( self ) -> None' )
     def load( self ) -> None:
         """Load the configured local GGUF model once.
 
@@ -127,6 +147,7 @@ class LocalGGUFEmbeddings( Embeddings ):
             verbose=False,
         )
 
+    @log_embedding_errors( 'LocalGGUFEmbeddings', 'embed_documents( self, texts )' )
     def embed_documents( self, texts: List[ str ] ) -> List[ List[ float ] ]:
         """Create embeddings for document text.
 
@@ -162,6 +183,7 @@ class LocalGGUFEmbeddings( Embeddings ):
 
         return vectors
 
+    @log_embedding_errors( 'LocalGGUFEmbeddings', 'embed_query( self, text ) -> List[ float ]' )
     def embed_query( self, text: str ) -> List[ float ]:
         """Create an embedding for query text.
 
@@ -199,6 +221,7 @@ class EmbeddingFactory( ):
         self.model = ''
         self.model_path = ''
 
+    @log_embedding_errors( 'EmbeddingFactory', 'create( self, **kwargs ) -> Embeddings' )
     def create( self, provider: str, model: str, model_path: str = '' ) -> Embeddings:
         """Create the selected LangChain embedding implementation.
 
@@ -221,18 +244,22 @@ class EmbeddingFactory( ):
 
         if self.provider == 'OpenAI':
             throw_if( 'model', self.model )
+            from langchain_openai import OpenAIEmbeddings
             return OpenAIEmbeddings( model=self.model )
 
         if self.provider == 'Google Generative AI':
             throw_if( 'model', self.model )
+            from langchain_google_genai import GoogleGenerativeAIEmbeddings
             return GoogleGenerativeAIEmbeddings( model=self.model )
 
         if self.provider == 'Mistral AI':
             throw_if( 'model', self.model )
+            from langchain_mistralai import MistralAIEmbeddings
             return MistralAIEmbeddings( model=self.model )
 
         if self.provider == 'Hugging Face':
             throw_if( 'model', self.model )
+            from langchain_huggingface import HuggingFaceEmbeddings
             return HuggingFaceEmbeddings( model_name=self.model )
 
         if self.provider == 'Local GGUF':

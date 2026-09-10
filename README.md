@@ -92,6 +92,8 @@ ___
 | Generative AI               | Use ChatGPT, Grok, Claude, Gemini, and Mistral through a shared prompt and parameter interface.                                                                                        |
 | SQLite management           | Import Excel workbooks, browse tables, perform CRUD operations, filter, aggregate, visualize, alter schema, and run read-only SQL.                                                     |
 | Text analytics              | Compute token counts, vocabulary, type-token ratio, hapax ratio, stopword ratio, lexical density, top tokens, and optional readability metrics.                                        |
+| Document processing         | Recursively split loaded or retrieved documents, word-tokenize each chunk, generate embeddings, and store vectors without replacing source-specific result displays.                  |
+| Vector retrieval            | Connect to Chroma or Pinecone for non-destructive writes, filtered similarity search, scored retrieval, deletion, counts, health checks, and LangChain retrievers.                     |
 
 ## 🕹️ Application Modes
 
@@ -133,12 +135,14 @@ foo/
 ├── config.py              # App title, mode map, defaults, labels, API references, and constants
 ├── core.py                # Optional package core abstractions
 ├── data.py                # Data helpers and shared data abstractions
+├── embedders.py           # Hosted and local LangChain embedding implementations
 ├── fetchers.py            # External API, archive, geospatial, environmental, and science fetchers
 ├── generators.py          # ChatGPT, Claude, Grok, Mistral, and Gemini wrappers
 ├── loaders.py             # File, web, cloud, repository, and corpus loaders
 ├── scrapers.py            # HTML extraction helpers
 ├── requirements.txt       # Python dependencies
 ├── stores/
+│   ├── vector.py          # Chroma and Pinecone lifecycle implementations
 │   └── sqlite/            # SQLite database storage
 └── resources/
     └── images/            # README and UI image assets
@@ -197,7 +201,9 @@ streamlit run app.py
 2. Expand a loader such as **PDF Loader**, **Excel Loader**, **Web Loader**, or **GitHub Loader**.
 3. Select or enter the source.
 4. Click **Load**.
-5. Review the document preview panel and corpus metrics.
+5. Configure recursive chunking, embedding, and vector storage in the same source expander.
+6. Review the **Document**, **Chunks**, and **Embeddings** tabs. Chunking occurs first, followed by
+   word tokenization of every resulting chunk; embeddings use the original chunk text.
 
 ### Scrape a Web Page
 
@@ -206,6 +212,8 @@ streamlit run app.py
 3. Select core output and structured extraction options.
 4. Optionally enable recursive crawl controls.
 5. Click **Run Scraper**.
+6. Use the adjoining processing controls and right-side tabs to inspect, chunk, tokenize, embed,
+   and store the scraped documents.
 
 ### Query a Public Source
 
@@ -214,6 +222,10 @@ streamlit run app.py
 3. Enter the query and parameters.
 4. Click **Submit**.
 5. Review rendered summaries, rows, and raw results.
+
+Retrieval, Geospatial, Environmental, Astronomical, and Demographic source expanders use the same
+processing workflow while retaining their provider-specific maps, tables, images, metrics, and raw
+results.
 
 ![](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/images/foo-workflows.png)
 
