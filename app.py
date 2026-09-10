@@ -1062,10 +1062,8 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 		                                                             'GGUF model', )
 	
 	store_provider = st.selectbox( 'Vector Store', options=VECTOR_STORES, key=store_key, )
-	
 	if store_provider == 'Pinecone':
 		st.text_input( 'Pinecone Index', key=index_key, placeholder='Existing Pinecone index', )
-		
 		st.text_input( 'Pinecone Namespace', key=namespace_key, placeholder='Optional namespace', )
 	else:
 		st.text_input( 'Chroma Directory', value=str( CHROMA_DIRECTORY ), disabled=True,
@@ -1084,7 +1082,6 @@ def render_document_processing_actions( loader_name: str, key_prefix: str ) -> N
 	throw_if( 'loader_name', loader_name )
 	throw_if( 'key_prefix', key_prefix )
 	ensure_document_processing_state( )
-	
 	documents = st.session_state.get( 'documents' ) or [ ]
 	active_documents = st.session_state.get( 'active_loader' ) == loader_name and bool( documents )
 	if active_documents:
@@ -1100,9 +1097,8 @@ def render_document_processing_actions( loader_name: str, key_prefix: str ) -> N
 	embedder = st.session_state.get( 'embedder' )
 	current_size = int( st.session_state[ f'{key_prefix}_chunk_size' ] )
 	current_overlap = int( st.session_state[ f'{key_prefix}_chunk_overlap' ] )
-	chunk_config_current = (
-			st.session_state.get( 'chunk_size_used', 0 ) == current_size and st.session_state.get(
-		'chunk_overlap_used', 0 ) == current_overlap)
+	chunk_config_current = (st.session_state.get( 'chunk_size_used', 0 ) == current_size \
+	                         and st.session_state.get( 'chunk_overlap_used', 0 ) == current_overlap)
 	can_embed = (active_documents and bool( chunked_documents ) and chunk_signature ==
 	             current_signature and chunk_config_current)
 	
@@ -1123,7 +1119,6 @@ def render_document_processing_actions( loader_name: str, key_prefix: str ) -> N
 		disabled=not can_embed, width='stretch', )
 	store_clicked = store_col.button( 'Store', key=f'{key_prefix}_store_vectors', icon='🗄️',
 		disabled=not can_store, width='stretch', )
-	
 	if chunk_clicked:
 		try:
 			source_documents: List[ Document ] = [ ]

@@ -173,23 +173,7 @@
       <workItem from="1788881766814" duration="8075000" />
       <workItem from="1788996272439" duration="3005000" />
       <workItem from="1789023010800" duration="1040000" />
-      <workItem from="1789044520550" duration="2672000" />
-    </task>
-    <task id="LOCAL-00143" summary="updates">
-      <option name="closed" value="true" />
-      <created>1788559557930</created>
-      <option name="number" value="00143" />
-      <option name="presentableId" value="LOCAL-00143" />
-      <option name="project" value="LOCAL" />
-      <updated>1788559557930</updated>
-    </task>
-    <task id="LOCAL-00144" summary="updates">
-      <option name="closed" value="true" />
-      <created>1788615782993</created>
-      <option name="number" value="00144" />
-      <option name="presentableId" value="LOCAL-00144" />
-      <option name="project" value="LOCAL" />
-      <updated>1788615782994</updated>
+      <workItem from="1789044520550" duration="2898000" />
     </task>
     <task id="LOCAL-00145" summary="updates">
       <option name="closed" value="true" />
@@ -567,7 +551,23 @@
       <option name="project" value="LOCAL" />
       <updated>1789044721899</updated>
     </task>
-    <option name="localTasksCounter" value="192" />
+    <task id="LOCAL-00192" summary="updates">
+      <option name="closed" value="true" />
+      <created>1789049248875</created>
+      <option name="number" value="00192" />
+      <option name="presentableId" value="LOCAL-00192" />
+      <option name="project" value="LOCAL" />
+      <updated>1789049248875</updated>
+    </task>
+    <task id="LOCAL-00193" summary="updates">
+      <option name="closed" value="true" />
+      <created>1789049324126</created>
+      <option name="number" value="00193" />
+      <option name="presentableId" value="LOCAL-00193" />
+      <option name="project" value="LOCAL" />
+      <updated>1789049324126</updated>
+    </task>
+    <option name="localTasksCounter" value="194" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
