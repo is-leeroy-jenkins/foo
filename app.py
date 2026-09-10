@@ -781,10 +781,8 @@ def metric_with_tooltip( label: str, value: str, tooltip: str ):
 		Right column = hoverable ℹ️ icon
 	"""
 	col_metric, col_info = st.columns( [ 0.5, 0.5 ] )
-	
 	with col_metric:
 		st.metric( label, value )
-	
 	with col_info:
 		if label not in [ 'Characters', 'Tokens', 'Unique Tokens', 'Avg Length' ]:
 			st.markdown( f"""
@@ -822,7 +820,6 @@ def clear_if_active( loader_name: str ) -> None:
 		clear_document_processing_outputs( )
 		st.session_state[ 'processing_active_source' ] = ''
 
-
 # =====================================================================
 # DOCUMENT CHUNKING / EMBEDDING / VECTOR STORAGE
 # =====================================================================
@@ -845,7 +842,6 @@ DOCUMENT_PROCESSING_STATE: Dict[ str, Any ] = { 'chunked_documents': None,
 		'embedding_model': '', 'embedding_model_path': '', 'embedding_documents': None,
 		'df_embedding': None, 'vector_store': None, 'vector_store_provider': '',
 		'vector_store_name': '', 'vector_store_namespace': '', }
-
 
 def ensure_document_processing_state( ) -> None:
 	"""Initialize document-processing session state.
@@ -1037,7 +1033,6 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 	
 	provider_options = list( EMBEDDING_MODELS.keys( ) ) + [ 'Local GGUF' ]
 	provider = st.session_state[ provider_key ]
-	
 	if provider != 'Local GGUF':
 		provider_col, model_col = st.columns( 2 )
 		
@@ -1058,8 +1053,8 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 			key=provider_key, )
 	
 	if provider == 'Local GGUF':
-		st.text_input( 'Local GGUF Model', key=path_key, placeholder='Path to a local embedding '
-		                                                             'GGUF model', )
+		st.text_input( 'Local GGUF Model', key=path_key,
+			placeholder='Path to a local embedding GGUF model', )
 	
 	store_provider = st.selectbox( 'Vector Store', options=VECTOR_STORES, key=store_key, )
 	if store_provider == 'Pinecone':
