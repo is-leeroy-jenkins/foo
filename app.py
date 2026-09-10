@@ -991,6 +991,7 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 	"""
 	throw_if( 'loader_name', loader_name )
 	throw_if( 'key_prefix', key_prefix )
+	st.markdown( '##### Document Processing' )
 	ensure_document_processing_state( )
 	size_key = f'{key_prefix}_chunk_size'
 	overlap_key = f'{key_prefix}_chunk_overlap'
@@ -1023,43 +1024,48 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 		st.session_state[ overlap_key ] = max( 0, int( st.session_state[ size_key ] ) // 5, )
 	
 	chunk_max = max( 5000, int( st.session_state[ size_key ] ) )
-	chunk_col, overlap_col = st.columns( 2 )
-	with chunk_col:
+	chunk_c1, chunk_c2 = st.columns( 2, border=True )
+	with chunk_c1:
 		st.slider( 'Chunk Size', min_value=1, max_value=chunk_max, step=1, key=size_key, )
 	
-	with overlap_col:
+	with chunk_c2:
 		st.slider( 'Chunk Overlap', min_value=0, max_value=max( 0, int(
 			st.session_state[ size_key ] ) - 1 ), step=1, key=overlap_key, )
 	
 	provider_options = list( EMBEDDING_MODELS.keys( ) ) + [ 'Local GGUF' ]
 	provider = st.session_state[ provider_key ]
 	if provider != 'Local GGUF':
-		provider_col, model_col = st.columns( 2 )
-		
-		with provider_col:
+		model_c1, model_c2 = st.columns( 2, border=True )
+		with model_c1:
 			provider = st.selectbox( 'Embedding Provider', options=provider_options,
 				key=provider_key, )
 		
-		with model_col:
+		with model_c2:
 			if provider != 'Local GGUF':
 				model_options = EMBEDDING_MODELS[ provider ]
-				
 				if st.session_state.get( model_key, '' ) not in model_options:
 					st.session_state[ model_key ] = model_options[ 0 ]
 				
 				st.selectbox( 'Embedding Model', options=model_options, key=model_key, )
 	else:
-		provider = st.selectbox( 'Embedding Provider', options=provider_options,
-			key=provider_key, )
+		model_c1, model_c2 = st.columns( 2, border=True )
+		with model_c1:
+			provider = st.selectbox( 'Embedding Provider', options=provider_options,
+				key=provider_key, )
 	
-	if provider == 'Local GGUF':
-		st.text_input( 'Local GGUF Model', key=path_key,
-			placeholder='Path to a local embedding GGUF model', )
+		with model_c2:
+			if provider == 'Local GGUF':
+				st.text_input( 'Local GGUF Model', key=path_key,
+					placeholder='Path to a local embedding GGUF model', )
 	
 	store_provider = st.selectbox( 'Vector Store', options=VECTOR_STORES, key=store_key, )
 	if store_provider == 'Pinecone':
-		st.text_input( 'Pinecone Index', key=index_key, placeholder='Existing Pinecone index', )
-		st.text_input( 'Pinecone Namespace', key=namespace_key, placeholder='Optional namespace', )
+		cone_c1, cone_c2 = st.columns( 2, border=True )
+		with cone_c1:
+			st.text_input( 'Pinecone Index', key=index_key, placeholder='Existing Pinecone index', )
+			
+		with cone_c2:
+			st.text_input( 'Pinecone Namespace', key=namespace_key, placeholder='Optional namespace', )
 	else:
 		st.text_input( 'Chroma Directory', value=str( CHROMA_DIRECTORY ), disabled=True,
 			key=f'{key_prefix}_chroma_directory', )
@@ -1193,9 +1199,8 @@ def render_document_processing_actions( loader_name: str, key_prefix: str ) -> N
 			st.session_state[ 'embedding_model' ] = model
 			st.session_state[ 'embedding_model_path' ] = model_path
 			st.session_state[ 'embedding_documents' ] = list( chunked_documents )
-			st.session_state[
-				'df_embedding' ] = create_embedding_dataframe( chunks=list( chunked_documents ),
-				vectors=vectors, provider=provider, model=display_model, )
+			st.session_state[ 'df_embedding' ] = create_embedding_dataframe( chunks=list(
+				chunked_documents ), vectors=vectors, provider=provider, model=display_model, )
 			st.session_state[ 'vector_store' ] = None
 			st.session_state[ 'vector_store_provider' ] = ''
 			st.session_state[ 'vector_store_name' ] = ''
@@ -1260,10 +1265,9 @@ def render_document_processing_tabs( key_prefix: str='loading' ) -> None:
 	ensure_document_processing_state( )
 	documents = st.session_state.get( 'documents' ) or [ ]
 	current_signature = document_signature( documents ) if documents else ''
-	derived_current = bool( documents ) \
-		and current_signature == st.session_state.get( 'chunk_source_signature', '' )
+	derived_current = bool( documents ) and current_signature == st.session_state.get(
+		'chunk_source_signature', '' )
 	document_tab, chunk_tab, embedding_tab = st.tabs( [ 'Document', 'Chunks', 'Embeddings' ] )
-
 	with document_tab:
 		if not documents:
 			st.info( 'No documents loaded.' )
@@ -1273,22 +1277,18 @@ def render_document_processing_tabs( key_prefix: str='loading' ) -> None:
 			for index, document in enumerate( documents[ :5 ] ):
 				with st.expander( f'Document {index + 1}', expanded=True ):
 					st.json( document.metadata )
-					st.text_area(
-						'Content', document.page_content[ : ], height=450,
-						key=f'{key_prefix}_preview_doc_{index}',
-					)
-
+					st.text_area( 'Content', document.page_content[ : ], height=450,
+						key=f'{key_prefix}_preview_doc_{index}', )
+	
 	with chunk_tab:
 		df_chunking = st.session_state.get( 'df_chunking' )
 		if not derived_current or not isinstance( df_chunking, DataFrame ) or df_chunking.empty:
 			st.info( 'No chunks created for the active documents.' )
 		else:
 			st.caption( f'Chunks: {len( df_chunking )}' )
-			st.data_editor(
-				df_chunking, disabled=True, hide_index=True,
-				use_container_width=True, height=520, key=f'{key_prefix}_df_chunking',
-			)
-
+			st.data_editor( df_chunking, disabled=True, hide_index=True, use_container_width=True,
+				height=520, key=f'{key_prefix}_df_chunking', )
+	
 	with embedding_tab:
 		df_embedding = st.session_state.get( 'df_embedding' )
 		if not derived_current or not isinstance( df_embedding, DataFrame ) or df_embedding.empty:
@@ -1302,10 +1302,8 @@ def render_document_processing_tabs( key_prefix: str='loading' ) -> None:
 			store_name = st.session_state.get( 'vector_store_name', '' )
 			if store_provider and store_name:
 				st.caption( f'Vector Store: {store_provider} | Target: {store_name}' )
-			st.data_editor(
-				df_embedding, disabled=True, hide_index=True,
-				use_container_width=True, height=520, key=f'{key_prefix}_df_embedding',
-			)
+			st.data_editor( df_embedding, disabled=True, hide_index=True,
+				use_container_width=True, height=520, key=f'{key_prefix}_df_embedding', )
 
 def render_loading_tabs( ) -> None:
 	"""Render the shared document-processing tabs in Loading mode."""
@@ -1315,7 +1313,6 @@ def render_source_processing_controls( source_name: str, key_prefix: str ) -> No
 	"""Render processing inputs and actions beside one loader or API source."""
 	throw_if( 'source_name', source_name )
 	throw_if( 'key_prefix', key_prefix )
-	st.markdown( '##### Document Processing' )
 	render_document_processing_inputs( loader_name=source_name, key_prefix=key_prefix )
 	render_document_processing_actions( loader_name=source_name, key_prefix=key_prefix )
 
@@ -1323,7 +1320,7 @@ _streamlit_data_editor = st.data_editor
 
 # -------- Expander Utilities
 
-def set_blue_divider( ) -> None:
+def blue_divider( ) -> None:
 	st.markdown( cfg.BLUE_DIVIDER, unsafe_allow_html=True )
 
 def set_sidebar_mode( source_key: str ) -> None:
@@ -1395,8 +1392,7 @@ col_left, col_center, col_right = st.columns( [ 1, 2, 1 ], vertical_alignment='t
 ingestion_mode = list( cfg.MODE_MAP.keys( ) )
 active_mode = st.session_state[ 'mode' ]
 if 'source_mode' not in st.session_state:
-	st.session_state[ 'source_mode' ] = (
-			active_mode if active_mode in ingestion_mode else None)
+	st.session_state[ 'source_mode' ] = ( active_mode if active_mode in ingestion_mode else None )
 
 with st.sidebar:
 	st.divider( )
@@ -1443,6 +1439,7 @@ if mode == 'Loading':
 			st.success( _loader_msg )
 		
 		with st.expander( label='Local Documents', expanded=True ):
+			
 			# ----------------------------
 			# ------- Expander NLTK Loader
 			# ----------------------------
@@ -1576,6 +1573,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'NLTKLoader', 'loader_corpora_loader' )
+			
 			# ----------------------------
 			# ------ Expander Text Loader
 			# ----------------------------
@@ -1583,6 +1581,7 @@ if mode == 'Loading':
 				files = st.file_uploader( 'Upload Text File(s)', type=[ 'txt', 'text', 'log' ],
 					accept_multiple_files=True, key='txt_upload', help=cfg.TEXT_LOADER )
 				
+				st.divider( )
 				render_document_processing_inputs( 'TextLoader', 'txt' )
 
 				# ------------------------------------------------------------------
@@ -1621,7 +1620,6 @@ if mode == 'Loading':
 				# ------------------------------------------------------------------
 				if load_txt and files:
 					documents: list[ Document ] = [ ]
-					
 					with tempfile.TemporaryDirectory( ) as tmp:
 						for uploaded_file in files:
 							path = os.path.join( tmp, uploaded_file.name )
@@ -1648,7 +1646,8 @@ if mode == 'Loading':
 					
 					st.session_state.active_loader = 'TextLoader'
 					st.success( f'Loaded {len( documents )} text document(s).' )
-			
+				
+				st.divider( )
 				render_document_processing_actions( 'TextLoader', 'txt' )
 
 			# ----------------------------
@@ -1863,6 +1862,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'XmlLoader', 'loader_xml_loader' )
+			
 			# ----------------------------
 			# ------- Expander Word Loader
 			# ----------------------------
@@ -2218,6 +2218,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'JupyterNotebookLoader', 'loader_jupyter_notebook_loader' )
+			
 			# ----------------------------
 			# ------- Expander Excel Loader
 			# ----------------------------
@@ -2562,6 +2563,7 @@ if mode == 'Loading':
 				render_document_processing_actions( 'JsonLoader', 'json' )
 
 		with st.expander( label='Web Documents', expanded=False ):
+			
 			# ----------------------------
 			# ------- Expander ArXiv Loader
 			# ----------------------------
@@ -2617,6 +2619,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'ArXivLoader', 'loader_arxiv_loader' )
+			
 			# ----------------------------
 			# ---- Expander Wikipedia Loader
 			# ----------------------------
@@ -2678,6 +2681,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'WikiLoader', 'loader_wikipedia_loader' )
+			
 			# ----------------------------
 			# ----- Expander GitHub Loader
 			# ----------------------------
@@ -2746,6 +2750,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'GithubLoader', 'loader_github_loader' )
+			
 			# ----------------------------
 			# -------- Expander Outlook Loader
 			# ----------------------------
@@ -2818,6 +2823,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'OutlookLoader', 'loader_outlook_loader' )
+			
 			# ----------------------------
 			# ------- Expander Web Loader
 			# ----------------------------
@@ -2881,6 +2887,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'WebLoader', 'loader_web_loader' )
+			
 			# ----------------------------
 			# ----- Expander Web Crawler
 			# ----------------------------
@@ -2953,6 +2960,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'WebCrawler', 'loader_web_crawler' )
+			
 			# ----------------------------
 			# ----- Expander Email Loader
 			# ----------------------------
@@ -3031,6 +3039,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'EmailLoader', 'loader_e_mail_loader' )
+			
 			# ----------------------------
 			# ---- Expander PubMed Loader
 			# ----------------------------
@@ -3099,6 +3108,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'PubMedSearchLoader', 'loader_pub_med_loader' )
+			
 			# ----------------------------
 			# --- Expander Open City Loader
 			# ----------------------------
@@ -3180,7 +3190,9 @@ if mode == 'Loading':
 		
 
 				render_source_processing_controls( 'OpenCityLoader', 'loader_open_city_loader' )
+		
 		with st.expander( label='Cloud Documents', expanded=False ):
+			
 			# ----------------------------
 			# ---- Expander OneDrive Loader
 			# ----------------------------
@@ -3261,6 +3273,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'OneDriveDocLoader', 'loader_onedrive_loader' )
+			
 			# ----------------------------
 			# ---- Expander Google Cloud File Loader
 			# ----------------------------
@@ -3337,6 +3350,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'GoogleCloudFileLoader', 'loader_google_cloud_file_loader' )
+			
 			# ----------------------------
 			# ---- Expander AWS File Loader
 			# ----------------------------
@@ -3445,6 +3459,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'AwsFileLoader', 'loader_aws_file_loader' )
+			
 			# ----------------------------
 			# ----- Expander Google Bucket Loader
 			# ----------------------------
@@ -3536,6 +3551,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'GoogleBucketLoader', 'loader_google_bucket_loader' )
+			
 			# ----------------------------
 			# ---- Expander AWS Bucket Loader
 			# ----------------------------
@@ -3656,6 +3672,7 @@ if mode == 'Loading':
 			
 
 				render_source_processing_controls( 'AwsBucketLoader', 'loader_aws_bucket_loader' )
+			
 			# ---------------------------
 			# ---- Expander SharePoint Loader
 			# ---------------------------
