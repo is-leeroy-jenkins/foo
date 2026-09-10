@@ -6,7 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="649d1b1c-e24f-435b-9576-30e7d61c1f89" name="Changes" comment="updates">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/setup/API-Setup.md" beforeDir="false" afterPath="$PROJECT_DIR$/resources/setup/API-Setup.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -174,14 +173,7 @@
       <workItem from="1788881766814" duration="8075000" />
       <workItem from="1788996272439" duration="3005000" />
       <workItem from="1789023010800" duration="1040000" />
-    </task>
-    <task id="LOCAL-00142" summary="updates">
-      <option name="closed" value="true" />
-      <created>1788556429413</created>
-      <option name="number" value="00142" />
-      <option name="presentableId" value="LOCAL-00142" />
-      <option name="project" value="LOCAL" />
-      <updated>1788556429413</updated>
+      <workItem from="1789044520550" duration="2672000" />
     </task>
     <task id="LOCAL-00143" summary="updates">
       <option name="closed" value="true" />
@@ -567,7 +559,15 @@
       <option name="project" value="LOCAL" />
       <updated>1788889811100</updated>
     </task>
-    <option name="localTasksCounter" value="191" />
+    <task id="LOCAL-00191" summary="updates">
+      <option name="closed" value="true" />
+      <created>1789044721898</created>
+      <option name="number" value="00191" />
+      <option name="presentableId" value="LOCAL-00191" />
+      <option name="project" value="LOCAL" />
+      <updated>1789044721899</updated>
+    </task>
+    <option name="localTasksCounter" value="192" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

@@ -996,7 +996,6 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 	throw_if( 'loader_name', loader_name )
 	throw_if( 'key_prefix', key_prefix )
 	ensure_document_processing_state( )
-	
 	size_key = f'{key_prefix}_chunk_size'
 	overlap_key = f'{key_prefix}_chunk_overlap'
 	provider_key = f'{key_prefix}_embedding_provider'
@@ -1005,8 +1004,7 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 	store_key = f'{key_prefix}_vector_store_provider'
 	index_key = f'{key_prefix}_pinecone_index'
 	namespace_key = f'{key_prefix}_pinecone_namespace'
-	reset_key = f'{key_prefix}_processing_reset_request'
-	
+	reset_key = f'{key_prefix}_processing_reset_request'	
 	if st.session_state.get( reset_key, False ):
 		st.session_state[ size_key ] = DEFAULT_CHUNK_SIZE
 		st.session_state[ overlap_key ] = DEFAULT_CHUNK_OVERLAP
