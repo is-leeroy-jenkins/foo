@@ -1452,8 +1452,8 @@ if mode == 'Loading':
 				nltk_c1, nltk_c2,= st.columns( 2 )
 				with nltk_c1:
 					corpus_name = st.selectbox( 'Select corpus',
-						['Brown', 'Gutenberg', 'Reuters', 'WebText', 'Inaugural', 'State of the Union'],
-						key='nltk_corpus_name' )
+						[ 'Brown', 'Gutenberg', 'Reuters', 'WebText', 'Inaugural',
+								'State of the Union' ], key='nltk_corpus_name' )
 
 				try:
 					if corpus_name == 'Brown':
