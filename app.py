@@ -1587,6 +1587,7 @@ if mode == 'Loading':
 				# ------------------------------------------------------------------
 				# Buttons: Load / Clear / Save
 				# ------------------------------------------------------------------
+				st.divider( )
 				col_load, col_clear, col_save = st.columns( 3 )
 				load_txt = col_load.button( label='Load', key='txt_load',
 					icon='📤', width='stretch' )
@@ -1647,7 +1648,6 @@ if mode == 'Loading':
 					st.session_state.active_loader = 'TextLoader'
 					st.success( f'Loaded {len( documents )} text document(s).' )
 				
-				st.divider( )
 				render_document_processing_actions( 'TextLoader', 'txt' )
 
 			# ----------------------------
