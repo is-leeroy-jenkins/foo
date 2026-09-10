@@ -46,6 +46,7 @@ import math
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from embedders import EmbeddingFactory
 from stores.vector import ChromaStore, PineconeStore
+from boogr import Error, Logger
 import altair
 import inspect
 from astroquery.simbad import Simbad
@@ -211,9 +212,10 @@ if 'target_url' not in st.session_state:
 
 for corpus in cfg.REQUIRED_CORPORA:
 	try:
-		nltk.data.find( f'corpora/{corpus}' )
+		resource_group = 'tokenizers' if corpus in ( 'punkt', 'punkt_tab' ) else 'corpora'
+		nltk.data.find( f'{resource_group}/{corpus}' )
 	except LookupError:
-		nltk.download( corpus )
+		nltk.download( corpus, quiet=True )
 
 # =====================================================================
 # UTILITIES
@@ -705,6 +707,73 @@ def normalize( obj ):
 			return str( obj )
 	return str( obj )
 
+def build_source_documents( mode_name: str, source_name: str,
+		result: Any ) -> List[ Document ]:
+	"""Convert a provider result into record-oriented documents.
+
+	Purpose:
+		Preserves individual rows, features, observations, events, and records so chunking does
+		not destroy the provider's natural retrieval boundaries.
+	"""
+	throw_if( 'mode_name', mode_name )
+	throw_if( 'source_name', source_name )
+	if result is None:
+		return [ ]
+
+	values: List[ Any ] = [ ]
+	container_metadata: Dict[ str, Any ] = { }
+	if isinstance( result, dict ):
+		for key in ( 'rows', 'features', 'items', 'results', 'events', 'observations',
+				'records', 'data' ):
+			candidate = result.get( key )
+			if isinstance( candidate, list ):
+				values = candidate
+				container_metadata[ 'result_key' ] = key
+				break
+		if not values:
+			values = [ result ]
+	elif isinstance( result, ( list, tuple, set ) ):
+		values = list( result )
+	else:
+		values = [ result ]
+
+	documents: List[ Document ] = [ ]
+	for index, value in enumerate( values, start=1 ):
+		if isinstance( value, Document ):
+			metadata = dict( value.metadata or { } )
+			metadata.setdefault( 'mode', mode_name )
+			metadata.setdefault( 'source', source_name )
+			metadata.setdefault( 'record_id', index )
+			documents.append( Document( page_content=value.page_content or '', metadata=metadata ) )
+			continue
+
+		metadata = dict( container_metadata )
+		metadata.update( { 'mode': mode_name, 'source': source_name, 'record_id': index } )
+		if isinstance( value, dict ):
+			for key in ( 'id', 'feature_id', 'latitude', 'longitude', 'lat', 'lon', 'lng',
+					'time', 'date', 'timestamp', 'provider', 'endpoint', 'units' ):
+				if key in value and isinstance( value[ key ], ( str, int, float, bool ) ):
+					metadata[ key ] = value[ key ]
+			content = json.dumps( normalize( value ), indent=2, ensure_ascii=False, default=str )
+		else:
+			content = str( value )
+		if content.strip( ):
+			documents.append( Document( page_content=content, metadata=metadata ) )
+	return documents
+
+def promote_source_result( mode_name: str, source_name: str, result: Any ) -> List[ Document ]:
+	"""Write a provider result to Foo's canonical document-processing state."""
+	activate_processing_source( source_name )
+	documents = build_source_documents( mode_name=mode_name, source_name=source_name,
+		result=result )
+	st.session_state[ 'documents' ] = documents
+	st.session_state[ 'raw_documents' ] = list( documents )
+	st.session_state[ 'raw_text' ] = '\n\n'.join( document.page_content for document in documents
+		if isinstance( document.page_content, str ) and document.page_content.strip( ) )
+	st.session_state[ 'processed_text' ] = ''
+	st.session_state[ 'active_loader' ] = source_name
+	return documents
+
 def metric_with_tooltip( label: str, value: str, tooltip: str ):
 	"""
 		Renders a metric with a hover tooltip using a two-column layout.
@@ -746,6 +815,12 @@ def clear_if_active( loader_name: str ) -> None:
 		st.session_state.df_count = None
 		st.session_state.df_chunks = None
 		st.session_state.lines = None
+	states = st.session_state.get( 'source_processing_states', { } )
+	if isinstance( states, dict ):
+		states.pop( loader_name, None )
+	if st.session_state.get( 'processing_active_source', '' ) == loader_name:
+		clear_document_processing_outputs( )
+		st.session_state[ 'processing_active_source' ] = ''
 
 
 # =====================================================================
@@ -785,6 +860,24 @@ def ensure_document_processing_state( ) -> None:
 	for key, value in DOCUMENT_PROCESSING_STATE.items( ):
 		if key not in st.session_state:
 			st.session_state[ key ] = value
+	st.session_state.setdefault( 'source_processing_states', { } )
+	st.session_state.setdefault( 'processing_active_source', '' )
+
+def activate_processing_source( source_name: str ) -> None:
+	"""Save and restore derived processing state independently for each source."""
+	throw_if( 'source_name', source_name )
+	ensure_document_processing_state( )
+	current = str( st.session_state.get( 'processing_active_source', '' ) or '' )
+	if current == source_name:
+		return
+	states = st.session_state[ 'source_processing_states' ]
+	if current:
+		states[ current ] = { key: st.session_state.get( key, value )
+			for key, value in DOCUMENT_PROCESSING_STATE.items( ) }
+	restored = states.get( source_name, { } )
+	for key, value in DOCUMENT_PROCESSING_STATE.items( ):
+		st.session_state[ key ] = restored.get( key, value )
+	st.session_state[ 'processing_active_source' ] = source_name
 
 def clear_document_processing_outputs( ) -> None:
 	"""Clear derived document-processing outputs.
@@ -849,6 +942,8 @@ def create_chunk_dataframe( chunks: List[ Document ] ) -> DataFrame:
 			'Document ID': metadata.get( 'document_id', '' ),
 			'Source': metadata.get( 'source', '' ),
 			'Characters': len( chunk.page_content or '' ),
+			'Token Count': metadata.get( 'token_count', 0 ),
+			'Tokens': metadata.get( 'tokens', [ ] ),
 			'Chunk Text': chunk.page_content or '',
 		} )
 	return pd.DataFrame( rows )
@@ -996,6 +1091,8 @@ def render_document_processing_actions( loader_name: str, key_prefix: str ) -> N
 	
 	documents = st.session_state.get( 'documents' ) or [ ]
 	active_documents = st.session_state.get( 'active_loader' ) == loader_name and bool( documents )
+	if active_documents:
+		activate_processing_source( loader_name )
 	current_signature = document_signature( documents ) if active_documents else ''
 	chunk_signature = st.session_state.get( 'chunk_source_signature', '' )
 	if active_documents and chunk_signature and chunk_signature != current_signature:
@@ -1032,96 +1129,139 @@ def render_document_processing_actions( loader_name: str, key_prefix: str ) -> N
 		disabled=not can_store, width='stretch', )
 	
 	if chunk_clicked:
-		source_documents: List[ Document ] = [ ]
-		for index, document in enumerate( documents, start=1 ):
-			metadata = dict( document.metadata or { } )
-			metadata.setdefault( 'document_id', index )
-			source_documents.append( Document( page_content=document.page_content,
-				metadata=metadata, ) )
-		
-		splitter = RecursiveCharacterTextSplitter( chunk_size=current_size,
-			chunk_overlap=current_overlap, )
-		chunks = splitter.split_documents( source_documents )
-		for index, chunk in enumerate( chunks, start=1 ):
-			metadata = dict( chunk.metadata or { } )
-			metadata[ 'chunk_id' ] = f'chunk-{index:06d}'
-			metadata[ 'chunk_size' ] = current_size
-			metadata[ 'chunk_overlap' ] = current_overlap
-			chunk.metadata = metadata
-		
-		st.session_state[ 'chunked_documents' ] = chunks
-		st.session_state[ 'chunks' ] = [ chunk.page_content for chunk in chunks ]
-		st.session_state[ 'df_chunking' ] = create_chunk_dataframe( chunks )
-		st.session_state[ 'df_chunks' ] = st.session_state[ 'df_chunking' ]
-		st.session_state[ 'chunk_source_signature' ] = current_signature
-		st.session_state[ 'chunk_size_used' ] = current_size
-		st.session_state[ 'chunk_overlap_used' ] = current_overlap
-		st.session_state[ 'embedder' ] = None
-		st.session_state[ 'embeddings' ] = None
-		st.session_state[ 'embedding_provider' ] = ''
-		st.session_state[ 'embedding_model' ] = ''
-		st.session_state[ 'embedding_model_path' ] = ''
-		st.session_state[ 'embedding_documents' ] = None
-		st.session_state[ 'df_embedding' ] = None
-		st.session_state[ 'vector_store' ] = None
-		st.session_state[ 'vector_store_provider' ] = ''
-		st.session_state[ 'vector_store_name' ] = ''
-		st.session_state[ 'vector_store_namespace' ] = ''
-		st.success( f'Created {len( chunks )} chunk(s).' )
+		try:
+			source_documents: List[ Document ] = [ ]
+			for index, document in enumerate( documents, start=1 ):
+				metadata = dict( document.metadata or { } )
+				metadata.setdefault( 'document_id', index )
+				source_documents.append( Document( page_content=document.page_content,
+					metadata=metadata, ) )
+
+			splitter = RecursiveCharacterTextSplitter( chunk_size=current_size,
+				chunk_overlap=current_overlap, )
+			chunks = splitter.split_documents( source_documents )
+			all_tokens: List[ str ] = [ ]
+			for chunk in chunks:
+				metadata = dict( chunk.metadata or { } )
+				tokens = word_tokenize( chunk.page_content or '' )
+				identifier = sha256( (
+					f'{loader_name}|{current_signature}|{metadata.get( "document_id", "" )}|'
+					f'{chunk.page_content or ""}' ).encode( 'utf-8', errors='ignore' ) ).hexdigest( )
+				metadata[ 'chunk_id' ] = identifier
+				metadata[ 'chunk_size' ] = current_size
+				metadata[ 'chunk_overlap' ] = current_overlap
+				metadata[ 'tokens' ] = ' '.join( tokens )
+				metadata[ 'token_count' ] = len( tokens )
+				chunk.metadata = metadata
+				all_tokens.extend( tokens )
+
+			st.session_state[ 'chunked_documents' ] = chunks
+			st.session_state[ 'chunks' ] = [ chunk.page_content for chunk in chunks ]
+			st.session_state[ 'tokens' ] = all_tokens
+			st.session_state[ 'df_chunking' ] = create_chunk_dataframe( chunks )
+			st.session_state[ 'df_chunks' ] = st.session_state[ 'df_chunking' ]
+			st.session_state[ 'chunk_source_signature' ] = current_signature
+			st.session_state[ 'chunk_size_used' ] = current_size
+			st.session_state[ 'chunk_overlap_used' ] = current_overlap
+			st.session_state[ 'embedder' ] = None
+			st.session_state[ 'embeddings' ] = None
+			st.session_state[ 'embedding_provider' ] = ''
+			st.session_state[ 'embedding_model' ] = ''
+			st.session_state[ 'embedding_model_path' ] = ''
+			st.session_state[ 'embedding_documents' ] = None
+			st.session_state[ 'df_embedding' ] = None
+			st.session_state[ 'vector_store' ] = None
+			st.session_state[ 'vector_store_provider' ] = ''
+			st.session_state[ 'vector_store_name' ] = ''
+			st.session_state[ 'vector_store_namespace' ] = ''
+			st.success( f'Created {len( chunks )} chunk(s) containing {len( all_tokens )} '
+				f'word token(s).' )
+		except Error:
+			raise
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'app'
+			exception.cause = 'DocumentProcessing'
+			exception.method = 'render_document_processing_actions( loader_name, key_prefix )'
+			Logger( ).write( exception )
+			st.error( str( exception ) )
 	
 	if embed_clicked:
-		factory = EmbeddingFactory( )
-		embedder = factory.create( provider=provider, model=model, model_path=model_path, )
-		texts = [ chunk.page_content for chunk in chunked_documents ]
-		vectors = embedder.embed_documents( texts )
-		if len( vectors ) != len( chunked_documents ):
-			raise RuntimeError( 'Embedding count does not match the chunk count.' )
-		dimensions = { len( vector ) for vector in vectors }
-		if len( dimensions ) != 1:
-			raise RuntimeError( 'Embedding vectors do not have a consistent dimension.' )
-		if not all( math.isfinite( float( value ) ) for vector in vectors for value in vector ):
-			raise RuntimeError( 'Embedding vectors contain non-finite values.' )
-		
-		display_model = model_path if provider == 'Local GGUF' else model
-		st.session_state[ 'embedder' ] = embedder
-		st.session_state[ 'embeddings' ] = vectors
-		st.session_state[ 'embedding_provider' ] = provider
-		st.session_state[ 'embedding_model' ] = model
-		st.session_state[ 'embedding_model_path' ] = model_path
-		st.session_state[ 'embedding_documents' ] = list( chunked_documents )
-		st.session_state[
-			'df_embedding' ] = create_embedding_dataframe( chunks=list( chunked_documents ),
-			vectors=vectors, provider=provider, model=display_model, )
-		st.session_state[ 'vector_store' ] = None
-		st.session_state[ 'vector_store_provider' ] = ''
-		st.session_state[ 'vector_store_name' ] = ''
-		st.session_state[ 'vector_store_namespace' ] = ''
-		st.success( f'Generated {len( vectors )} embedding(s) with {next( iter( dimensions ) )} '
-		            f'dimensions.' )
-	
-	if store_clicked:
-		store_provider = str( st.session_state[ f'{key_prefix}_vector_store_provider' ] )
-		if store_provider == 'Chroma':
-			store_name = f'foo_{loader_name.lower( ).replace( "loader", "" )}_documents'
-			store = ChromaStore( )
-			vector_store = store.create( documents=list( chunked_documents ), embedder=embedder,
-				collection_name=store_name, persist_directory=str( CHROMA_DIRECTORY ), )
-			namespace = ''
-		else:
-			store_name = str( st.session_state[ f'{key_prefix}_pinecone_index' ] )
-			namespace = str( st.session_state[ f'{key_prefix}_pinecone_namespace' ] )
-			store = PineconeStore( )
-			vector_store = store.create( documents=list( chunked_documents ), embedder=embedder,
-				index_name=store_name, namespace=namespace, api_key=cfg.PINECONE_API_KEY, )
-		
-		st.session_state[ 'vector_store' ] = vector_store
-		st.session_state[ 'vector_store_provider' ] = store_provider
-		st.session_state[ 'vector_store_name' ] = store_name
-		st.session_state[ 'vector_store_namespace' ] = namespace
-		st.success( f'Stored {len( chunked_documents )} chunk(s) in {store_provider}: '
-		            f'{store_name}.' )
+		try:
+			factory = EmbeddingFactory( )
+			embedder = factory.create( provider=provider, model=model, model_path=model_path, )
+			texts = [ chunk.page_content for chunk in chunked_documents ]
+			vectors = embedder.embed_documents( texts )
+			if len( vectors ) != len( chunked_documents ):
+				raise RuntimeError( 'Embedding count does not match the chunk count.' )
+			dimensions = { len( vector ) for vector in vectors }
+			if len( dimensions ) != 1:
+				raise RuntimeError( 'Embedding vectors do not have a consistent dimension.' )
+			if not all( math.isfinite( float( value ) ) for vector in vectors for value in vector ):
+				raise RuntimeError( 'Embedding vectors contain non-finite values.' )
 
-def render_loading_tabs( ) -> None:
+			display_model = model_path if provider == 'Local GGUF' else model
+			st.session_state[ 'embedder' ] = embedder
+			st.session_state[ 'embeddings' ] = vectors
+			st.session_state[ 'embedding_provider' ] = provider
+			st.session_state[ 'embedding_model' ] = model
+			st.session_state[ 'embedding_model_path' ] = model_path
+			st.session_state[ 'embedding_documents' ] = list( chunked_documents )
+			st.session_state[
+				'df_embedding' ] = create_embedding_dataframe( chunks=list( chunked_documents ),
+				vectors=vectors, provider=provider, model=display_model, )
+			st.session_state[ 'vector_store' ] = None
+			st.session_state[ 'vector_store_provider' ] = ''
+			st.session_state[ 'vector_store_name' ] = ''
+			st.session_state[ 'vector_store_namespace' ] = ''
+			st.success( f'Generated {len( vectors )} embedding(s) with {next( iter( dimensions ) )} '
+			            f'dimensions.' )
+
+		except Error as e:
+			st.error( e.message or str( e ) )
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'app'
+			exception.cause = 'DocumentProcessing'
+			exception.method = 'render_document_processing_actions( loader_name, key_prefix )'
+			Logger( ).write( exception )
+			st.error( exception.message or str( exception ) )
+
+	if store_clicked:
+		try:
+			store_provider = str( st.session_state[ f'{key_prefix}_vector_store_provider' ] )
+			if store_provider == 'Chroma':
+				store_name = f'foo_{loader_name.lower( ).replace( "loader", "" )}_documents'
+				store = ChromaStore( )
+				vector_store = store.connect( collection_name=store_name,
+					persist_directory=str( CHROMA_DIRECTORY ), embedder=embedder )
+				store.add_embeddings( documents=list( chunked_documents ), embeddings=embeddings )
+				namespace = ''
+			else:
+				store_name = str( st.session_state[ f'{key_prefix}_pinecone_index' ] )
+				namespace = str( st.session_state[ f'{key_prefix}_pinecone_namespace' ] )
+				store = PineconeStore( )
+				vector_store = store.connect( index_name=store_name, namespace=namespace,
+					api_key=cfg.PINECONE_API_KEY, embedder=embedder )
+				store.add_embeddings( documents=list( chunked_documents ), embeddings=embeddings )
+
+			st.session_state[ 'vector_store' ] = vector_store
+			st.session_state[ 'vector_store_provider' ] = store_provider
+			st.session_state[ 'vector_store_name' ] = store_name
+			st.session_state[ 'vector_store_namespace' ] = namespace
+			st.success( f'Stored {len( chunked_documents )} chunk(s) in {store_provider}: '
+				f'{store_name}.' )
+		except Error as e:
+			st.error( e.message or str( e ) )
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'app'
+			exception.cause = 'DocumentProcessing'
+			exception.method = 'render_document_processing_actions( loader_name, key_prefix )'
+			Logger( ).write( exception )
+			st.error( exception.message or str( exception ) )
+
+def render_document_processing_tabs( key_prefix: str='loading' ) -> None:
 	"""Render Loading-mode document, chunk, and embedding tabs.
 
 	Purpose:
@@ -1130,6 +1270,7 @@ def render_loading_tabs( ) -> None:
 	Returns:
 		None: This function renders Streamlit content.
 	"""
+	throw_if( 'key_prefix', key_prefix )
 	ensure_document_processing_state( )
 	documents = st.session_state.get( 'documents' ) or [ ]
 	current_signature = document_signature( documents ) if documents else ''
@@ -1148,7 +1289,7 @@ def render_loading_tabs( ) -> None:
 					st.json( document.metadata )
 					st.text_area(
 						'Content', document.page_content[ : ], height=450,
-						key=f'preview_doc_{index}',
+						key=f'{key_prefix}_preview_doc_{index}',
 					)
 
 	with chunk_tab:
@@ -1159,7 +1300,7 @@ def render_loading_tabs( ) -> None:
 			st.caption( f'Chunks: {len( df_chunking )}' )
 			st.data_editor(
 				df_chunking, disabled=True, hide_index=True,
-				use_container_width=True, height=520, key='loading_df_chunking',
+				use_container_width=True, height=520, key=f'{key_prefix}_df_chunking',
 			)
 
 	with embedding_tab:
@@ -1177,8 +1318,20 @@ def render_loading_tabs( ) -> None:
 				st.caption( f'Vector Store: {store_provider} | Target: {store_name}' )
 			st.data_editor(
 				df_embedding, disabled=True, hide_index=True,
-				use_container_width=True, height=520, key='loading_df_embedding',
+				use_container_width=True, height=520, key=f'{key_prefix}_df_embedding',
 			)
+
+def render_loading_tabs( ) -> None:
+	"""Render the shared document-processing tabs in Loading mode."""
+	render_document_processing_tabs( key_prefix='loading' )
+
+def render_source_processing_controls( source_name: str, key_prefix: str ) -> None:
+	"""Render processing inputs and actions beside one loader or API source."""
+	throw_if( 'source_name', source_name )
+	throw_if( 'key_prefix', key_prefix )
+	st.markdown( '##### Document Processing' )
+	render_document_processing_inputs( loader_name=source_name, key_prefix=key_prefix )
+	render_document_processing_actions( loader_name=source_name, key_prefix=key_prefix )
 
 _streamlit_data_editor = st.data_editor
 
@@ -1206,7 +1359,7 @@ def set_sidebar_mode( source_key: str ) -> None:
 
 def _promote_loader_documents( documents: List[ Document ] | None, active_loader: str ) -> int:
 	docs: List[ Document ] = list( documents or [ ] )
-	
+	activate_processing_source( active_loader )
 	st.session_state.documents = docs
 	st.session_state.raw_documents = list( docs )
 	st.session_state.raw_text = '\n\n'.join( doc.page_content for doc in docs if
@@ -1237,9 +1390,10 @@ for key, default in cfg.SESSION_STATE_DEFAULTS.items( ):
 
 for corpus in cfg.REQUIRED_CORPORA:
 	try:
-		nltk.data.find( f'corpora/{corpus}' )
+		resource_group = 'tokenizers' if corpus in ( 'punkt', 'punkt_tab' ) else 'corpora'
+		nltk.data.find( f'{resource_group}/{corpus}' )
 	except LookupError:
-		nltk.download( corpus )
+		nltk.download( corpus, quiet=True )
 
 # =========================================================================
 # APP SET-UP
@@ -1279,6 +1433,7 @@ with st.sidebar:
 				val = st.text_input( attr, value=current, type='password' )
 				if val:
 					os.environ[ attr ] = val
+					setattr( cfg, attr, val )
 
 mode = st.session_state[ 'mode' ]
 
@@ -1433,6 +1588,8 @@ if mode == 'Loading':
 					else:
 						st.warning( 'No documents were loaded.' )
 			
+
+				render_source_processing_controls( 'NLTKLoader', 'loader_corpora_loader' )
 			# ----------------------------
 			# ------ Expander Text Loader
 			# ----------------------------
@@ -1718,6 +1875,8 @@ if mode == 'Loading':
 								"chunk_size": getattr( xml_loader, 'chunk_size', None ),
 								"overlap_amount": getattr( xml_loader, 'overlap_amount', None ), } )
 			
+
+				render_source_processing_controls( 'XmlLoader', 'loader_xml_loader' )
 			# ----------------------------
 			# ------- Expander Word Loader
 			# ----------------------------
@@ -2071,6 +2230,8 @@ if mode == 'Loading':
 					st.session_state[
 						'_loader_status' ] = f'Loaded {len( documents )} notebook document(s).'
 			
+
+				render_source_processing_controls( 'JupyterNotebookLoader', 'loader_jupyter_notebook_loader' )
 			# ----------------------------
 			# ------- Expander Excel Loader
 			# ----------------------------
@@ -2468,6 +2629,8 @@ if mode == 'Loading':
 						st.session_state[ '_loader_status' ] = \
 							f'Fetched {len( documents )} document(s).'
 			
+
+				render_source_processing_controls( 'ArXivLoader', 'loader_arxiv_loader' )
 			# ----------------------------
 			# ---- Expander Wikipedia Loader
 			# ----------------------------
@@ -2527,6 +2690,8 @@ if mode == 'Loading':
 						st.session_state[ '_loader_status' ] = (
 								f'Fetched {len( documents )} Wikipedia document(s).')
 			
+
+				render_source_processing_controls( 'WikiLoader', 'loader_wikipedia_loader' )
 			# ----------------------------
 			# ----- Expander GitHub Loader
 			# ----------------------------
@@ -2593,6 +2758,8 @@ if mode == 'Loading':
 						st.session_state[ "_loader_status" ] = \
 							f"Fetched {len( documents )} GitHub document(s)."
 			
+
+				render_source_processing_controls( 'GithubLoader', 'loader_github_loader' )
 			# ----------------------------
 			# -------- Expander Outlook Loader
 			# ----------------------------
@@ -2663,6 +2830,8 @@ if mode == 'Loading':
 							f'Loaded {len( documents )} Outlook message document('
 							f's).')
 			
+
+				render_source_processing_controls( 'OutlookLoader', 'loader_outlook_loader' )
 			# ----------------------------
 			# ------- Expander Web Loader
 			# ----------------------------
@@ -2724,6 +2893,8 @@ if mode == 'Loading':
 						st.session_state[ "_loader_status" ] = \
 							f"Fetched {len( new_docs )} web document(s)."
 			
+
+				render_source_processing_controls( 'WebLoader', 'loader_web_loader' )
 			# ----------------------------
 			# ----- Expander Web Crawler
 			# ----------------------------
@@ -2794,6 +2965,8 @@ if mode == 'Loading':
 					st.session_state[
 						'_loader_status' ] = f'Crawled {len( documents )} document(s).'
 			
+
+				render_source_processing_controls( 'WebCrawler', 'loader_web_crawler' )
 			# ----------------------------
 			# ----- Expander Email Loader
 			# ----------------------------
@@ -2870,6 +3043,8 @@ if mode == 'Loading':
 					st.session_state[ '_loader_status' ] = \
 						f'Loaded {len( documents )} email document(s).'
 			
+
+				render_source_processing_controls( 'EmailLoader', 'loader_e_mail_loader' )
 			# ----------------------------
 			# ---- Expander PubMed Loader
 			# ----------------------------
@@ -2936,6 +3111,8 @@ if mode == 'Loading':
 					st.session_state[
 						'_loader_status' ] = f'Loaded {len( documents )} PubMed document(s).'
 			
+
+				render_source_processing_controls( 'PubMedSearchLoader', 'loader_pub_med_loader' )
 			# ----------------------------
 			# --- Expander Open City Loader
 			# ----------------------------
@@ -3015,6 +3192,8 @@ if mode == 'Loading':
 					st.session_state[ '_loader_status' ] = \
 						f'Loaded {len( documents )} Open City document(s).'
 		
+
+				render_source_processing_controls( 'OpenCityLoader', 'loader_open_city_loader' )
 		with st.expander( label='Cloud Documents', expanded=False ):
 			# ----------------------------
 			# ---- Expander OneDrive Loader
@@ -3094,6 +3273,8 @@ if mode == 'Loading':
 					st.session_state[
 						'_loader_status' ] = f'Loaded {len( documents )} OneDrive document(s).'
 			
+
+				render_source_processing_controls( 'OneDriveDocLoader', 'loader_onedrive_loader' )
 			# ----------------------------
 			# ---- Expander Google Cloud File Loader
 			# ----------------------------
@@ -3168,6 +3349,8 @@ if mode == 'Loading':
 							f'Loaded {len( documents )} Google Cloud file '
 							f'document(s).')
 			
+
+				render_source_processing_controls( 'GoogleCloudFileLoader', 'loader_google_cloud_file_loader' )
 			# ----------------------------
 			# ---- Expander AWS File Loader
 			# ----------------------------
@@ -3274,6 +3457,8 @@ if mode == 'Loading':
 					st.session_state[
 						'_loader_status' ] = f'Loaded {len( documents )} AWS file document(s).'
 			
+
+				render_source_processing_controls( 'AwsFileLoader', 'loader_aws_file_loader' )
 			# ----------------------------
 			# ----- Expander Google Bucket Loader
 			# ----------------------------
@@ -3363,6 +3548,8 @@ if mode == 'Loading':
 					st.session_state[ '_loader_status' ] = (
 							f'Loaded {len( documents )} Google bucket document(s).')
 			
+
+				render_source_processing_controls( 'GoogleBucketLoader', 'loader_google_bucket_loader' )
 			# ----------------------------
 			# ---- Expander AWS Bucket Loader
 			# ----------------------------
@@ -3481,6 +3668,8 @@ if mode == 'Loading':
 					st.session_state[ '_loader_status' ] = \
 						f'Loaded {len( documents )} AWS bucket document(s).'
 			
+
+				render_source_processing_controls( 'AwsBucketLoader', 'loader_aws_bucket_loader' )
 			# ---------------------------
 			# ---- Expander SharePoint Loader
 			# ---------------------------
@@ -3554,6 +3743,8 @@ if mode == 'Loading':
 					st.session_state[
 						'_loader_status' ] = f'Loaded {len( documents )} SharePoint document(s).'
 	
+
+				render_source_processing_controls( 'SpfxLoader', 'loader_sharepoint_loader' )
 	# ------------------------------------------------------------------
 	# RIGHT COLUMN — DOCUMENT RENDERING
 	# ------------------------------------------------------------------
@@ -3573,6 +3764,7 @@ elif mode == 'Scraping':
 		st.session_state[ 'webfetcher_url' ] = ''
 		st.session_state[ 'webscrape_results' ] = [ ]
 		st.session_state[ 'webscrape_summary' ] = { }
+		clear_if_active( 'Web Scraper' )
 		st.session_state[ 'webscrape_clear_request' ] = False
 	
 	def _clear_webscrape_state( ) -> None:
@@ -3824,6 +4016,8 @@ elif mode == 'Scraping':
 		with b2:
 			st.button( 'Clear', key='webfetcher_clear', on_click=_clear_webscrape_state )
 	
+		render_source_processing_controls( 'Web Scraper', 'web_scraper' )
+
 	with col_right:
 		if run_scraper:
 			try:
@@ -3838,6 +4032,8 @@ elif mode == 'Scraping':
 				
 				st.session_state[ 'webscrape_results' ] = results
 				st.session_state[ 'webscrape_summary' ] = summary
+				promote_source_result( mode_name='Scraping', source_name='Web Scraper',
+					result=results )
 				st.rerun( )
 			
 			except Exception as exc:
@@ -3900,6 +4096,8 @@ elif mode == 'Scraping':
 						st.subheader( 'Errors' )
 						for err in errors:
 							st.error( err )
+
+		render_document_processing_tabs( key_prefix='web_scraper' )
 
 # ==============================================================================
 # FETCHING MODE
@@ -3995,6 +4193,8 @@ elif mode == 'Retrieval':
 					st.error( 'ArXiv request failed.' )
 					st.exception( exc )
 		
+
+			render_source_processing_controls( 'ArXiv', 'retrieval_arxiv' )
 		# ----------------------------
 		# -------- Expander (Google Drive)
 		# ----------------------------
@@ -4097,6 +4297,8 @@ elif mode == 'Retrieval':
 					st.error( 'Google Drive request failed.' )
 					st.exception( exc )
 		
+
+			render_source_processing_controls( 'Google Drive', 'retrieval_google_drive' )
 		# ----------------------------
 		# -------- Expander (Wikipedia)
 		# ----------------------------
@@ -4175,6 +4377,8 @@ elif mode == 'Retrieval':
 			with st.expander( label='Information', expanded=False ):
 				st.help( Wikipedia )
 		
+
+			render_source_processing_controls( 'Wikipedia', 'retrieval_wikipedia' )
 		# ----------------------------
 		# -------- Expander (Google Search)
 		# ----------------------------
@@ -4348,6 +4552,8 @@ elif mode == 'Retrieval':
 				st.button( 'Clear', key='googlesearch_clear', on_click=_clear_googlesearch_state,
 					width='stretch' )
 		
+
+			render_source_processing_controls( 'Google Search', 'retrieval_google_search' )
 		# ----------------------------
 		# -------- Expander (Open Science)
 		# ----------------------------
@@ -4400,6 +4606,8 @@ elif mode == 'Retrieval':
 				st.button( 'Clear', key='openscience_clear',
 					on_click=_clear_openscience_state, width='stretch' )
 		
+
+			render_source_processing_controls( 'Open Science', 'retrieval_open_science' )
 		# ----------------------------
 		# -------- Expander (Gov Info)
 		# ----------------------------
@@ -4621,6 +4829,8 @@ elif mode == 'Retrieval':
 				with st.expander( 'Raw Result', expanded=False ):
 					st.json( result )
 		
+
+			render_source_processing_controls( 'Gov Info', 'retrieval_gov_info' )
 		# ----------------------------
 		# -------- Expander (Congress)
 		# ----------------------------
@@ -4862,6 +5072,8 @@ elif mode == 'Retrieval':
 				with st.expander( 'Raw Result', expanded=False ):
 					st.json( result )
 		
+
+			render_source_processing_controls( 'US Congress', 'retrieval_us_congress' )
 		# ----------------------------
 		# -------- Expander (Internet Archive)
 		# ----------------------------
@@ -5055,6 +5267,8 @@ elif mode == 'Retrieval':
 				with st.expander( 'Raw Result', expanded=False ):
 					st.json( result )
 		
+
+			render_source_processing_controls( 'Internet Archive', 'retrieval_internet_archive' )
 		# ----------------------------
 		# -------- Expander (Grokipedia)
 		# ----------------------------
@@ -5292,6 +5506,8 @@ elif mode == 'Retrieval':
 					else:
 						st.info( 'No results returned.' )
 		
+
+			render_source_processing_controls( 'Grokipedia', 'retrieval_grokipedia' )
 		# ----------------------------
 		# -------- Expander (Jupyter Notebook)
 		# ----------------------------
@@ -5338,6 +5554,8 @@ elif mode == 'Retrieval':
 					st.button( 'Save', key='jupyter_notebook_save_disabled', disabled=True,
 						use_container_width=True, width='stretch' )
 		
+
+			render_source_processing_controls( 'Jupyter Notebook', 'retrieval_jupyter_notebook' )
 		# ----------------------------
 		# -------- Expander (Google Cloud File)
 		# ----------------------------
@@ -5376,6 +5594,8 @@ elif mode == 'Retrieval':
 					st.button( 'Save', key='google_cloud_file_save_disabled', disabled=True,
 						use_container_width=True, width='stretch' )
 		
+
+			render_source_processing_controls( 'Google Cloud File', 'retrieval_google_cloud_file' )
 		# ----------------------------
 		# -------- Expander (AWS S3 File)
 		# ----------------------------
@@ -5423,6 +5643,8 @@ elif mode == 'Retrieval':
 					st.button( 'Save', key='aws_file_save_disabled', disabled=True,
 						use_container_width=True, width='stretch' )
 		
+
+			render_source_processing_controls( 'AWS S3 File', 'retrieval_aws_s3_file' )
 		# ----------------------------
 		# -------- Expander (OneDrive)
 		# ----------------------------
@@ -5464,6 +5686,8 @@ elif mode == 'Retrieval':
 					st.button( 'Save', key='onedrive_save_disabled', disabled=True,
 						use_container_width=True, width='stretch' )
 		
+
+			render_source_processing_controls( 'OneDrive', 'retrieval_onedrive' )
 		# ----------------------------
 		# -------- Expander (Google Speech-to-Text)
 		# ----------------------------
@@ -5505,6 +5729,8 @@ elif mode == 'Retrieval':
 					st.button( 'Save', key='google_speech_to_text_save_disabled',
 						disabled=True, use_container_width=True, width='stretch' )
 		
+
+			render_source_processing_controls( 'Google Speech-to-Text', 'retrieval_google_speech_to_text' )
 		# ----------------------------
 		# -------- Expander  (AWS S3 Bucket)
 		# ----------------------------
@@ -5552,6 +5778,8 @@ elif mode == 'Retrieval':
 					st.button( 'Save', key='aws_bucket_save_disabled',
 						disabled=True, use_container_width=True, width='stretch' )
 		
+
+			render_source_processing_controls( 'AWS S3 Bucket', 'retrieval_aws_s3_bucket' )
 		# ----------------------------
 		# -------- Expander (Google Cloud Bucket)
 		# ----------------------------
@@ -5594,6 +5822,8 @@ elif mode == 'Retrieval':
 					st.button( 'Save', key='google_bucket_save_disabled', disabled=True,
 						use_container_width=True, width='stretch' )
 	
+
+			render_source_processing_controls( 'Google Cloud Bucket', 'retrieval_google_cloud_bucket' )
 	# ------------------------------------------------------------------
 	# Shared result selection
 	# ------------------------------------------------------------------
@@ -6506,6 +6736,21 @@ elif mode == 'Retrieval':
 
 # ==============================================================================
 # GEOSPATIAL MODE
+		retrieval_result_keys: Dict[ str, str ] = {
+			'ArXiv': 'arxiv_results', 'Google Drive': 'googledrive_results',
+			'Wikipedia': 'wikipedia_results', 'Google Search': 'googlesearch_results',
+			'Open Science': 'openscience_results', 'Gov Info': 'govinfo_results',
+			'US Congress': 'congress_results', 'Internet Archive': 'internetarchive_results',
+			'Grokipedia': 'grokipedia_results', 'Jupyter Notebook': 'jupyter_notebook_results',
+			'Google Cloud File': 'google_cloud_file_results', 'AWS S3 File': 'aws_file_results',
+			'OneDrive': 'onedrive_results',
+			'Google Speech-to-Text': 'google_speech_to_text_results',
+			'AWS S3 Bucket': 'aws_bucket_results', 'Google Cloud Bucket': 'google_bucket_results', }
+		if active_source in retrieval_result_keys:
+			promote_source_result( mode_name='Retrieval', source_name=active_source,
+				result=st.session_state.get( retrieval_result_keys[ active_source ] ) )
+		render_document_processing_tabs( key_prefix='retrieval' )
+
 # ==============================================================================
 elif mode == 'Geospatial':
 	st.session_state.setdefault( 'geospatial_active_source', '' )
@@ -6513,48 +6758,9 @@ elif mode == 'Geospatial':
 	st.session_state.setdefault( 'geospatial_raw_result', None )
 	
 	def _build_geospatial_documents( source: str, result: Any ) -> List[ Document ]:
-		"""Build canonical documents from a Geospatial-mode result.
+		"""Build record-oriented documents from a Geospatial provider result."""
+		return build_source_documents( mode_name='Geospatial', source_name=source, result=result )
 
-		Purpose:
-			Converts heterogeneous geospatial responses into LangChain documents so every source
-			writes to the shared document contract consumed by the right-side viewer.
-
-		Args:
-			source (str): Geospatial source that produced the result.
-			result (Any): Source-specific result payload.
-
-		Returns:
-			List[Document]: Canonical documents representing the result payload.
-		"""
-		documents: List[ Document ] = [ ]
-		
-		def _append_document( value: Any, index: int = 1 ) -> None:
-			if isinstance( value, Document ):
-				metadata = dict( value.metadata or { } )
-				metadata.setdefault( 'mode', 'Geospatial' )
-				metadata.setdefault( 'source', source )
-				documents.append( Document( page_content=value.page_content or '', metadata=metadata ) )
-				return
-			
-			metadata: Dict[ str, Any ] = { 'mode': 'Geospatial', 'source': source, 'item': index, }
-			if isinstance( value, dict ):
-				content = json.dumps( normalize( value ), indent=2, ensure_ascii=False, default=str )
-			elif isinstance( value, (list, tuple, set) ):
-				content = json.dumps( normalize( list( value ) ), indent=2, ensure_ascii=False, default=str )
-			else:
-				content = str( value )
-			if content.strip( ):
-				documents.append( Document( page_content=content, metadata=metadata ) )
-		
-		if result is None:
-			return documents
-		if isinstance( result, list ):
-			for index, item in enumerate( result, start=1 ):
-				_append_document( item, index )
-		else:
-			_append_document( result )
-		return documents
-	
 	def _promote_geospatial_result( source: str, result: Any ) -> List[ Document ]:
 		"""Promote a source result into the shared Geospatial document state.
 
@@ -6569,7 +6775,7 @@ elif mode == 'Geospatial':
 		Returns:
 			List[Document]: Canonical documents written to shared session state.
 		"""
-		documents = _build_geospatial_documents( source=source, result=result )
+		documents = promote_source_result( mode_name='Geospatial', source_name=source, result=result )
 		st.session_state[ 'geospatial_raw_result' ] = result
 		st.session_state[ 'geospatial_documents' ] = documents
 		st.session_state[ 'documents' ] = documents
@@ -6700,6 +6906,8 @@ elif mode == 'Geospatial':
 			if googlegeocoding_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'Geocoding'
 		
+
+			render_source_processing_controls( 'Geocoding', 'api_geocoding' )
 		# ----------------------------
 		# ------ Expander Google Maps
 		# ----------------------------
@@ -6839,6 +7047,8 @@ elif mode == 'Geospatial':
 			if googlemaps_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'Google Maps'
 		
+
+			render_source_processing_controls( 'Google Maps', 'api_google_maps' )
 		# ----------------------------
 		# ------ Expander Google Weather
 		# ----------------------------
@@ -6926,8 +7136,8 @@ elif mode == 'Geospatial':
 			with h2:
 				gw_timeout = st.number_input( 'Timeout', min_value=1, max_value=60, value=int( st.session_state.get( 'googleweather_timeout', 10 ) ), step=1, key='googleweather_timeout' )
 			
-			st.caption( 'Required key: GOOGLE_WEATHER_API_KEY. '
-			            'Weather API must be enabled in your Google Cloud project.' )
+			st.caption( 'Required keys: GOOGLE_WEATHER_API_KEY and GOOGLE_API_KEY. '
+			            'Weather and Geocoding APIs must be enabled in your Google Cloud project.' )
 			
 			b1, b2 = st.columns( 2 )
 			with b1:
@@ -6939,6 +7149,8 @@ elif mode == 'Geospatial':
 			if gw_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'Google Weather'
 		
+
+			render_source_processing_controls( 'Google Weather', 'api_google_weather' )
 		# ----------------------------
 		# ------ Expander Open Weather
 		# ----------------------------
@@ -7007,6 +7219,8 @@ elif mode == 'Geospatial':
 			if openweather_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'Open Weather'
 		
+
+			render_source_processing_controls( 'Open Weather', 'api_open_weather' )
 		# ----------------------------
 		# ------ Expander Historical Weather
 		# ----------------------------
@@ -7064,6 +7278,8 @@ elif mode == 'Geospatial':
 			if historicalweather_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'Historical Weather'
 		
+
+			render_source_processing_controls( 'Historical Weather', 'api_historical_weather' )
 		# ----------------------------
 		# ------ Expander USGS Earthquakes
 		# ----------------------------
@@ -7251,6 +7467,8 @@ elif mode == 'Geospatial':
 			if usgseq_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'USGS Earthquakes'
 		
+
+			render_source_processing_controls( 'USGS Earthquakes', 'api_usgs_earthquakes' )
 		# ----------------------------
 		# ------ Expander NASA Earth Observatory
 		# ----------------------------
@@ -7345,6 +7563,8 @@ elif mode == 'Geospatial':
 			if earth_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'NASA Earth Observatory'
 		
+
+			render_source_processing_controls( 'NASA Earth Observatory', 'api_nasa_earth_observatory' )
 		# ----------------------------
 		# ------ Expander The National Map
 		# ----------------------------
@@ -7474,6 +7694,8 @@ elif mode == 'Geospatial':
 			if usgstnm_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'The National Map'
 		
+
+			render_source_processing_controls( 'The National Map', 'api_the_national_map' )
 		# ----------------------------
 		# ------ Expander USGS Science Base
 		# ----------------------------
@@ -7569,6 +7791,8 @@ elif mode == 'Geospatial':
 			if usgssb_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'USGS Science Base'
 		
+
+			render_source_processing_controls( 'USGS Science Base', 'api_usgs_science_base' )
 		# ----------------------------
 		# ------ Expander Open Sky
 		# ----------------------------
@@ -7693,6 +7917,8 @@ elif mode == 'Geospatial':
 			if opensky_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'Open Sky'
 	
+
+			render_source_processing_controls( 'Open Sky', 'api_open_sky' )
 	with right:
 		active_source = st.session_state.get( 'geospatial_active_source', '' )
 		result_keys: Dict[ str, str ] = { 'Geocoding': 'googlegeocoding_results',
@@ -7703,10 +7929,6 @@ elif mode == 'Geospatial':
 				'NASA Earth Observatory': 'earthobservatory_results',
 				'The National Map': 'usgstnm_results', 'USGS Science Base': 'usgssb_results',
 				'Open Sky': 'opensky_results', }
-		if active_source in result_keys:
-			active_result = st.session_state.get( result_keys[ active_source ] )
-			_promote_geospatial_result( source=active_source, result=active_result )
-		
 		st.markdown( '##### Results' )
 		if not active_source:
 			st.info( 'Select a source, configure the request, and submit it to display results.' )
@@ -8588,7 +8810,7 @@ elif mode == 'Geospatial':
 					client = OpenSky( )
 					result = client.fetch( mode=mode, icao24=icao24, airport=airport,
 						begin=int(begin ) if int( begin or 0 ) > 0 else None,
-						nd=int( end ) if int( end or   0 ) > 0 else None,
+						end=int( end ) if int( end or 0 ) > 0 else None,
 						time_value=normalized_time_value,
 						lamin=float( lamin ) if lamin is not None else None,
 						lomin=float( lomin ) if lomin is not None else None,
@@ -8655,6 +8877,11 @@ elif mode == 'Geospatial':
 
 # ==============================================================================
 # ENVIRONMENTAL MODE
+		if active_source in result_keys:
+			_promote_geospatial_result( source=active_source,
+				result=st.session_state.get( result_keys[ active_source ] ) )
+		render_document_processing_tabs( key_prefix='geospatial' )
+
 # ==============================================================================
 elif mode == 'Environmental':
 	st.session_state.setdefault( 'environmental_active_source', '' )
@@ -8662,49 +8889,9 @@ elif mode == 'Environmental':
 	st.session_state.setdefault( 'environmental_raw_result', None )
 	
 	def _build_environmental_documents( source: str, result: Any ) -> List[ Document ]:
-		"""Build canonical documents from an Environmental-mode result.
+		"""Build record-oriented documents from a Environmental provider result."""
+		return build_source_documents( mode_name='Environmental', source_name=source, result=result )
 
-		Purpose:
-			Converts heterogeneous environmental responses into LangChain documents so every
-			source writes to the shared document contract consumed by the right-side viewer.
-
-		Args:
-			source (str): Environmental source that produced the result.
-			result (Any): Source-specific result payload.
-
-		Returns:
-			List[Document]: Canonical documents representing the result payload.
-		"""
-		documents: List[ Document ] = [ ]
-		
-		def _append_document( value: Any, index: int = 1 ) -> None:
-			if isinstance( value, Document ):
-				metadata = dict( value.metadata or { } )
-				metadata.setdefault( 'mode', 'Environmental' )
-				metadata.setdefault( 'source', source )
-				documents.append( Document( page_content=value.page_content or '', metadata=metadata ) )
-				return
-			
-			metadata: Dict[ str, Any ] = { 'mode': 'Environmental', 'source': source,
-					'item': index, }
-			if isinstance( value, dict ):
-				content = json.dumps( normalize( value ), indent=2, ensure_ascii=False, default=str )
-			elif isinstance( value, (list, tuple, set) ):
-				content = json.dumps( normalize( list( value ) ), indent=2, ensure_ascii=False, default=str )
-			else:
-				content = str( value )
-			if content.strip( ):
-				documents.append( Document( page_content=content, metadata=metadata ) )
-		
-		if result is None:
-			return documents
-		if isinstance( result, list ):
-			for index, item in enumerate( result, start=1 ):
-				_append_document( item, index )
-		else:
-			_append_document( result )
-		return documents
-	
 	def _promote_environmental_result( source: str, result: Any ) -> List[ Document ]:
 		"""Promote a source result into the shared Environmental document state.
 
@@ -8719,7 +8906,7 @@ elif mode == 'Environmental':
 		Returns:
 			List[Document]: Canonical documents written to shared session state.
 		"""
-		documents = _build_environmental_documents( source=source, result=result )
+		documents = promote_source_result( mode_name='Environmental', source_name=source, result=result )
 		st.session_state[ 'environmental_raw_result' ] = result
 		st.session_state[ 'environmental_documents' ] = documents
 		st.session_state[ 'documents' ] = documents
@@ -8813,6 +9000,8 @@ elif mode == 'Environmental':
 			if airnow_submit:
 				st.session_state[ 'environmental_active_source' ] = 'Air Now'
 		
+
+			render_source_processing_controls( 'Air Now', 'api_air_now' )
 		# ----------------------------
 		# -------- Expander NOAA Climate Data
 		# ----------------------------
@@ -8940,6 +9129,8 @@ elif mode == 'Environmental':
 			if climatedata_submit:
 				st.session_state[ 'environmental_active_source' ] = 'NOAA Climate Data'
 		
+
+			render_source_processing_controls( 'NOAA Climate Data', 'api_noaa_climate_data' )
 		# ----------------------------
 		# -------- Expander NASA EONET
 		# ----------------------------
@@ -9085,6 +9276,8 @@ elif mode == 'Environmental':
 			if eonet_submit:
 				st.session_state[ 'environmental_active_source' ] = 'NASA EONET'
 		
+
+			render_source_processing_controls( 'NASA EONET', 'api_nasa_eonet' )
 		# ----------------------------
 		# -------- Expander EPA Envirofacts
 		# ----------------------------
@@ -9152,6 +9345,8 @@ elif mode == 'Environmental':
 			if envirofacts_submit:
 				st.session_state[ 'environmental_active_source' ] = 'EPA Envirofacts'
 		
+
+			render_source_processing_controls( 'EPA Envirofacts', 'api_epa_envirofacts' )
 		# ----------------------------
 		# -------- Expander NOAA Tides & Currents
 		# ----------------------------
@@ -9260,6 +9455,8 @@ elif mode == 'Environmental':
 			if tac_submit:
 				st.session_state[ 'environmental_active_source' ] = 'NOAA Tides & Currents'
 		
+
+			render_source_processing_controls( 'NOAA Tides & Currents', 'api_noaa_tides_currents' )
 		# ----------------------------
 		# -------- Expander EPA UV Index
 		# ----------------------------
@@ -9335,6 +9532,8 @@ elif mode == 'Environmental':
 			if uvindex_submit:
 				st.session_state[ 'environmental_active_source' ] = 'EPA UV Index'
 		
+
+			render_source_processing_controls( 'EPA UV Index', 'api_epa_uv_index' )
 		# ----------------------------
 		# -------- Expander Purple Air
 		# ----------------------------
@@ -9514,6 +9713,8 @@ elif mode == 'Environmental':
 			if purpleair_submit:
 				st.session_state[ 'environmental_active_source' ] = 'Purple Air'
 		
+
+			render_source_processing_controls( 'Purple Air', 'api_purple_air' )
 		# ----------------------------
 		# -------- Expander Open Air Quality
 		# ----------------------------
@@ -9643,6 +9844,8 @@ elif mode == 'Environmental':
 			if openaq_submit:
 				st.session_state[ 'environmental_active_source' ] = 'Open Air Quality'
 		
+
+			render_source_processing_controls( 'Open Air Quality', 'api_open_air_quality' )
 		# ----------------------------
 		# -------- Expander NASA FIRMS
 		# ----------------------------
@@ -9761,6 +9964,8 @@ elif mode == 'Environmental':
 			if firms_submit:
 				st.session_state[ 'environmental_active_source' ] = 'NASA FIRMS'
 		
+
+			render_source_processing_controls( 'NASA FIRMS', 'api_nasa_firms' )
 		# ----------------------------
 		# -------- Expander USGS Water Data
 		# ----------------------------
@@ -9886,6 +10091,8 @@ elif mode == 'Environmental':
 			if usgswd_submit:
 				st.session_state[ 'environmental_active_source' ] = 'USGS Water Data'
 	
+
+			render_source_processing_controls( 'USGS Water Data', 'api_usgs_water_data' )
 	with right:
 		st.markdown( '### Results' )
 		active_source = st.session_state.get( 'environmental_active_source', '' )
@@ -11002,6 +11209,11 @@ elif mode == 'Environmental':
 
 # ==============================================================================
 # ASTRONOMICAL MODE
+		if active_source == 'USGS Water Data':
+			_promote_environmental_result( source=active_source,
+				result=st.session_state.get( 'usgswaterdata_results' ) )
+		render_document_processing_tabs( key_prefix='environmental' )
+
 # ==============================================================================
 elif mode == 'Astronomical':
 	st.session_state.setdefault( 'astronomical_active_source', '' )
@@ -11009,52 +11221,9 @@ elif mode == 'Astronomical':
 	st.session_state.setdefault( 'astronomical_raw_result', None )
 	
 	def _build_astronomical_documents( source: str, result: Any ) -> List[ Document ]:
-		"""Build canonical documents from an Astronomical-mode result.
+		"""Build record-oriented documents from a Astronomical provider result."""
+		return build_source_documents( mode_name='Astronomical', source_name=source, result=result )
 
-		Purpose:
-			Converts heterogeneous astronomical, scientific, demographic, and public-data
-			responses into LangChain documents for the shared right-side viewer.
-
-		Args:
-			source (str): Astronomical source that produced the result.
-			result (Any): Source-specific result payload.
-
-		Returns:
-			List[Document]: Canonical documents representing the result payload.
-		"""
-		documents: List[ Document ] = [ ]
-		
-		def _append_document( value: Any, index: int = 1 ) -> None:
-			if isinstance( value, Document ):
-				metadata = dict( value.metadata or { } )
-				metadata.setdefault( 'mode', 'Astronomical' )
-				metadata.setdefault( 'source', source )
-				documents.append( Document( page_content=value.page_content or '', metadata=metadata ) )
-				return
-			
-			metadata: Dict[ str, Any ] = { 'mode': 'Astronomical', 'source': source,
-					'item': index, }
-			if isinstance( value, dict ):
-				content = json.dumps( normalize( value ), indent=2, ensure_ascii=False, default=str )
-			elif isinstance( value, (list, tuple, set) ):
-				content = json.dumps( normalize( list( value ) ), indent=2, ensure_ascii=False, default=str )
-			else:
-				content = str( value )
-			
-			if content.strip( ):
-				documents.append( Document( page_content=content, metadata=metadata ) )
-		
-		if result is None:
-			return documents
-		
-		if isinstance( result, list ):
-			for index, item in enumerate( result, start=1 ):
-				_append_document( item, index )
-		else:
-			_append_document( result )
-		
-		return documents
-	
 	def _promote_astronomical_result( source: str, result: Any ) -> List[ Document ]:
 		"""Promote a source result into the shared Astronomical document state.
 
@@ -11069,7 +11238,7 @@ elif mode == 'Astronomical':
 		Returns:
 			List[Document]: Canonical documents written to shared session state.
 		"""
-		documents = _build_astronomical_documents( source=source, result=result )
+		documents = promote_source_result( mode_name='Astronomical', source_name=source, result=result )
 		st.session_state[ 'astronomical_raw_result' ] = result
 		st.session_state[ 'astronomical_documents' ] = documents
 		st.session_state[ 'documents' ] = documents
@@ -11149,6 +11318,8 @@ elif mode == 'Astronomical':
 			if naval_submit:
 				st.session_state[ 'astronomical_active_source' ] = 'US Naval Observatory'
 		
+
+			render_source_processing_controls( 'US Naval Observatory', 'api_us_naval_observatory' )
 		# ----------------------------
 		# -------- Expander Satellite Center
 		# ----------------------------
@@ -11263,6 +11434,8 @@ elif mode == 'Astronomical':
 			if satellite_submit:
 				st.session_state[ 'astronomical_active_source' ] = 'Satellite Center'
 		
+
+			render_source_processing_controls( 'Satellite Center', 'api_satellite_center' )
 		# ----------------------------
 		# -------- Expander Astro Catalog
 		# ----------------------------
@@ -11361,6 +11534,8 @@ elif mode == 'Astronomical':
 			if astro_submit:
 				st.session_state[ 'astronomical_active_source' ] = 'Astro Catalog'
 		
+
+			render_source_processing_controls( 'Astro Catalog', 'api_astro_catalog' )
 		# ----------------------------
 		# -------- Expander Astro Query
 		# ----------------------------
@@ -11446,6 +11621,8 @@ elif mode == 'Astronomical':
 			if astroquery_submit:
 				st.session_state[ 'astronomical_active_source' ] = 'Astro Query'
 		
+
+			render_source_processing_controls( 'Astro Query', 'api_astro_query' )
 		# ----------------------------
 		# -------- Expander Star Map
 		# ----------------------------
@@ -11565,6 +11742,8 @@ elif mode == 'Astronomical':
 			if starmap_submit:
 				st.session_state[ 'astronomical_active_source' ] = 'Star Map'
 		
+
+			render_source_processing_controls( 'Star Map', 'api_star_map' )
 		# ----------------------------
 		# -------- Expander Simbad
 		# ----------------------------
@@ -11654,6 +11833,8 @@ elif mode == 'Astronomical':
 			if simbad_submit:
 				st.session_state[ 'astronomical_active_source' ] = 'SIMBAD'
 		
+
+			render_source_processing_controls( 'SIMBAD', 'api_simbad' )
 		# ----------------------------
 		# -------- Expander Space Weather
 		# ----------------------------
@@ -11775,6 +11956,8 @@ elif mode == 'Astronomical':
 			if spaceweather_submit:
 				st.session_state[ 'astronomical_active_source' ] = 'Space Weather'
 		
+
+			render_source_processing_controls( 'Space Weather', 'api_space_weather' )
 		# ----------------------------
 		# -------- Expander Astro Catalog
 		# ----------------------------
@@ -11932,6 +12115,8 @@ elif mode == 'Astronomical':
 			if starchart_submit:
 				st.session_state[ 'astronomical_active_source' ] = 'Star Chart'
 		
+
+			render_source_processing_controls( 'Star Chart', 'api_star_chart' )
 		# ----------------------------
 		# -------- Expander Near Earth Object
 		# ----------------------------
@@ -12131,6 +12316,8 @@ elif mode == 'Astronomical':
 			if nearby_submit:
 				st.session_state[ 'astronomical_active_source' ] = 'Near Earth Objects'
 	
+
+			render_source_processing_controls( 'Near Earth Objects', 'api_near_earth_objects' )
 	with right:
 		active_source = st.session_state.get( 'astronomical_active_source', '' )
 		result_keys: Dict[ str, str ] = { 'US Naval Observatory': 'navalobservatory_results',
@@ -12139,10 +12326,6 @@ elif mode == 'Astronomical':
 				'Star Map': 'starmap_results', 'SIMBAD': 'simbad_results',
 				'Space Weather': 'spaceweather_results', 'Star Chart': 'starchart_results',
 				'Near Earth Objects': 'nearbyobjects_results', }
-		
-		if active_source in result_keys:
-			active_result = st.session_state.get( result_keys[ active_source ] )
-			_promote_astronomical_result( source=active_source, result=active_result )
 		
 		st.markdown( '#### Results' )
 		if not active_source:
@@ -12973,6 +13156,11 @@ elif mode == 'Astronomical':
 
 # ==============================================================================
 # POPULATION MODE
+		if active_source in result_keys:
+			_promote_astronomical_result( source=active_source,
+				result=st.session_state.get( result_keys[ active_source ] ) )
+		render_document_processing_tabs( key_prefix='astronomical' )
+
 # ==============================================================================
 elif mode == 'Demographic':
 	st.subheader( f'🩺 Demographics & Health Data' )
@@ -13132,6 +13320,8 @@ elif mode == 'Demographic':
 			if census_submit:
 				st.session_state[ 'demographic_active_source' ] = 'u_s_census_bureau'
 		
+
+			render_source_processing_controls( 'u_s_census_bureau', 'api_u_s_census_bureau' )
 		# ---------------------
 		# ---- Expander CDC SOCRATA
 		# ---------------------
@@ -13273,6 +13463,8 @@ elif mode == 'Demographic':
 			if socrata_submit:
 				st.session_state[ 'demographic_active_source' ] = 'cdc_socrata'
 		
+
+			render_source_processing_controls( 'cdc_socrata', 'api_cdc_socrata' )
 		# ---------------------
 		# ---- Expander US Health Data
 		# ---------------------
@@ -13417,6 +13609,8 @@ elif mode == 'Demographic':
 			if healthdata_submit:
 				st.session_state[ 'demographic_active_source' ] = 'u_s_health'
 		
+
+			render_source_processing_controls( 'u_s_health', 'api_u_s_health' )
 		# ---------------------
 		# ---- Expander WHO Global Health
 		# ---------------------
@@ -13533,6 +13727,8 @@ elif mode == 'Demographic':
 			if who_submit:
 				st.session_state[ 'demographic_active_source' ] = 'who_global'
 		
+
+			render_source_processing_controls( 'who_global', 'api_who_global' )
 		# ---------------------
 		# ---- Expander United Nations Data
 		# ---------------------
@@ -13639,6 +13835,8 @@ elif mode == 'Demographic':
 			if un_submit:
 				st.session_state[ 'demographic_active_source' ] = 'united_nations'
 		
+
+			render_source_processing_controls( 'united_nations', 'api_united_nations' )
 		# ---------------------
 		# ---- Expander World Population
 		# ---------------------
@@ -13791,6 +13989,8 @@ elif mode == 'Demographic':
 			if worldpop_submit:
 				st.session_state[ 'demographic_active_source' ] = 'world_population'
 		
+
+			render_source_processing_controls( 'world_population', 'api_world_population' )
 		# ---------------------
 		# ---- Expander CDC WONDER
 		# ---------------------
@@ -13913,6 +14113,8 @@ elif mode == 'Demographic':
 			if wonder_submit:
 				st.session_state[ 'demographic_active_source' ] = 'cdc_wonder'
 		
+
+			render_source_processing_controls( 'cdc_wonder', 'api_cdc_wonder' )
 		# ---------------------
 		# ---- Expander Pub Med
 		# ---------------------
@@ -13974,6 +14176,8 @@ elif mode == 'Demographic':
 			if pubmed_submit:
 				st.session_state[ 'demographic_active_source' ] = 'pub_med_search'
 		
+
+			render_source_processing_controls( 'pub_med_search', 'api_pub_med_search' )
 		# ---------------------
 		# ---- Expander Open City
 		# ---------------------
@@ -14100,6 +14304,8 @@ elif mode == 'Demographic':
 			if open_city_submit:
 				st.session_state[ 'demographic_active_source' ] = 'open_city_data'
 	
+
+			render_source_processing_controls( 'open_city_data', 'api_open_city_data' )
 	with right:
 		st.markdown( '##### Results' )
 		active_source = st.session_state.get( 'demographic_active_source', '' )
@@ -14771,6 +14977,17 @@ elif mode == 'Demographic':
 
 # ==============================================================================
 # TEXT GENERATION MODE
+		demographic_result_keys: Dict[ str, str ] = {
+			'u_s_census_bureau': 'census_results', 'cdc_socrata': 'socrata_results',
+			'u_s_health': 'healthdata_results', 'who_global': 'who_results',
+			'united_nations': 'un_results', 'world_population': 'worldpop_results',
+			'cdc_wonder': 'wonder_results', 'pub_med_search': 'pubmed_results',
+			'open_city_data': 'open_city_results', }
+		if active_source in demographic_result_keys:
+			promote_source_result( mode_name='Demographic', source_name=active_source,
+				result=st.session_state.get( demographic_result_keys[ active_source ] ) )
+		render_document_processing_tabs( key_prefix='demographic' )
+
 # ==============================================================================
 elif mode == 'Generation':
 	st.subheader( '🧠  Generative AI' )

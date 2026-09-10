@@ -2456,6 +2456,7 @@ class GoogleMaps( Fetcher ):
 		"""
 		try:
 			throw_if( 'address', address )
+			throw_if( 'api_key', self.api_key )
 			self.mode = 'geocode_location'
 			self.address = str( address ).strip( )
 			self.url = 'https://maps.googleapis.com/maps/api/geocode/json'
@@ -2468,11 +2469,17 @@ class GoogleMaps( Fetcher ):
 				timeout=self.timeout )
 			self.response.raise_for_status( )
 			self.payload = self.response.json( )
-			results = self.payload.get( 'results', [ ] ) if isinstance( self.payload,
-				dict ) else [ ]
+			if not isinstance( self.payload, dict ):
+				raise ValueError( 'Google Geocoding returned an invalid response payload.' )
+			status = str( self.payload.get( 'status', '' ) or '' ).strip( )
+			error_message = str( self.payload.get( 'error_message', '' ) or '' ).strip( )
+			if status and status != 'OK':
+				detail = f' — {error_message}' if error_message else ''
+				raise ValueError( f'Google Geocoding failed: {status}{detail}' )
+			results = self.payload.get( 'results', [ ] )
 			
 			if not results:
-				raise ValueError( 'No geocoding results were returned for the supplied address.' )
+				raise ValueError( 'Google Geocoding returned no results for the supplied address.' )
 			
 			location = results[ 0 ].get( 'geometry', { } ).get( 'location', { } )
 			self.latitude = float( location.get( 'lat' ) )
@@ -2482,6 +2489,9 @@ class GoogleMaps( Fetcher ):
 			
 			return self.coordinates
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -2543,6 +2553,9 @@ class GoogleMaps( Fetcher ):
 			
 			return self.address
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -2608,6 +2621,9 @@ class GoogleMaps( Fetcher ):
 			
 			return self.result
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -2668,6 +2684,9 @@ class GoogleMaps( Fetcher ):
 			
 			return self.result
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -2721,6 +2740,9 @@ class GoogleMaps( Fetcher ):
 					}
 			}
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -2856,6 +2878,9 @@ class GoogleWeather( Fetcher ):
 			
 			return self.coordinates
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -2920,6 +2945,9 @@ class GoogleWeather( Fetcher ):
 			
 			return self.result
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -2954,6 +2982,9 @@ class GoogleWeather( Fetcher ):
 			
 			return self.result
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -3008,6 +3039,9 @@ class GoogleWeather( Fetcher ):
 			
 			return self.package_response( )
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -3072,6 +3106,9 @@ class GoogleWeather( Fetcher ):
 			
 			return self.package_response( )
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -3137,6 +3174,9 @@ class GoogleWeather( Fetcher ):
 			
 			return self.package_response( )
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -3194,6 +3234,9 @@ class GoogleWeather( Fetcher ):
 			
 			return self.package_response( )
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -3236,6 +3279,9 @@ class GoogleWeather( Fetcher ):
 			
 			return self.package_response( )
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -4365,6 +4411,9 @@ class GlobalImagery( Fetcher ):
 			
 			return self.result
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -7001,6 +7050,9 @@ class GovData( Fetcher ):
 			
 			return self.result
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -7192,6 +7244,9 @@ class GovData( Fetcher ):
 				"'collection'."
 			)
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -8218,6 +8273,9 @@ class Congress( Fetcher ):
 				time=time
 			)
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -8328,6 +8386,9 @@ class Congress( Fetcher ):
 				time=time
 			)
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -8384,6 +8445,9 @@ class Congress( Fetcher ):
 				time=time
 			)
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -8437,6 +8501,9 @@ class Congress( Fetcher ):
 				time=time
 			)
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -8499,6 +8566,9 @@ class Congress( Fetcher ):
 				time=time
 			)
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -10203,6 +10273,13 @@ class GoogleGeocoding( Fetcher ):
 			
 			self.response.raise_for_status( )
 			self.payload = self.response.json( )
+			if not isinstance( self.payload, dict ):
+				raise ValueError( 'Google Geocoding returned an invalid response payload.' )
+			status = str( self.payload.get( 'status', '' ) or '' ).strip( )
+			error_message = str( self.payload.get( 'error_message', '' ) or '' ).strip( )
+			if status and status != 'OK':
+				detail = f' — {error_message}' if error_message else ''
+				raise ValueError( f'Google Geocoding failed: {status}{detail}' )
 			self.result = {
 					'mode': self.mode,
 					'url': self.url,
@@ -10217,6 +10294,9 @@ class GoogleGeocoding( Fetcher ):
 			
 			return self.result
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -10271,6 +10351,9 @@ class GoogleGeocoding( Fetcher ):
 				api_key=api_key
 			)
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -10334,6 +10417,9 @@ class GoogleGeocoding( Fetcher ):
 				api_key=api_key
 			)
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -10388,6 +10474,9 @@ class GoogleGeocoding( Fetcher ):
 				api_key=api_key
 			)
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -10462,6 +10551,9 @@ class GoogleGeocoding( Fetcher ):
 			
 			raise ValueError( "Unsupported geocoding mode. Use 'forward', 'reverse', or 'place'." )
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -10515,6 +10607,9 @@ class GoogleGeocoding( Fetcher ):
 					}
 			}
 		
+		except Error:
+			raise
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -24424,7 +24519,7 @@ class OpenSky( Fetcher ):
 		self.token_url = ('https://auth.opensky-network.org/auth/realms/opensky-network/'
 		                  'protocol/openid-connect/token')
 		self.client_id = cfg.OPENSKY_API_CLIENT_ID
-		self.client_secret = cfg.OPENSKY_API_CREDENTIALS
+		self.client_secret = cfg.OPENSKY_API_CLIENT_SECRET or cfg.OPENSKY_API_CREDENTIALS
 		self.access_token = None
 		self.mode = 'states_bbox'
 		self.endpoint = ''
@@ -24494,6 +24589,9 @@ class OpenSky( Fetcher ):
 			
 			return value
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -24534,6 +24632,9 @@ class OpenSky( Fetcher ):
 			
 			return value
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -24565,6 +24666,9 @@ class OpenSky( Fetcher ):
 			
 			return value
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -24596,6 +24700,9 @@ class OpenSky( Fetcher ):
 			
 			return value
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -24631,6 +24738,9 @@ class OpenSky( Fetcher ):
 			
 			return number
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -24664,6 +24774,9 @@ class OpenSky( Fetcher ):
 			
 			return start, stop
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -24699,6 +24812,9 @@ class OpenSky( Fetcher ):
 			
 			return number
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -24734,6 +24850,9 @@ class OpenSky( Fetcher ):
 			
 			return number
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -24775,6 +24894,9 @@ class OpenSky( Fetcher ):
 			
 			return min_lat, min_lon, max_lat, max_lon
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -24809,7 +24931,10 @@ class OpenSky( Fetcher ):
 			if client_secret is not None and str( client_secret ).strip( ):
 				self.client_secret = str( client_secret ).strip( )
 			else:
-				self.client_secret = cfg.OPENSKY_API_CREDENTIALS
+				self.client_secret = cfg.OPENSKY_API_CLIENT_SECRET or cfg.OPENSKY_API_CREDENTIALS
+
+		except Error:
+			raise
 		
 		except Exception as exc:
 			exception = Error( exc )
@@ -24848,6 +24973,9 @@ class OpenSky( Fetcher ):
 			
 			return self.access_token
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -24896,6 +25024,9 @@ class OpenSky( Fetcher ):
 			self.payload = self.response.json( )
 			return self.payload
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -24959,6 +25090,9 @@ class OpenSky( Fetcher ):
 			
 			return self.result
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -25016,6 +25150,9 @@ class OpenSky( Fetcher ):
 			
 			return self.result
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -25075,6 +25212,9 @@ class OpenSky( Fetcher ):
 			
 			return self.result
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -25148,6 +25288,9 @@ class OpenSky( Fetcher ):
 			
 			return self.normalize_states( self.payload )
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -25186,6 +25329,9 @@ class OpenSky( Fetcher ):
 			
 			return self.normalize_flights( self.payload, self.mode )
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -25224,6 +25370,9 @@ class OpenSky( Fetcher ):
 			
 			return self.normalize_flights( self.payload, self.mode )
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -25263,6 +25412,9 @@ class OpenSky( Fetcher ):
 			
 			return self.normalize_flights( self.payload, self.mode )
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -25301,6 +25453,9 @@ class OpenSky( Fetcher ):
 			
 			return self.normalize_track( self.payload )
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -25372,6 +25527,9 @@ class OpenSky( Fetcher ):
 			raise ValueError( "Unsupported mode. Use 'states_bbox', 'flights_aircraft', "
 				"'arrivals_airport', 'departures_airport', or 'track_aircraft'." )
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -25424,6 +25582,9 @@ class OpenSky( Fetcher ):
 					}
 			}
 		
+		except Error:
+			raise
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
