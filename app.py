@@ -1004,7 +1004,7 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 	store_key = f'{key_prefix}_vector_store_provider'
 	index_key = f'{key_prefix}_pinecone_index'
 	namespace_key = f'{key_prefix}_pinecone_namespace'
-	reset_key = f'{key_prefix}_processing_reset_request'	
+	reset_key = f'{key_prefix}_processing_reset_request'
 	if st.session_state.get( reset_key, False ):
 		st.session_state[ size_key ] = DEFAULT_CHUNK_SIZE
 		st.session_state[ overlap_key ] = DEFAULT_CHUNK_OVERLAP
@@ -1015,7 +1015,6 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 		st.session_state[ index_key ] = ''
 		st.session_state[ namespace_key ] = ''
 		st.session_state[ reset_key ] = False
-	
 	defaults = { size_key: DEFAULT_CHUNK_SIZE, overlap_key: DEFAULT_CHUNK_OVERLAP,
 			provider_key: DEFAULT_EMBEDDING_PROVIDER, model_key: DEFAULT_EMBEDDING_MODEL,
 			path_key: '', store_key: VECTOR_STORES[ 0 ], index_key: '', namespace_key: '', }
@@ -1028,7 +1027,6 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 		st.session_state[ overlap_key ] = max( 0, int( st.session_state[ size_key ] ) // 5, )
 	
 	chunk_max = max( 5000, int( st.session_state[ size_key ] ) )
-	
 	chunk_col, overlap_col = st.columns( 2 )
 	with chunk_col:
 		st.slider( 'Chunk Size', min_value=1, max_value=chunk_max, step=1, key=size_key, )
