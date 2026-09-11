@@ -1,83 +1,79 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/app/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/app/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/architecture/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/architecture/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/data-management/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/development/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/development/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/fetching-scraping/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/fetching-scraping/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/generation/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/generation/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/loading/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/loading/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/outputs/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/outputs/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/user-guide/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/user-guide/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/api/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/api/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/api/core/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/api/core/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/api/data/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/api/data/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/api/fetchers/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/api/fetchers/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/api/generators/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/api/generators/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/api/loaders/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/api/loaders/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/api/models/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/api/models/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/api/processors/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/api/processors/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/api/scrapers/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
     <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/api/scrapers/</loc>
-         <lastmod>2026-09-04</lastmod>
-    </url>
-    <url>
-         <loc>https://is-leeroy-jenkins.github.io/Foo/api/writers/</loc>
-         <lastmod>2026-09-04</lastmod>
+         <loc>https://is-leeroy-jenkins.github.io/foo/api/writers/</loc>
+         <lastmod>2026-09-11</lastmod>
     </url>
 </urlset>
