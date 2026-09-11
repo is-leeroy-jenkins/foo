@@ -1455,7 +1455,7 @@ if mode == 'Loading':
 				file_ids = [ ]
 				nltk_c1, nltk_c2,= st.columns( 2 )
 				with nltk_c1:
-					corpus_name = st.selectbox( 'Select corpus',
+					corpus_name = st.selectbox( 'Select Corpus',
 						[ 'Brown', 'Gutenberg', 'Reuters', 'WebText', 'Inaugural',
 								'State of the Union' ], key='nltk_corpus_name' )
 
@@ -1658,17 +1658,17 @@ if mode == 'Loading':
 			# ----------------------------
 			# ------ Expander CSV Loader
 			# ----------------------------
-			with st.expander( label="CSV Loader", icon='📑', expanded=False ):
-				csv_file = st.file_uploader( label="Upload CSV", type=[ "csv" ],
-					key="csv_upload", help=cfg.CSV_LOADER )
+			with st.expander( label='CSV Loader', icon='📑', expanded=False ):
+				csv_file = st.file_uploader( label='Upload CSV', type=[ 'csv' ],
+					key='csv_upload', help=cfg.CSV_LOADER )
 				
 				st.divider( )
 				
 				csv_c1, csv_c2 = st.columns( 2 )
 				with csv_c1:
-					delimiter = st.text_input( "Delimiter", value=",", key="csv_delim", )
+					delimiter = st.text_input( 'Delimiter', value=',', key='csv_delim', )
 				with csv_c2:
-					quotechar = st.text_input( "Quote Character", value='"', key="csv_quote", )
+					quotechar = st.text_input( 'Quote Character', value="", key='csv_quote', )
 				
 				render_document_processing_inputs( 'CsvLoader', 'csv' )
 
@@ -1695,9 +1695,9 @@ if mode == 'Loading':
 				# --------------------------------------------------
 				if clear_csv:
 					reset_document_processing_controls( 'csv' )
-					clear_if_active( "CsvLoader" )
+					clear_if_active( 'CsvLoader' )
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
-					st.session_state[ "_loader_status" ] = "CSV Loader state cleared."
+					st.session_state[ '_loader_status' ] = 'CSV Loader state cleared.'
 				
 				# --------------------------------------------------
 				# Load
@@ -1705,7 +1705,7 @@ if mode == 'Loading':
 				if load_csv and csv_file:
 					with tempfile.TemporaryDirectory( ) as tmp:
 						path = os.path.join( tmp, csv_file.name )
-						with open( path, "wb" ) as f:
+						with open( path, 'wb' ) as f:
 							f.write( csv_file.read( ) )
 						
 						loader = CsvLoader( )
@@ -1715,13 +1715,13 @@ if mode == 'Loading':
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
 					st.session_state.raw_text = "\n\n".join( d.page_content for d in documents if
-							hasattr( d, "page_content" ) and isinstance( d.page_content, str ) \
+							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) \
 							and d.page_content.strip( ) )
 					st.session_state.processed_text = None
-					st.session_state.active_loader = "CsvLoader"
+					st.session_state.active_loader = 'CsvLoader'
 					
-					st.session_state[ "_loader_status" ] = \
-						f"Loaded {len( documents )} CSV document(s)."
+					st.session_state[ '_loader_status' ] = \
+						f'Loaded {len( documents )} CSV document(s).'
 			
 			# ----------------------------
 			# ---- XML Loader
@@ -1864,18 +1864,18 @@ if mode == 'Loading':
 				# ------------------------------------------------------------------
 				# Debug / Introspection
 				# ------------------------------------------------------------------
-				with st.expander( "ℹ Loader State" ):
+				with st.expander( 'ℹ Loader State' ):
 					xml_loader = st.session_state.get( 'xml_loader' )
 					
 					if xml_loader is None:
-						st.info( "No loader initialized." )
+						st.info( 'No loader initialized.' )
 					else:
-						st.json( { "file_path": getattr( xml_loader, 'file_path', None ),
-								"documents_loaded": getattr( xml_loader, 'documents', None ) is not None,
-								"xml_tree_loaded": getattr( xml_loader, 'xml_tree', None ) is not None,
-								"namespaces": getattr( xml_loader, 'xml_namespaces', None ),
-								"chunk_size": getattr( xml_loader, 'chunk_size', None ),
-								"overlap_amount": getattr( xml_loader, 'overlap_amount', None ), } )
+						st.json( { 'file_path': getattr( xml_loader, 'file_path', None ),
+								'documents_loaded': getattr( xml_loader, 'documents', None ) is not None,
+								'xml_tree_loaded': getattr( xml_loader, 'xml_tree', None ) is not None,
+								'namespaces': getattr( xml_loader, 'xml_namespaces', None ),
+								'chunk_size': getattr( xml_loader, 'chunk_size', None ),
+								'overlap_amount': getattr( xml_loader, 'overlap_amount', None ), } )
 			
 
 				render_source_processing_controls( 'XmlLoader', 'loader_xml_loader' )
@@ -2116,10 +2116,9 @@ if mode == 'Loading':
 				clear_pptx = col_clear.button( 'Clear', key='pptx_clear', icon='🧹', width='stretch' )
 				
 				# ---------- Save
-				can_save = (
-							st.session_state.get( 'active_loader' ) == 'PowerPointLoader' \
+				can_save = (st.session_state.get( 'active_loader' ) == 'PowerPointLoader' \
 							and isinstance( st.session_state.get( 'raw_text' ), str ) \
-							and st.session_state.get( 'raw_text' ).strip( ))
+							and st.session_state.get( 'raw_text' ).strip( ) )
 				
 				if can_save:
 					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ),
@@ -2139,7 +2138,7 @@ if mode == 'Loading':
 				if load_pptx and pptx:
 					with tempfile.TemporaryDirectory( ) as tmp:
 						path = os.path.join( tmp, pptx.name )
-						with open( path, "wb" ) as f:
+						with open( path, 'wb' ) as f:
 							f.write( pptx.read( ) )
 						
 						loader = PowerPointLoader( )
@@ -2150,8 +2149,8 @@ if mode == 'Loading':
 					st.session_state.raw_text = "\n\n".join( d.page_content for d in documents if
 							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) \
 							and d.page_content.strip( ) )
-					st.session_state.active_loader = "PowerPointLoader"
-					st.success( f"Loaded {len( documents )} PowerPoint document(s)." )
+					st.session_state.active_loader = 'PowerPointLoader'
+					st.success( f'Loaded {len( documents )} PowerPoint document(s).' )
 			
 			# ----------------------------
 			# ------ Expander Jupyter Notebook Loader
@@ -2240,11 +2239,12 @@ if mode == 'Loading':
 					st.session_state.chunked_documents = None
 					st.session_state.df_chunks = None
 					st.session_state.active_loader = 'JupyterNotebookLoader'
-					st.session_state[
-						'_loader_status' ] = f'Loaded {len( documents )} notebook document(s).'
+					st.session_state[ '_loader_status' ] = \
+						f'Loaded {len( documents )} notebook document(s).'
 			
 
-				render_source_processing_controls( 'JupyterNotebookLoader', 'loader_jupyter_notebook_loader' )
+				render_source_processing_controls( 'JupyterNotebookLoader',
+					'loader_jupyter_notebook_loader' )
 			
 			# ----------------------------
 			# ------- Expander Excel Loader
@@ -2316,12 +2316,12 @@ if mode == 'Loading':
 				if load_excel and excel_file:
 					with tempfile.TemporaryDirectory( ) as tmp:
 						excel_path = os.path.join( tmp, excel_file.name )
-						with open( excel_path, "wb" ) as f:
+						with open( excel_path, 'wb' ) as f:
 							f.write( excel_file.read( ) )
 						
 						documents = [ ]
 						if load_mode == 'Tabular + SQLite':
-							sqlite_path = os.path.join( "stores", "sqlite", "data.db" )
+							sqlite_path = os.path.join( 'stores', 'sqlite', 'data.db' )
 							os.makedirs( os.path.dirname( sqlite_path ), exist_ok=True )
 							if sheet_name.strip( ):
 								dfs = { sheet_name: pd.read_excel( excel_path,
@@ -2334,8 +2334,8 @@ if mode == 'Loading':
 								for sheet, df in dfs.items( ):
 									if df.empty:
 										continue
-									table_name = f"{table_prefix}_{sheet}".replace( " ", "_" ).lower( )
-									df.to_sql( table_name, conn, if_exists="replace", index=False, )
+									table_name = f'{table_prefix}_{sheet}'.replace( ' ', '_' ).lower( )
+									df.to_sql( table_name, conn, if_exists='replace', index=False, )
 									text = df.to_csv( index=False )
 									documents.append( Document( page_content=text, metadata={
 											'loader': 'ExcelLoader', 'source': excel_file.name,
@@ -2376,15 +2376,15 @@ if mode == 'Loading':
 						
 						if load_mode == 'Tabular + SQLite':
 							st.success(
-								f"Loaded {len( documents )} sheet(s) and stored in SQLite." )
+								f'Loaded {len( documents )} sheet(s) and stored in SQLite.' )
 						else:
 							st.success(
-								f"Loaded {len( documents )} Excel {unstructured_mode!r} mode." )
+								f'Loaded {len( documents )} Excel {unstructured_mode!r} mode.' )
 					else:
 						if load_mode == 'Tabular + SQLite':
-							st.warning( "No data loaded (empty sheets or invalid selection)." )
+							st.warning( 'No data loaded (empty sheets or invalid selection).' )
 						else:
-							st.warning( "No Excel document content was loaded." )
+							st.warning( 'No Excel document content was loaded.' )
 			
 			# ----------------------------
 			# ------ Expander Markdown Loader
@@ -2411,8 +2411,7 @@ if mode == 'Loading':
 				load_md = col_load.button( 'Load', key='md_load', icon='📤', width='stretch' )
 				clear_md = col_clear.button( 'Clear', key='md_clear', icon='🧹', width='stretch' )
 				
-				can_save = (
-						st.session_state.get( 'active_loader' ) == 'MarkdownLoader' \
+				can_save = ( st.session_state.get( 'active_loader' ) == 'MarkdownLoader' \
 						and isinstance( st.session_state.get( 'raw_text' ), str ) \
 						and st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -2438,7 +2437,7 @@ if mode == 'Loading':
 				if load_md and md:
 					with tempfile.TemporaryDirectory( ) as tmp:
 						path = os.path.join( tmp, md.name )
-						with open( path, "wb" ) as f:
+						with open( path, 'wb' ) as f:
 							f.write( md.read( ) )
 						
 						loader = MarkdownLoader( )
@@ -2446,11 +2445,11 @@ if mode == 'Loading':
 					
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
-					st.session_state.raw_text = "\n\n".join( d.page_content for d in documents if
+					st.session_state.raw_text = '\n\n'.join( d.page_content for d in documents if
 							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) \
 							and d.page_content.strip( ) )
-					st.session_state.active_loader = "MarkdownLoader"
-					st.success( f"Loaded {len( documents )} Markdown document(s)." )
+					st.session_state.active_loader = 'MarkdownLoader'
+					st.success( f'Loaded {len( documents )} Markdown document(s).' )
 			
 			# ----------------------------
 			# ---- Expander HTML Loader
@@ -2491,8 +2490,8 @@ if mode == 'Loading':
 				# --------------------------------------------------
 				if clear_html:
 					reset_document_processing_controls( 'html' )
-					clear_if_active( "HtmlLoader" )
-					st.info( "HTML Loader state cleared." )
+					clear_if_active( 'HtmlLoader' )
+					st.info( 'HTML Loader state cleared.' )
 				
 				# --------------------------------------------------
 				# Load
@@ -2500,7 +2499,7 @@ if mode == 'Loading':
 				if load_html and html:
 					with tempfile.TemporaryDirectory( ) as tmp:
 						path = os.path.join( tmp, html.name )
-						with open( path, "wb" ) as f:
+						with open( path, 'wb' ) as f:
 							f.write( html.read( ) )
 						
 						loader = HtmlLoader( )
@@ -2508,9 +2507,9 @@ if mode == 'Loading':
 					
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
-					st.session_state.raw_text = "\n\n".join( d.page_content for d in documents )
-					st.session_state.active_loader = "HtmlLoader"
-					st.success( f"Loaded {len( documents )} HTML document(s)." )
+					st.session_state.raw_text = '\n\n'.join( d.page_content for d in documents )
+					st.session_state.active_loader = 'HtmlLoader'
+					st.success( f'Loaded {len( documents )} HTML document(s).' )
 			
 			# ----------------------------
 			# --------- Expander JSON Loader
@@ -2713,43 +2712,43 @@ if mode == 'Loading':
 			# ----- Expander GitHub Loader
 			# ----------------------------
 			with st.expander( label='GitHub Loader', icon='🐙', expanded=False ):
-				gh_url = st.text_input( "GitHub API URL", placeholder="https://api.github.com",
-					value="https://api.github.com", key="gh_url", help="GitHub REST API base URL.",)
+				gh_url = st.text_input( 'GitHub API URL', placeholder='https://api.github.com',
+					value='https://api.github.com', key='gh_url', help='GitHub REST API base URL.',)
 				
-				gh_repo = st.text_input( "Repo (owner/name)", placeholder="openai/openai-python",
-					key="gh_repo", help="Name of the repository.", )
+				gh_repo = st.text_input( 'Repo (owner/name)', placeholder='openai/openai-python',
+					key='gh_repo', help='Name of the repository.', )
 				
-				gh_branch = st.text_input( "Branch", placeholder="main", value="main",
-					key="gh_branch", help="The branch of the repository.", )
+				gh_branch = st.text_input( 'Branch', placeholder='main', value='main',
+					key='gh_branch', help='The branch of the repository.', )
 				
-				gh_filetype = st.text_input( "File type filter", value=".md",
-					key="gh_filetype", help="Filtering by file type. Example: .py, .md, .txt", )
+				gh_filetype = st.text_input( 'File type filter', value='.md',
+					key='gh_filetype', help='Filtering by file type. Example: .py, .md, .txt', )
 				
-				gh_access_token = st.text_input( "GitHub Access Token (optional)", value="",
-					type="password", key="gh_access_token", help="Optional personal access token.")
+				gh_access_token = st.text_input( 'GitHub Access Token (optional)', value="",
+					type='password', key='gh_access_token', help='Optional personal access token.')
 				
 				col_fetch, col_clear, col_save = st.columns( 3 )
-				gh_fetch = col_fetch.button( "Load", key="gh_fetch", icon='📤', width='stretch' )
+				gh_fetch = col_fetch.button( 'Load', key='gh_fetch', icon='📤', width='stretch' )
 				gh_clear = col_clear.button( "Clear", key="gh_clear", icon='🧹', width='stretch' )
 				
 				can_save = (
-						st.session_state.get( "active_loader" ) == "GithubLoader" \
-						and isinstance( st.session_state.get( "raw_text" ), str ) \
-						and st.session_state.get( "raw_text" ).strip( ) )
+						st.session_state.get( 'active_loader' ) == 'GithubLoader' \
+						and isinstance( st.session_state.get( 'raw_text' ), str ) \
+						and st.session_state.get( 'raw_text' ).strip( ) )
 				
 				if can_save:
-					col_save.download_button( "Save", data=st.session_state.get( "raw_text" ),
-						file_name="github_loader_output.txt", mime="text/plain",
-						key="gh_save", icon='💾', width='stretch' )
+					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ),
+						file_name='github_loader_output.txt', mime='text/plain',
+						key='gh_save', icon='💾', width='stretch' )
 				else:
-					col_save.button( "Save", key="gh_save_disabled", disabled=True,
+					col_save.button( 'Save', key='gh_save_disabled', disabled=True,
 						icon='💾', width='stretch' )
 				
-				if gh_clear and st.session_state.get( "documents" ):
+				if gh_clear and st.session_state.get( 'documents' ):
 					st.session_state.documents = [ d for d in st.session_state.documents if
-							d.metadata.get( "loader" ) != "GithubLoader" ]
+							d.metadata.get( 'loader' ) != 'GithubLoader' ]
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
-					st.session_state[ "_loader_status" ] = "GithubLoader documents removed."
+					st.session_state[ '_loader_status' ] = 'GithubLoader documents removed.'
 				
 				if gh_fetch and gh_repo and gh_branch:
 					loader = GithubLoader( )
@@ -2757,23 +2756,23 @@ if mode == 'Loading':
 						gh_access_token, ) or [ ]
 					
 					for d in documents:
-						if not isinstance( getattr( d, "metadata", None ), dict ):
+						if not isinstance( getattr( d, 'metadata', None ), dict ):
 							d.metadata = { }
-						d.metadata[ "loader" ] = "GithubLoader"
-						d.metadata[ "source" ] = f"{gh_repo}@{gh_branch}"
+						d.metadata[ 'loader' ] = 'GithubLoader'
+						d.metadata[ 'source' ] = f'{gh_repo}@{gh_branch}'
 					
 					if documents:
-						if st.session_state.get( "documents" ):
+						if st.session_state.get( 'documents' ):
 							st.session_state.documents.extend( documents )
 						else:
 							st.session_state.documents = documents
 							st.session_state.raw_documents = list( documents )
 						
 						st.session_state.raw_text = rebuild_raw_text_from_documents( )
-						st.session_state.active_loader = "GithubLoader"
+						st.session_state.active_loader = 'GithubLoader'
 						
-						st.session_state[ "_loader_status" ] = \
-							f"Fetched {len( documents )} GitHub document(s)."
+						st.session_state[ '_loader_status' ] = \
+							f'Fetched {len( documents )} GitHub document(s).'
 			
 
 				render_source_processing_controls( 'GithubLoader', 'loader_github_loader' )
@@ -2854,36 +2853,36 @@ if mode == 'Loading':
 			# ----------------------------
 			# ------- Expander Web Loader
 			# ----------------------------
-			with st.expander( label="Web Loader", icon='🌐', expanded=False ):
-				urls = st.text_area( "Enter one URL per line",
-					placeholder="https://example.com\nhttps://another.com", key="web_urls", )
+			with st.expander( label='Web Loader', icon='🌐', expanded=False ):
+				urls = st.text_area( 'Enter one URL per line',
+					placeholder="https://example.com\nhttps://another.com", key='web_urls', )
 				
-				web_timeout = st.number_input( "Timeout (seconds)", min_value=1, max_value=120,
-					value=10, step=1, key="web_timeout", )
+				web_timeout = st.number_input( 'Timeout (seconds)', min_value=1, max_value=120,
+					value=10, step=1, key='web_timeout', )
 				
-				web_ignore = st.checkbox( "Continue On Failure", value=True,
-					key="web_ignore", help="Keep loading remaining URLs if one page fails." )
+				web_ignore = st.checkbox( 'Continue On Failure', value=True,
+					key='web_ignore', help='Keep loading remaining URLs if one page fails.' )
 				
 				col_fetch, col_clear, col_save = st.columns( 3 )
-				load_web = col_fetch.button( "Load", key="web_fetch", icon='📤', width='stretch' )
+				load_web = col_fetch.button( 'Load', key='web_fetch', icon='📤', width='stretch' )
 				clear_web = col_clear.button( "Clear", key="web_clear", icon='🧹', width='stretch' )
-				can_save = ( st.session_state.get( "active_loader" ) == "WebLoader" \
-							and isinstance( st.session_state.get( "raw_text" ), str ) \
-							and st.session_state.get( "raw_text" ).strip( ))
+				can_save = ( st.session_state.get( 'active_loader' ) == 'WebLoader' \
+							and isinstance( st.session_state.get( 'raw_text' ), str ) \
+							and st.session_state.get( 'raw_text' ).strip( ))
 				
 				if can_save:
-					col_save.download_button( "Save", data=st.session_state.get( "raw_text" ),
-						file_name="web_loader_output.txt", mime="text/plain",
-						key="web_save", icon='💾', width='stretch' )
+					col_save.download_button( 'Save', data=st.session_state.get( 'raw_text' ),
+						file_name='web_loader_output.txt', mime='text/plain',
+						key='web_save', icon='💾', width='stretch' )
 				else:
-					col_save.button( "Save", key="web_save_disabled", disabled=True,
+					col_save.button( 'Save', key='web_save_disabled', disabled=True,
 						icon='💾', width='stretch' )
 				
-				if clear_web and st.session_state.get( "documents" ):
+				if clear_web and st.session_state.get( 'documents' ):
 					st.session_state.documents = [ d for d in st.session_state.documents if
-							d.metadata.get( "loader" ) != "WebLoader" ]
+							d.metadata.get( 'loader' ) != 'WebLoader' ]
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
-					st.session_state[ "_loader_status" ] = "WebLoader documents removed."
+					st.session_state[ '_loader_status' ] = 'WebLoader documents removed.'
 				
 				if load_web and urls.strip( ):
 					loader = WebLoader( recursive=False )
@@ -2893,24 +2892,24 @@ if mode == 'Loading':
 							ignore=bool( web_ignore ), progress=True ) or [ ]
 						
 						for d in documents:
-							if not isinstance( getattr( d, "metadata", None ), dict ):
+							if not isinstance( getattr( d, 'metadata', None ), dict ):
 								d.metadata = { }
-							d.metadata[ "loader" ] = "WebLoader"
-							d.metadata[ "source" ] = url
+							d.metadata[ 'loader' ] = 'WebLoader'
+							d.metadata[ 'source' ] = url
 						
 						new_docs.extend( documents )
 					
 					if new_docs:
-						if st.session_state.get( "documents" ):
+						if st.session_state.get( 'documents' ):
 							st.session_state.documents.extend( new_docs )
 						else:
 							st.session_state.documents = new_docs
 							st.session_state.raw_documents = list( new_docs )
 						
 						st.session_state.raw_text = rebuild_raw_text_from_documents( )
-						st.session_state.active_loader = "WebLoader"
-						st.session_state[ "_loader_status" ] = \
-							f"Fetched {len( new_docs )} web document(s)."
+						st.session_state.active_loader = 'WebLoader'
+						st.session_state[ '_loader_status' ] = \
+							f'Fetched {len( new_docs )} web document(s).'
 			
 
 				render_source_processing_controls( 'WebLoader', 'loader_web_loader' )
@@ -3375,7 +3374,6 @@ if mode == 'Loading':
 							f'Loaded {len( documents )} Google Cloud file '
 							f'document(s).')
 			
-
 				render_source_processing_controls( 'GoogleCloudFileLoader', 'loader_google_cloud_file_loader' )
 			
 			# ----------------------------
@@ -3481,10 +3479,9 @@ if mode == 'Loading':
 					st.session_state.chunked_documents = None
 					st.session_state.df_chunks = None
 					st.session_state.active_loader = 'AwsFileLoader'
-					st.session_state[
-						'_loader_status' ] = f'Loaded {len( documents )} AWS file document(s).'
+					st.session_state[ '_loader_status' ] = \
+						f'Loaded {len( documents )} AWS file document(s).'
 			
-
 				render_source_processing_controls( 'AwsFileLoader', 'loader_aws_file_loader' )
 			
 			# ----------------------------
@@ -3534,10 +3531,9 @@ if mode == 'Loading':
 				# --------------------------------------------------
 				# Load
 				# --------------------------------------------------
-				if (
-						load_gcs_bucket and isinstance( gcs_bucket_project_name, str ) \
-						and gcs_bucket_project_name.strip( ) and isinstance( gcs_bucket_name, str )\
-						and gcs_bucket_name.strip( )):
+				if ( load_gcs_bucket and isinstance( gcs_bucket_project_name, str ) \
+					and gcs_bucket_project_name.strip( ) and isinstance( gcs_bucket_name, str )\
+					and gcs_bucket_name.strip( )):
 					loader = GoogleBucketLoader( )
 					documents = loader.load( project_name=gcs_bucket_project_name.strip( ),
 						bucket=gcs_bucket_name.strip( ), prefix=gcs_bucket_prefix.strip( ) or None,
@@ -3558,10 +3554,10 @@ if mode == 'Loading':
 						
 						if gcs_bucket_prefix.strip( ):
 							document.metadata.setdefault( 'source',
-								f"gs://{gcs_bucket_name.strip( )}/{gcs_bucket_prefix.strip( )}" )
+								f'gs://{gcs_bucket_name.strip( )}/{gcs_bucket_prefix.strip( )}' )
 						else:
 							document.metadata.setdefault( 'source',
-								f"gs://{gcs_bucket_name.strip( )}" )
+								f'gs://{gcs_bucket_name.strip( )}' )
 					
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
@@ -3576,8 +3572,8 @@ if mode == 'Loading':
 					st.session_state[ '_loader_status' ] = (
 							f'Loaded {len( documents )} Google bucket document(s).')
 			
-
-				render_source_processing_controls( 'GoogleBucketLoader', 'loader_google_bucket_loader' )
+				render_source_processing_controls( 'GoogleBucketLoader', 
+					'loader_google_bucket_loader' )
 			
 			# ----------------------------
 			# ---- Expander AWS Bucket Loader
@@ -3678,10 +3674,10 @@ if mode == 'Loading':
 						
 						if aws_bucket_prefix.strip( ):
 							document.metadata.setdefault( 'source',
-								f"s3://{aws_bucket_name.strip( )}/{aws_bucket_prefix.strip( )}" )
+								f's3://{aws_bucket_name.strip( )}/{aws_bucket_prefix.strip( )}' )
 						else:
 							document.metadata.setdefault( 'source',
-								f"s3://{aws_bucket_name.strip( )}" )
+								f's3://{aws_bucket_name.strip( )}' )
 					
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
@@ -3744,7 +3740,8 @@ if mode == 'Loading':
 				if (load_spfx and isinstance( spfx_library_id, str ) and spfx_library_id.strip( )):
 					loader = SpfxLoader( )
 					if isinstance( spfx_folder_id, str ) and spfx_folder_id.strip( ):
-						documents = loader.load_folder( library_id=spfx_library_id.strip( ), folder_id=spfx_folder_id.strip( ), ) or [ ]
+						documents = loader.load_folder( library_id=spfx_library_id.strip( ), 
+							folder_id=spfx_folder_id.strip( ), ) or [ ]
 					else:
 						documents = loader.load( library_id=spfx_library_id.strip( ), ) or [ ]
 					
@@ -3757,24 +3754,26 @@ if mode == 'Loading':
 						document.metadata.setdefault( 'folder_id', spfx_folder_id.strip( ) or None, )
 						
 						if spfx_folder_id.strip( ):
-							document.metadata.setdefault( 'source', f"{spfx_library_id.strip( )}:{spfx_folder_id.strip( )}" )
+							document.metadata.setdefault( 'source',
+								f'{spfx_library_id.strip( )}:{spfx_folder_id.strip( )}' )
 						else:
 							document.metadata.setdefault( 'source', spfx_library_id.strip( ), )
 					
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
 					st.session_state.raw_text = '\n\n'.join( d.page_content for d in documents if
-							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) and d.page_content.strip( ) )
+							hasattr( d, 'page_content' ) and isinstance( d.page_content, str ) \
+							and d.page_content.strip( ) )
 					st.session_state.processed_text = None
 					st.session_state.lines = None
 					st.session_state.chunked_documents = None
 					st.session_state.df_chunks = None
 					st.session_state.active_loader = 'SpfxLoader'
-					st.session_state[
-						'_loader_status' ] = f'Loaded {len( documents )} SharePoint document(s).'
+					st.session_state[ '_loader_status' ] = \
+						f'Loaded {len( documents )} SharePoint document(s).'
 	
-
 				render_source_processing_controls( 'SpfxLoader', 'loader_sharepoint_loader' )
+				
 	# ------------------------------------------------------------------
 	# RIGHT COLUMN — DOCUMENT RENDERING
 	# ------------------------------------------------------------------

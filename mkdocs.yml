@@ -1,8 +1,8 @@
 site_name: Foo Documentation
 site_description: Documentation for Foo, a Streamlit and Python application for information acquisition and analysis workflows.
 site_author: Terry D. Eppler
-site_url: https://is-leeroy-jenkins.github.io/Foo/
-repo_url: https://github.com/is-leeroy-jenkins/Foo
+site_url: https://is-leeroy-jenkins.github.io/foo/
+repo_url: https://github.com/is-leeroy-jenkins/foo
 repo_name: is-leeroy-jenkins/Foo
 
 copyright: Copyright © 2025 Terry Eppler
