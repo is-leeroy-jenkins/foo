@@ -991,7 +991,7 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 	"""
 	throw_if( 'loader_name', loader_name )
 	throw_if( 'key_prefix', key_prefix )
-	st.markdown( '##### Document Processing' )
+	st.markdown( '##### Processing' )
 	ensure_document_processing_state( )
 	size_key = f'{key_prefix}_chunk_size'
 	overlap_key = f'{key_prefix}_chunk_overlap'
@@ -1060,21 +1060,19 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 	
 	st.divider( )
 	
-	vector_c1, vector_c2 = st.columns( 2 )
-	with vector_c1:
-		store_provider = st.selectbox( 'Vector Store', options=VECTOR_STORES, key=store_key, )
-		if store_provider == 'Pinecone':
-			cone_c1, cone_c2 = st.columns( 2, border=True )
-			with cone_c1:
-				st.text_input( 'Pinecone Index', key=index_key,
-					placeholder='Existing Pinecone index', )
-				
-			with cone_c2:
-				st.text_input( 'Pinecone Namespace', key=namespace_key,
-					placeholder='Optional namespace', )
-		else:
-			st.text_input( 'Chroma Directory', value=str( CHROMA_DIRECTORY ), disabled=True,
-				key=f'{key_prefix}_chroma_directory', )
+	store_provider = st.selectbox( 'Vector Store', options=VECTOR_STORES, key=store_key, )
+	if store_provider == 'Pinecone':
+		cone_c1, cone_c2 = st.columns( 2, border=True )
+		with cone_c1:
+			st.text_input( 'Pinecone Index', key=index_key,
+				placeholder='Existing Pinecone index', )
+			
+		with cone_c2:
+			st.text_input( 'Pinecone Namespace', key=namespace_key,
+				placeholder='Optional namespace', )
+	else:
+		st.text_input( 'Chroma Directory', value=str( CHROMA_DIRECTORY ), disabled=True,
+			key=f'{key_prefix}_chroma_directory', )
 		
 def render_document_processing_actions( loader_name: str, key_prefix: str ) -> None:
 	"""Render and execute Chunk, Embed, and Store actions for one loader.
@@ -1453,7 +1451,7 @@ if mode == 'Loading':
 				import nltk
 				from nltk.corpus import (brown, gutenberg, reuters, webtext, inaugural, state_union)
 				
-				st.markdown( '###### NLTK Corpora', help=cfg.NLTK_LOADER  )
+				st.markdown( '##### NLTK Corpora', help=cfg.NLTK_LOADER  )
 				file_ids = [ ]
 				nltk_c1, nltk_c2,= st.columns( 2 )
 				with nltk_c1:
@@ -1483,7 +1481,7 @@ if mode == 'Loading':
 						options=file_ids, key='nltk_file_ids', )
 				
 
-				st.markdown( '###### Local Corpus' )
+				st.markdown( '##### Local Corpus' )
 				st.divider( )
 				local_corpus_dir = st.text_input( 'Local directory',
 					placeholder='path/to/text/files', key='nltk_local_dir', )
@@ -1506,6 +1504,7 @@ if mode == 'Loading':
 					mime='text/plain', disabled=not bool( _nltk_text.strip( ) ),
 					icon='💾', width='stretch' )
 				
+				st.divider( )
 				# ------------------------------------------------------------------
 				# Clear
 				# ------------------------------------------------------------------
