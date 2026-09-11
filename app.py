@@ -1058,17 +1058,23 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 				st.text_input( 'Local GGUF Model', key=path_key,
 					placeholder='Path to a local embedding GGUF model', )
 	
-	store_provider = st.selectbox( 'Vector Store', options=VECTOR_STORES, key=store_key, )
-	if store_provider == 'Pinecone':
-		cone_c1, cone_c2 = st.columns( 2, border=True )
-		with cone_c1:
-			st.text_input( 'Pinecone Index', key=index_key, placeholder='Existing Pinecone index', )
-			
-		with cone_c2:
-			st.text_input( 'Pinecone Namespace', key=namespace_key, placeholder='Optional namespace', )
-	else:
-		st.text_input( 'Chroma Directory', value=str( CHROMA_DIRECTORY ), disabled=True,
-			key=f'{key_prefix}_chroma_directory', )
+	st.divider( )
+	
+	vector_c1, vector_c2 = st.columns( 2 )
+	with vector_c1:
+		store_provider = st.selectbox( 'Vector Store', options=VECTOR_STORES, key=store_key, )
+		if store_provider == 'Pinecone':
+			cone_c1, cone_c2 = st.columns( 2, border=True )
+			with cone_c1:
+				st.text_input( 'Pinecone Index', key=index_key,
+					placeholder='Existing Pinecone index', )
+				
+			with cone_c2:
+				st.text_input( 'Pinecone Namespace', key=namespace_key,
+					placeholder='Optional namespace', )
+		else:
+			st.text_input( 'Chroma Directory', value=str( CHROMA_DIRECTORY ), disabled=True,
+				key=f'{key_prefix}_chroma_directory', )
 		
 def render_document_processing_actions( loader_name: str, key_prefix: str ) -> None:
 	"""Render and execute Chunk, Embed, and Store actions for one loader.
@@ -1656,8 +1662,14 @@ if mode == 'Loading':
 			with st.expander( label="CSV Loader", icon='📑', expanded=False ):
 				csv_file = st.file_uploader( label="Upload CSV", type=[ "csv" ],
 					key="csv_upload", help=cfg.CSV_LOADER )
-				delimiter = st.text_input( "Delimiter", value=",", key="csv_delim", )
-				quotechar = st.text_input( "Quote Character", value='"', key="csv_quote", )
+				
+				st.divider( )
+				
+				csv_c1, csv_c2 = st.columns( 2 )
+				with csv_c1:
+					delimiter = st.text_input( "Delimiter", value=",", key="csv_delim", )
+				with csv_c2:
+					quotechar = st.text_input( "Quote Character", value='"', key="csv_quote", )
 				
 				render_document_processing_inputs( 'CsvLoader', 'csv' )
 
@@ -1729,7 +1741,10 @@ if mode == 'Loading':
 				xml_file = st.file_uploader( label='Select XML file', type=[ 'xml' ],
 					accept_multiple_files=False, key='xml_file_uploader', help=cfg.XML_LOADER )
 				st.text( 'Semantic XML Loading (Unstructured)' )
-				col1, col2 = st.columns( 2 )
+				
+				st.divider( )
+				
+				col1, col2 = st.columns( 2, border=True )
 				with col1:
 					chunk_size = st.number_input( 'Chunk Size', min_value=100, max_value=5000,
 						value=1000, step=100 )
@@ -1741,17 +1756,19 @@ if mode == 'Loading':
 				# --------------------------------------------------
 				# Semantic Load
 				# --------------------------------------------------
-				if st.button( 'Load XML (Semantic)', use_container_width=True, icon='📤', ):
-					if xml_file is None:
-						st.warning( 'Please select an XML file.' )
-					else:
-						with tempfile.TemporaryDirectory( ) as tmp:
-							path = os.path.join( tmp, xml_file.name )
-							with open( path, 'wb' ) as f:
-								f.write( xml_file.read( ) )
-							
-							with st.spinner( 'Loading XML via UnstructuredXMLLoader...' ):
-								documents = loader.load( path )
+				btn_c1, btn_c2 = st.columns( 2 )
+				with btn_c1:
+					if st.button( 'Load XML (Semantic)', use_container_width=True, icon='📤', ):
+						if xml_file is None:
+							st.warning( 'Please select an XML file.' )
+						else:
+							with tempfile.TemporaryDirectory( ) as tmp:
+								path = os.path.join( tmp, xml_file.name )
+								with open( path, 'wb' ) as f:
+									f.write( xml_file.read( ) )
+								
+								with st.spinner( 'Loading XML via UnstructuredXMLLoader...' ):
+									documents = loader.load( path )
 						
 						if documents:
 							raw_text = '\n\n'.join( d.page_content for d in documents if
@@ -1773,14 +1790,15 @@ if mode == 'Loading':
 				# --------------------------------------------------
 				# Split Semantic Documents
 				# --------------------------------------------------
-				if st.button( 'Split Semantic Documents', use_container_width=True, icon='➗', ):
-					with st.spinner( 'Splitting documents...' ):
-						split_docs = loader.split( size=int( chunk_size ),
-							amount=int( overlap_amount ) )
-					
-					if split_docs:
-						st.session_state[ 'xml_split_documents' ] = split_docs
-						st.success( f'Produced {len( split_docs )} document chunks.' )
+				with btn_c2:
+					if st.button( 'Split Semantic Documents', use_container_width=True, icon='➗', ):
+						with st.spinner( 'Splitting documents...' ):
+							split_docs = loader.split( size=int( chunk_size ),
+								amount=int( overlap_amount ) )
+						
+							if split_docs:
+								st.session_state[ 'xml_split_documents' ] = split_docs
+								st.success( f'Produced {len( split_docs )} document chunks.' )
 				
 				# ------------------------------------------------------------------
 				# Structured XML Tree Loading
@@ -1870,11 +1888,14 @@ if mode == 'Loading':
 				word_file = st.file_uploader( 'Upload Word Document', type=[ 'docx' ],
 					key='word_upload', help=cfg.WORD_LOADER )
 				
+				st.divider( )
+				
 				render_document_processing_inputs( 'WordLoader', 'word' )
 
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
 				# --------------------------------------------------
+				st.divider( )
 				col_load, col_clear, col_save = st.columns( 3 )
 				load_word = col_load.button( 'Load', key='word_load', icon='📤', width='stretch' )
 				clear_word = col_clear.button( 'Clear', key='word_clear', icon='🧹', width='stretch' )
@@ -1917,7 +1938,6 @@ if mode == 'Loading':
 						
 						document.metadata[ 'loader' ] = 'WordLoader'
 						document.metadata.setdefault( 'source', word_file.name )
-					
 					st.session_state.documents = documents
 					st.session_state.raw_documents = list( documents )
 					st.session_state.raw_text = '\n\n'.join( d.page_content for d in documents if
@@ -1930,10 +1950,6 @@ if mode == 'Loading':
 					st.session_state.active_loader = 'WordLoader'
 					st.session_state[ '_loader_status' ] = \
 						f'Loaded {len( documents )} Word document(s).'
-			
-			# ----------------------------
-			# ------ Expander PDF Loader
-			# ----------------------------
 
 				render_document_processing_actions( 'WordLoader', 'word' )
 
@@ -1943,23 +1959,34 @@ if mode == 'Loading':
 			with st.expander( label='PDF Loader', icon='📕', expanded=False ):
 				pdf = st.file_uploader( 'Upload PDF', type=[ 'pdf' ], key='pdf_upload',
 					help=cfg.PDF_LOADER )
-				mode = st.selectbox( 'Mode', [ 'single', 'page' ], key='pdf_mode' )
 				
-				extract = st.selectbox( 'Extract', [ 'plain', 'layout' ], key='pdf_extract',
-					help='Used only when legacy extraction is enabled.' )
+				st.divider( )
 				
-				include = st.checkbox( 'Include Images', value=False, key='pdf_include',
-					help='Used only when legacy extraction is enabled.' )
+				pdf_c1, pdf_c2 = st.columns( 2, border=True )
+				with pdf_c1:
+					mode = st.selectbox( 'Mode', [ 'single', 'page' ], key='pdf_mode' )
 				
-				fmt = st.selectbox( 'Format', [ 'markdown-img', 'html-img', 'text-img' ],
-					key='pdf_fmt',
-					help='Used only when legacy extraction is enabled.' )
+				with pdf_c2:
+					extract = st.selectbox( 'Extract', [ 'plain', 'layout' ], key='pdf_extract',
+						help='Used only when legacy extraction is enabled.' )
 				
-				use_geometry = st.checkbox( 'Use Geometry Extraction', value=True,
-					key='pdf_use_geometry', help='Uses PyMuPDF block coordinates' )
+				img_c1, img_c2 = st.columns( 2 )
+				with img_c1:
+					include = st.checkbox( 'Include Images', value=False, key='pdf_include',
+						help='Used only when legacy extraction is enabled.' )
 				
-				use_legacy_pdf_loader = st.checkbox( 'Use Legacy PdfLoader', value=False,
-					key='pdf_use_legacy_loader', help='Falls back to the existing PdfLoader' )
+				with img_c2:
+					fmt = st.selectbox( 'Format', [ 'markdown-img', 'html-img', 'text-img' ],
+						key='pdf_fmt', help='Used only when legacy extraction is enabled.' )
+				
+				geo_c1, geo_c2 = st.columns( 2 )
+				with geo_c1:
+					use_geometry = st.checkbox( 'Use Geometry Extraction', value=True,
+						key='pdf_use_geometry', help='Uses PyMuPDF block coordinates' )
+				
+				with geo_c2:
+					use_legacy_pdf_loader = st.checkbox( 'Use Legacy PdfLoader', value=False,
+						key='pdf_use_legacy_loader', help='Falls back to the existing PdfLoader' )
 				
 				band_left, band_right = st.columns( 2, border=True )
 				with band_left:
@@ -1978,6 +2005,7 @@ if mode == 'Loading':
 				
 				render_document_processing_inputs( 'PdfLoader', 'pdf' )
 
+				st.divider( )
 				# --------------------------------------------------
 				# Buttons: Load / Clear / Save
 				# --------------------------------------------------
