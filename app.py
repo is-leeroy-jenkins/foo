@@ -1726,7 +1726,6 @@ if mode == 'Loading':
 			# ----------------------------
 			# ---- XML Loader
 			# ----------------------------
-
 				render_document_processing_actions( 'CsvLoader', 'csv' )
 
 			# ----------------------------
@@ -2155,7 +2154,6 @@ if mode == 'Loading':
 			# ----------------------------
 			# ------ Expander Jupyter Notebook Loader
 			# ----------------------------
-
 				render_document_processing_actions( 'PowerPointLoader', 'pptx' )
 
 			# ----------------------------
