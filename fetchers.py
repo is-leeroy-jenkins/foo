@@ -1789,7 +1789,6 @@ class Wikipedia( Fetcher ):
 		try:
 			throw_if( 'question', question )
 			self.query = question.strip( )
-			
 			lang = self.language if language is None else (language.strip( ) if language else 'en')
 			max_docs = self.max_documents if max_documents is None else max( 1, min( int(
 				max_documents ), 300 ) )
@@ -2744,7 +2743,7 @@ class GoogleMaps( Fetcher ):
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -2944,7 +2943,7 @@ class GoogleWeather( Fetcher ):
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		     metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
@@ -3002,11 +3001,11 @@ class GoogleWeather( Fetcher ):
 
 		Returns:
 		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			if not isinstance( self.result, dict ):
@@ -3030,9 +3029,8 @@ class GoogleWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_current( self, address: str, units_system: str='METRIC', language_code: str =
-	'en', time: int=10 ) -> \
-	Dict[ str, Any ] | None:
+	def fetch_current( self, address: str, units_system: str='METRIC',
+			language_code: str='en', time: int=10 ) -> Dict[ str, Any ] | None:
 		"""Fetch current.
 
 		Purpose:
@@ -3040,26 +3038,25 @@ class GoogleWeather( Fetcher ):
 
 		Args:
 		    address (str): Address supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    units_system (str): Units system supplied by the caller and interpreted according to
-		    the method contract.
+		        the method contract.
 		    language_code (str): Code identifying the requested language value.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'address', address )
 			throw_if( 'units_system', units_system )
 			throw_if( 'language_code', language_code )
 			throw_if( 'time', time )
-			
 			self.mode = 'current'
 			self.units_system = str( units_system ).strip( )
 			self.language_code = str( language_code ).strip( )
@@ -3081,14 +3078,12 @@ class GoogleWeather( Fetcher ):
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'GoogleWeather'
-			exception.method = ('fetch_current( self, *args, **kwargs ) -> Dict[ str, Any ] | '
-			                    'None')
+			exception.method = 'fetch_current( self, **kwargs ) -> Dict[ str, Any ] )'
 			Logger( ).write( exception )
 			raise exception
 	
 	def fetch_hourly_forecast( self, address: str, hours: int=24, units_system: str='METRIC',
-			language_code: str='en', time: int=10 ) -> \
-	Dict[ str, Any ] | None:
+			language_code: str='en', time: int=10 ) -> Dict[ str, Any ] | None:
 		"""Fetch hourly forecast.
 
 		Purpose:
@@ -3097,21 +3092,21 @@ class GoogleWeather( Fetcher ):
 
 		Args:
 		    address (str): Address supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    hours (int): Hours supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    units_system (str): Units system supplied by the caller and interpreted according to
-		    the method contract.
+		        the method contract.
 		    language_code (str): Code identifying the requested language value.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'address', address )
@@ -3119,13 +3114,11 @@ class GoogleWeather( Fetcher ):
 			throw_if( 'units_system', units_system )
 			throw_if( 'language_code', language_code )
 			throw_if( 'time', time )
-			
 			self.mode = 'hourly_forecast'
 			self.hours = int( hours )
 			self.units_system = str( units_system ).strip( )
 			self.language_code = str( language_code ).strip( )
 			self.timeout = int( time )
-			
 			if self.hours < 1 or self.hours > 240:
 				raise ValueError( 'hours must be between 1 and 240.' )
 			
@@ -3145,14 +3138,12 @@ class GoogleWeather( Fetcher ):
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'GoogleWeather'
-			exception.method = ('fetch_hourly_forecast( self, *args, **kwargs ) '
-			                    '-> Dict[ str, Any ] | None')
+			exception.method = 'fetch_hourly_forecast( self, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
 	def fetch_daily_forecast( self, address: str, days: int=5, units_system: str='METRIC',
-			language_code: str='en', time: int=10 ) -> \
-	Dict[ str, Any ] | None:
+			language_code: str='en', time: int=10 ) -> Dict[ str, Any ] | None:
 		"""Fetch daily forecast.
 
 		Purpose:
@@ -3161,21 +3152,21 @@ class GoogleWeather( Fetcher ):
 
 		Args:
 		    address (str): Address supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    days (int): Days supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    units_system (str): Units system supplied by the caller and interpreted according to
-		    the method contract.
+		        the method contract.
 		    language_code (str): Code identifying the requested language value.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'address', address )
@@ -3183,13 +3174,11 @@ class GoogleWeather( Fetcher ):
 			throw_if( 'units_system', units_system )
 			throw_if( 'language_code', language_code )
 			throw_if( 'time', time )
-			
 			self.mode = 'daily_forecast'
 			self.days = int( days )
 			self.units_system = str( units_system ).strip( )
 			self.language_code = str( language_code ).strip( )
 			self.timeout = int( time )
-			
 			if self.days < 1 or self.days > 10:
 				raise ValueError( 'days must be between 1 and 10.' )
 			
@@ -3215,8 +3204,7 @@ class GoogleWeather( Fetcher ):
 			raise exception
 	
 	def fetch_hourly_history( self, address: str, hours: int=24, units_system: str='METRIC',
-			language_code: str='en', time: int=10 ) -> \
-	Dict[ str, Any ] | None:
+			language_code: str='en', time: int=10 ) -> Dict[ str, Any ] | None:
 		"""Fetch hourly history.
 
 		Purpose:
@@ -3225,21 +3213,21 @@ class GoogleWeather( Fetcher ):
 
 		Args:
 		    address (str): Address supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    hours (int): Hours supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    units_system (str): Units system supplied by the caller and interpreted according to
-		    the method contract.
+		        the method contract.
 		    language_code (str): Code identifying the requested language value.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'address', address )
@@ -3277,10 +3265,8 @@ class GoogleWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_alerts( self, address: str, language_code: str='en', time: int=10 ) -> (Dict[
-		                                                                                     str,
-		                                                                                     Any ]
-	                                                                                      | None):
+	def fetch_alerts( self, address: str, language_code: str='en',
+			time: int=10 ) -> (Dict[ str, Any ] | None):
 		"""Fetch alerts.
 
 		Purpose:
@@ -3288,17 +3274,17 @@ class GoogleWeather( Fetcher ):
 
 		Args:
 		    address (str): Address supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    language_code (str): Code identifying the requested language value.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'address', address )
@@ -3409,7 +3395,7 @@ class NavalObservatory( Fetcher ):
 
 		Args:
 		    date_value (str): Date value supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 
 		Returns:
 		    str: Normalized text produced by the operation.
@@ -3439,14 +3425,14 @@ class NavalObservatory( Fetcher ):
 
 		Args:
 		    time_value (str): Time value supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 
 		Returns:
 		    str: Normalized text produced by the operation.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			value = str( time_value ).strip( )
@@ -3469,7 +3455,8 @@ class NavalObservatory( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def validate_coordinates( self, latitude: float, longitude: float ) -> tuple[ float, float ]:
+	def validate_coordinates( self, latitude: float,
+			longitude: float ) -> tuple[ float, float ]:
 		"""Validate coordinates.
 
 		Purpose:
@@ -3484,7 +3471,7 @@ class NavalObservatory( Fetcher ):
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			lat = float( latitude )
@@ -3506,8 +3493,7 @@ class NavalObservatory( Fetcher ):
 			raise exception
 	
 	def fetch_celnav( self, date_value: str, time_value: str, latitude: float, longitude: float,
-			location_label: str='', time: int=20 ) -> \
-	Dict[ str, Any ] | None:
+			location_label: str='', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch celnav.
 
 		Purpose:
@@ -3515,22 +3501,22 @@ class NavalObservatory( Fetcher ):
 
 		Args:
 		    date_value (str): Date value supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    time_value (str): Time value supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    latitude (float): Geographic latitude expressed in decimal degrees.
 		    longitude (float): Geographic longitude expressed in decimal degrees.
 		    location_label (str): Location label supplied by the caller and interpreted according
-		    to the method contract.
+		        to the method contract.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			self.date_value = self.validate_date( date_value )
@@ -3558,9 +3544,9 @@ class NavalObservatory( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='celnav', date_value: str='', time_value: str='', latitude:
-	float = 0.0, longitude: float=0.0, location_label: str='', time: int=20 ) -> \
-	Dict[ str, Any ] | None:
+	def fetch( self, mode: str='celnav', date_value: str='', time_value: str='',
+			latitude: float=0.0, longitude: float=0.0,
+			location_label: str='', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch.
 
 		Purpose:
@@ -3570,18 +3556,18 @@ class NavalObservatory( Fetcher ):
 		Args:
 		    mode (str): Provider or loader operating mode selected for the request.
 		    date_value (str): Date value supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    time_value (str): Time value supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    latitude (float): Geographic latitude expressed in decimal degrees.
 		    longitude (float): Geographic longitude expressed in decimal degrees.
 		    location_label (str): Location label supplied by the caller and interpreted according
-		    to the method contract.
+		        to the method contract.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
@@ -3604,8 +3590,7 @@ class NavalObservatory( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
-			required:
-	list[ str ] ) -> Dict[ str, str ] | None:
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Create schema.
 
 		Purpose:
@@ -3621,11 +3606,11 @@ class NavalObservatory( Fetcher ):
 
 		Returns:
 		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'function', function )
