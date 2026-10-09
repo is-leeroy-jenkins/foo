@@ -1,0 +1,4 @@
+# Build-only Windows desktop dependencies.
+# Application dependencies are installed from requirements.txt.
+pyinstaller>=6.10,<7
+pywebview>=5.4,<7
