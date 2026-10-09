@@ -41,6 +41,7 @@ def main( ) -> None:
 
     environment = os.environ.copy( )
     environment[ 'FOO_DESKTOP' ] = '1'
+    environment[ 'LOCALAPPDATA' ] = str( user_path.parent )
     environment[ 'LOG_DIR' ] = str( user_path / 'logging' )
     command = [sys.executable, '-m', 'streamlit', 'run', spec.origin]
     status = subprocess.call( command, cwd=str( user_path ), env=environment )

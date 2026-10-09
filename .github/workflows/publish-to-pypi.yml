@@ -54,11 +54,17 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           from zipfile import ZipFile
+          from configparser import ConfigParser
+          from io import StringIO
           wheel = next(Path('dist').glob('*.whl'))
           with ZipFile(wheel) as archive:
               names = set(archive.namelist())
               for item in ['app.py','foo_cli.py','foo_assets/__init__.py','foo_assets/streamlit_config.toml','boogr/__init__.py','stores/vector.py']:
                   assert item in names, f'Missing from wheel: {item}'
+              entrypoints = next(name for name in names if name.endswith('.dist-info/entry_points.txt'))
+              parsed = ConfigParser()
+              parsed.read_file(StringIO(archive.read(entrypoints).decode('utf-8')))
+              assert parsed['console_scripts']['foo-app'] == 'foo_cli:main'
           PY
       - uses: actions/upload-artifact@v4
         with:

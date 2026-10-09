@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "foo-py"
-version = "0.1.0"
+version = "0.1.1"
 description = "Foo Streamlit workspace for acquisition, analysis and AI workflows."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,7 +20,7 @@ Documentation = "https://is-leeroy-jenkins.github.io/foo/"
 foo-app = "foo_cli:main"
 
 [tool.setuptools]
-py-modules = ["agents", "app", "config", "core", "data", "desktop", "embedders", "fetchers", "generators", "loaders", "models", "processors", "scrapers", "writers"]
+py-modules = ["agents", "app", "config", "core", "data", "desktop", "embedders", "foo_cli", "fetchers", "generators", "loaders", "models", "processors", "scrapers", "writers"]
 packages = ["boogr", "stores", "foo_assets"]
 include-package-data = true
 
