@@ -23,8 +23,11 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install -r requirements.txt
           python -m pip install -r desktop-requirements.txt
-      - name: Install Chromium for Playwright
-        run: python -m playwright install chromium
+      - name: Install portable Chromium for Playwright
+        shell: pwsh
+        run: |
+          $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path $PWD 'playwright-browsers'
+          python -m playwright install chromium
       - name: Compile launcher and application modules
         run: python -m compileall -q desktop.py app.py config.py
       - name: Create Foo executable
