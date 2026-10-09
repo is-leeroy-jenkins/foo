@@ -179,6 +179,14 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
+## 🪟 Windows Desktop Installer
+
+Foo can be packaged as a **Windows desktop application** using **PyInstaller (`onedir`)** and **Inno Setup**. The installed `Foo.exe` runs Streamlit on the local computer and displays the interface in a dedicated **Microsoft Edge WebView2 window**, without requiring the user to open a browser tab. The installer provides Start Menu shortcuts, an optional desktop shortcut, and an uninstaller. Writable application data is intended to live under `%LOCALAPPDATA%\Foo`.
+
+To build an installer, run the [Windows desktop installer workflow](.github/workflows/build-windows-installer.yml) from GitHub Actions, then download its `Foo-Windows-Installer` artifact after a successful run. Windows builds can also be created locally using the [PyInstaller specification](foo.spec) and [Inno Setup script](desktop/foo.iss). Browser runtimes, models, and some native dependencies require separate validation before distribution.
+
+**[Windows installation guide](docs/windows-installation.md)** · [Desktop launcher](desktop/launcher.py) · [Installer script](desktop/foo.iss) · [Build workflow](.github/workflows/build-windows-installer.yml) · [Desktop build notes](desktop/README.md)
+
 ## ▶️ Running the Streamlit App
 
 ```bash
