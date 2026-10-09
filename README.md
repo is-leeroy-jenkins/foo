@@ -6,6 +6,7 @@
   <a href="#-application-modes">Modes</a> ·
   <a href="#%EF%B8%8F-architecture">Architecture</a> ·
   <a href="#%EF%B8%8F-installation">Install</a> ·
+  <a href="docs/windows-installation.md">Windows Installer</a> ·
   <a href="#%EF%B8%8F-running-the-streamlit-app">Run</a> ·
   <a href="#-loaders">Loaders</a> ·
   <a href="#%EF%B8%8F-scraping">Scraping</a> ·
