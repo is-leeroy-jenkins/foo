@@ -1,0 +1,1576 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for Foo, a Streamlit and Python application for information acquisition and analysis workflows.">
+      
+      
+        <meta name="author" content="Terry D. Eppler">
+      
+      
+        <link rel="canonical" href="https://is-leeroy-jenkins.github.io/foo/windows-installation/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Foo — Windows Desktop Installation Guide - Foo Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../assets/stylesheets/foo.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#foo-windows-desktop-installation-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Foo Documentation" class="md-header__button md-logo" aria-label="Foo Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Foo Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Foo — Windows Desktop Installation Guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/is-leeroy-jenkins/foo" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    is-leeroy-jenkins/Foo
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../app/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Application
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../user-guide/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  User Guide
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../loading/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Loading Data
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../fetching-scraping/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Fetching and Scraping
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../generation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Generation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../outputs/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Outputs
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../development/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Development
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Foo Documentation" class="md-nav__button md-logo" aria-label="Foo Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Foo Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/is-leeroy-jenkins/foo" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    is-leeroy-jenkins/Foo
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../app/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../loading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Loading Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fetching-scraping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fetching and Scraping
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../outputs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Outputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/fetchers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fetchers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/generators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/loaders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Loaders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/scrapers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scrapers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/writers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/processors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Requirements
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Requirements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#for-people-installing-foo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For people installing Foo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#for-people-building-foo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For people building Foo
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-build-and-download-the-installer-from-github-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Build and download the installer from GitHub Actions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-install-foo-on-windows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Install Foo on Windows
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-first-launch-and-normal-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. First launch and normal use
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-data-persistence-and-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Data persistence and configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-optional-capabilities-and-external-prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Optional capabilities and external prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-build-locally-from-source-developer-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Build locally from source (developer instructions)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#installer-artifact-is-missing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installer artifact is missing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inno-setup-command-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inno Setup command not found
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#windows-blocks-the-executable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows blocks the executable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#foo-window-is-blank-or-the-server-exits-during-startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Foo window is blank, or the server exits during startup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-scraping-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web scraping fails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nltk-spacy-or-local-model-functionality-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NLTK, spaCy, or local-model functionality fails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-access-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database access fails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#windows-build-runs-out-of-time-or-disk-space" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows build runs out of time or disk space
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-upgrade-or-uninstall" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Upgrade or uninstall
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-validation-checklist-before-publishing-an-installer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Validation checklist before publishing an installer
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="foo-windows-desktop-installation-guide">Foo — Windows Desktop Installation Guide<a class="headerlink" href="#foo-windows-desktop-installation-guide" title="Permanent link">&para;</a></h1>
+<p>This guide explains how to build, download, install, launch, troubleshoot, and uninstall the <strong>Foo</strong> Windows desktop application. Foo is a Streamlit application displayed in its own Microsoft Edge WebView2 window. It starts a local Streamlit server; the UI is <strong>not</strong> a native rewrite of the Streamlit app.</p>
+<blockquote>
+<p><strong>Release status:</strong> The repository contains installer build configurations, but a successful workflow run and installation on a clean Windows machine must be verified before distributing the resulting Setup executable. An uploaded artifact is not evidence that every Foo mode works.</p>
+</blockquote>
+<h2 id="1-requirements">1. Requirements<a class="headerlink" href="#1-requirements" title="Permanent link">&para;</a></h2>
+<h3 id="for-people-installing-foo">For people installing Foo<a class="headerlink" href="#for-people-installing-foo" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A supported <strong>64-bit Windows</strong> PC.</li>
+<li>Microsoft <strong>Edge WebView2 Runtime</strong> installed. Some Windows installations already include it; otherwise install it from the <a href="https://developer.microsoft.com/en-us/microsoft-edge/webview2/">official Microsoft WebView2 page</a>.</li>
+<li>Enough disk space for the application and its substantial machine-learning and browser-related dependencies. The final installer size has not been measured.</li>
+<li>Internet access and applicable API credentials for features that use external services. Local features may work without connectivity.</li>
+<li>Administrator permission <strong>may</strong> be required by the Inno Setup configuration in <code>desktop/foo.iss</code>; follow the actual installer prompts.</li>
+</ul>
+<p>Installing an existing, fully built Foo Setup executable should <strong>not</strong> require a separate Python installation. Some optional model files, browser assets, and external runtimes may still need installation or configuration, as described below.</p>
+<h3 id="for-people-building-foo">For people building Foo<a class="headerlink" href="#for-people-building-foo" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Windows x64 and <strong>Python 3.11</strong>.</li>
+<li>Project dependencies in <a href="../requirements.txt"><code>requirements.txt</code></a>, including the Windows-only PyInstaller and pywebview requirements.</li>
+<li><strong>Inno Setup 6</strong> to compile the Windows installer. Inno Setup is a Windows application, not a pip package; obtain it from <a href="https://jrsoftware.org/isinfo.php">jrsoftware.org</a>.</li>
+<li>Native build tools where required by dependencies without compatible Windows wheels.</li>
+<li>Edge WebView2 Runtime for testing.</li>
+<li>Network access for Python packages and any Playwright/browser resource downloads.</li>
+</ul>
+<h2 id="2-build-and-download-the-installer-from-github-actions">2. Build and download the installer from GitHub Actions<a class="headerlink" href="#2-build-and-download-the-installer-from-github-actions" title="Permanent link">&para;</a></h2>
+<p>The repository currently has <strong>two</strong> Windows build workflows. Both produce an artifact named <code>Foo-Windows-Installer</code>, but they use different installer paths and setup scripts. Select the workflow you intend to validate and check its logs.</p>
+<table>
+<thead>
+<tr>
+<th>GitHub Actions workflow</th>
+<th>Trigger</th>
+<th>Inno Setup script</th>
+<th>Expected installer directory</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../.github/workflows/build-windows-installer.yml">Build Foo Windows desktop installer</a></td>
+<td>Manual</td>
+<td><code>desktop/foo.iss</code></td>
+<td><code>dist/installer/</code></td>
+</tr>
+<tr>
+<td><a href="../.github/workflows/windows-installer.yml">Build Foo Windows Installer</a></td>
+<td>Manual or <code>desktop-v*</code> tag</td>
+<td><code>installer/foo.iss</code></td>
+<td><code>dist-installer/</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Important:</strong> The first workflow invokes Inno Setup from a fixed path without installing it, and the second installs Inno Setup using Chocolatey. The second workflow also installs Playwright Chromium during the build, but this does <strong>not</strong> by itself prove that Chromium is bundled into the installer. Review logs and packaging before using either installer. Do not assume both workflows are interchangeable.</p>
+<ol>
+<li>Sign in to GitHub and open the <a href="https://github.com/is-leeroy-jenkins/foo">Foo repository</a>.</li>
+<li>Select <strong>Actions</strong>.</li>
+<li>In the left sidebar, select <strong>Build Foo Windows desktop installer</strong> to use the <code>desktop/foo.iss</code> packaging path.</li>
+<li>Select <strong>Run workflow</strong>, choose the branch to build (usually <code>main</code>), and confirm.</li>
+<li>Wait for the build to finish. Open the run and inspect <strong>every failed step</strong> if the result is not successful.</li>
+<li>On a successful run, scroll to the <strong>Artifacts</strong> section and download <strong>Foo-Windows-Installer</strong>.</li>
+<li>Extract the downloaded ZIP archive. The installer executable should be inside, named according to the Inno Setup script, such as <code>Foo-Setup-0.1.0.exe</code>.</li>
+<li>Verify the artifact belongs to your intended repository, branch, and workflow run before executing it.</li>
+</ol>
+<p>GitHub Actions artifacts are available only for the retention period configured for the repository. If the artifact is gone, start a new run. A packaged installer is <strong>not automatically attached to a GitHub Release</strong> by these workflows.</p>
+<h2 id="3-install-foo-on-windows">3. Install Foo on Windows<a class="headerlink" href="#3-install-foo-on-windows" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Save and extract the <strong>Foo-Windows-Installer</strong> artifact ZIP from the successful GitHub Actions run.</li>
+<li>Find <code>Foo-Setup-0.1.0.exe</code> (or the versioned Setup executable produced by the selected workflow).</li>
+<li>Check the file's <strong>Properties → Digital Signatures</strong> if applicable. The repository configuration does not provide a code-signing certificate, so expect an unsigned build unless signing was performed separately.</li>
+<li>Double-click the installer. If Windows SmartScreen displays a warning, first verify the file's provenance and whether you trust the build; do not bypass a warning for an unverified file.</li>
+<li>Follow the Inno Setup wizard: select or confirm the installation folder, Start Menu shortcuts, and optional desktop shortcut.</li>
+<li>Allow elevation if Windows requests it and the selected installer uses machine-wide installation.</li>
+<li>Finish the wizard. If <strong>Launch Foo</strong> appears, you may select it; otherwise launch Foo from the Start Menu or desktop shortcut.</li>
+</ol>
+<p>The <code>desktop/foo.iss</code> configuration targets <code>{autopf}\Foo</code> (normally Program Files for an administrative installation), adds a Start Menu shortcut, offers an optional desktop shortcut, and registers an uninstaller. The alternative <code>installer/foo.iss</code> has different privilege settings. Follow the behavior of the installer you actually built.</p>
+<h2 id="4-first-launch-and-normal-use">4. First launch and normal use<a class="headerlink" href="#4-first-launch-and-normal-use" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Open <strong>Foo</strong> from the Start Menu or desktop shortcut.</li>
+<li>The launcher starts a local Streamlit server and waits for its health endpoint to respond.</li>
+<li>A dedicated <strong>WebView2</strong> window opens and renders Foo. A separate browser tab is not required.</li>
+<li>Select the desired Foo application mode and use its normal Streamlit controls.</li>
+<li>Supply your own API credentials for any provider-specific features according to the application's configuration.</li>
+<li>Close the Foo desktop window when finished. The desktop launcher is designed to terminate its Streamlit child process on exit.</li>
+</ol>
+<p>The desktop server uses the local loopback address <code>127.0.0.1</code>, so it is not intended to expose the Foo UI as a remote network service. The launcher chooses an available local port; do not rely on a fixed port number.</p>
+<p><strong>Startup may take longer on the first run</strong>, particularly with large imports, model initialization, and local runtime provisioning. The launcher has a readiness timeout of approximately 120 seconds.</p>
+<h2 id="5-data-persistence-and-configuration">5. Data persistence and configuration<a class="headerlink" href="#5-data-persistence-and-configuration" title="Permanent link">&para;</a></h2>
+<p>Desktop builds are intended to keep mutable data outside the installed application directory:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>%LOCALAPPDATA%\Foo
+</code></pre></div>
+<p>The launcher provisions runtime directories and copies bundled supporting resources. Desktop configuration directs logs and the configured database location to writable user storage. Local app data may include SQLite databases, logs, imported files, and vector store data, depending on the feature used.</p>
+<ul>
+<li><strong>Back up</strong> the <code>%LOCALAPPDATA%\Foo</code> directory before uninstalling, resetting, or upgrading.</li>
+<li>Application data may persist after uninstalling the program; do not delete it unless you intentionally want to remove your data.</li>
+<li>If existing development-mode data lives in the repository's <code>stores</code> directory, do not assume it will automatically be imported into an installed desktop profile.</li>
+<li>Treat API credentials and downloaded documents as sensitive; avoid including them in bug reports or installer artifacts.</li>
+</ul>
+<h2 id="6-optional-capabilities-and-external-prerequisites">6. Optional capabilities and external prerequisites<a class="headerlink" href="#6-optional-capabilities-and-external-prerequisites" title="Permanent link">&para;</a></h2>
+<p>Foo's Python dependencies are installed during the executable build, but not all resources can be bundled through <code>requirements.txt</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Possible requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WebView2 window</td>
+<td>Microsoft Edge WebView2 Runtime on the installed PC</td>
+</tr>
+<tr>
+<td>Playwright / Crawl4AI</td>
+<td>Compatible Chromium browser files and a usable Playwright browser path</td>
+</tr>
+<tr>
+<td>spaCy / NLTK</td>
+<td>Language models and corpora downloaded or supplied separately</td>
+</tr>
+<tr>
+<td>Local LLMs</td>
+<td>User-selected model files and compatible native inference binaries</td>
+</tr>
+<tr>
+<td>Geospatial and scientific workflows</td>
+<td>Native DLLs and data used by Cartopy and related packages</td>
+</tr>
+<tr>
+<td>Generative AI and online retrieval</td>
+<td>Network access and valid third-party credentials</td>
+</tr>
+<tr>
+<td>Local vector stores</td>
+<td>Writable local storage and compatible installed binaries</td>
+</tr>
+</tbody>
+</table>
+<p>The current packaging configuration <strong>does not prove</strong> that every optional browser, language model, dataset, or native DLL is included. Validate the modes you plan to distribute on a clean Windows test machine.</p>
+<h2 id="7-build-locally-from-source-developer-instructions">7. Build locally from source (developer instructions)<a class="headerlink" href="#7-build-locally-from-source-developer-instructions" title="Permanent link">&para;</a></h2>
+<p>In a PowerShell terminal with Python 3.11 available:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">://</span><span class="n">github</span><span class="p">.</span><span class="n">com</span><span class="p">/</span><span class="n">is-leeroy-jenkins</span><span class="p">/</span><span class="n">foo</span><span class="p">.</span><span class="n">git</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">cd </span><span class="n">foo</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">py</span> <span class="p">-</span><span class="n">3</span><span class="p">.</span><span class="n">11</span> <span class="n">-m</span> <span class="n">venv</span> <span class="p">.</span><span class="n">venv</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">.\.</span><span class="n">venv</span><span class="p">\</span><span class="n">Scripts</span><span class="p">\</span><span class="n">Activate</span><span class="p">.</span><span class="n">ps1</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">python</span> <span class="n">-m</span> <span class="n">pip</span> <span class="n">install</span> <span class="p">-</span><span class="n">-upgrade</span> <span class="n">pip</span> <span class="n">setuptools</span> <span class="n">wheel</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">python</span> <span class="n">-m</span> <span class="n">pip</span> <span class="n">install</span> <span class="n">-r</span> <span class="n">requirements</span><span class="p">.</span><span class="n">txt</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">python</span> <span class="n">-m</span> <span class="n">PyInstaller</span> <span class="p">-</span><span class="n">-noconfirm</span> <span class="p">-</span><span class="n">-clean</span> <span class="n">foo</span><span class="p">.</span><span class="n">spec</span>
+</code></pre></div>
+<p>With <strong>Inno Setup 6</strong> installed at its usual location:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">&amp;</span> <span class="s2">&quot;C:\Program Files (x86)\Inno Setup 6\ISCC.exe&quot;</span> <span class="s2">&quot;desktop\foo.iss&quot;</span>
+</code></pre></div>
+<p>The selected setup script writes its finished installer to:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>dist\installer\Foo-Setup-0.1.0.exe
+</code></pre></div>
+<p>These commands describe the intended build. A native dependency may still fail to install or freeze, and Playwright/other external resource provisioning requires additional validation. Do not publish the installer solely because PyInstaller or Inno Setup exits successfully.</p>
+<h2 id="8-troubleshooting">8. Troubleshooting<a class="headerlink" href="#8-troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="installer-artifact-is-missing">Installer artifact is missing<a class="headerlink" href="#installer-artifact-is-missing" title="Permanent link">&para;</a></h3>
+<p>Check that the workflow run completed successfully and the <strong>Upload installers</strong> step found a Setup executable. Confirm you are looking at the appropriate workflow's expected output directory. Check artifact retention if the build is old.</p>
+<h3 id="inno-setup-command-not-found">Inno Setup command not found<a class="headerlink" href="#inno-setup-command-not-found" title="Permanent link">&para;</a></h3>
+<p>Install Inno Setup 6 and confirm the compiler executable is present. The workflow using <code>desktop/foo.iss</code> currently assumes its compiler is available; the alternative workflow installs it using Chocolatey.</p>
+<h3 id="windows-blocks-the-executable">Windows blocks the executable<a class="headerlink" href="#windows-blocks-the-executable" title="Permanent link">&para;</a></h3>
+<p>Confirm the downloaded file's origin and checksum/provenance where available. Windows may warn about unsigned executables. Do not ignore warnings for unknown binaries. Code signing is not configured in the repository's installer scripts.</p>
+<h3 id="foo-window-is-blank-or-the-server-exits-during-startup">Foo window is blank, or the server exits during startup<a class="headerlink" href="#foo-window-is-blank-or-the-server-exits-during-startup" title="Permanent link">&para;</a></h3>
+<p>Inspect launcher or operating-system error details, confirm WebView2 Runtime is installed, and verify the bundled application and its imports execute on the target Windows architecture. A successful wheel, PyInstaller, or Inno Setup build does not prove startup success.</p>
+<h3 id="web-scraping-fails">Web scraping fails<a class="headerlink" href="#web-scraping-fails" title="Permanent link">&para;</a></h3>
+<p>Confirm Playwright's compatible Chromium executable is available and that the runtime can locate it. Merely executing <code>python -m playwright install chromium</code> on the GitHub runner does not guarantee the browser files have been shipped to the user.</p>
+<h3 id="nltk-spacy-or-local-model-functionality-fails">NLTK, spaCy, or local-model functionality fails<a class="headerlink" href="#nltk-spacy-or-local-model-functionality-fails" title="Permanent link">&para;</a></h3>
+<p>Ensure the required corpora, models, and files are present and discoverable at runtime. Install/download only the resources actually required for the mode in use.</p>
+<h3 id="database-access-fails">Database access fails<a class="headerlink" href="#database-access-fails" title="Permanent link">&para;</a></h3>
+<p>Check that <code>%LOCALAPPDATA%\Foo</code> exists and is writable. Avoid storing writable databases under Program Files. Preserve existing user data while troubleshooting.</p>
+<h3 id="windows-build-runs-out-of-time-or-disk-space">Windows build runs out of time or disk space<a class="headerlink" href="#windows-build-runs-out-of-time-or-disk-space" title="Permanent link">&para;</a></h3>
+<p>Foo includes heavyweight numerical, geospatial, machine-learning, and browser dependencies. Inspect the workflow log for the exact failing package or step; optimize the build only after identifying the concrete failure.</p>
+<h2 id="9-upgrade-or-uninstall">9. Upgrade or uninstall<a class="headerlink" href="#9-upgrade-or-uninstall" title="Permanent link">&para;</a></h2>
+<p><strong>Upgrade:</strong> Obtain a verified installer built from the desired repository revision. Back up <code>%LOCALAPPDATA%\Foo</code>, close Foo, run the newer installer, then verify that the application starts and your data remains accessible.</p>
+<p><strong>Uninstall:</strong> Open <strong>Windows Settings → Apps → Installed apps</strong>, select <strong>Foo</strong>, and choose <strong>Uninstall</strong>. The installer should remove its application files and shortcuts; user-generated content under <code>%LOCALAPPDATA%\Foo</code> may remain and should be reviewed separately.</p>
+<h2 id="10-validation-checklist-before-publishing-an-installer">10. Validation checklist before publishing an installer<a class="headerlink" href="#10-validation-checklist-before-publishing-an-installer" title="Permanent link">&para;</a></h2>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> GitHub Actions installer job passed completely.</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> The resulting Setup executable is present in the uploaded artifact.</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Installer runs on a clean, supported Windows x64 environment.</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Foo starts in its WebView2 window without requiring a separate Python installation.</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Closing Foo stops its local Streamlit process.</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> SQLite/logs/vector stores are writable and remain intact after restart.</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Loading, Scraping, Retrieval, Geospatial, Demographic, Environmental, Astronomical, and Generation workflows have been smoke-tested as applicable.</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Playwright, native modules, NLTK/spaCy resources, and external providers have been verified for their corresponding modes.</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Uninstall and reinstall behavior has been checked without accidental data loss.</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Executable provenance, security scanning, and signing policy have been reviewed.</li>
+</ul>
+<hr />
+<p>Return to the <a href="../README.md">Foo README</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2025 Terry Eppler
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.tabs.link"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
