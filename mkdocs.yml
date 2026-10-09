@@ -17,6 +17,7 @@ nav:
   - Generation: generation.md
   - Outputs: outputs.md
   - Development: development.md
+  - Windows Installation: windows-installation.md
   - API Reference:
       - Overview: api/index.md
       - Core: api/core.md
