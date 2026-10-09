@@ -26,6 +26,8 @@ for module in (
     hiddenimports += collect_submodules(module)
 
 datas += [(str(root / 'app.py'), '.')]
+if (root / 'playwright-browsers').exists():
+    datas.append((str(root / 'playwright-browsers'), 'playwright-browsers'))
 for directory in ('resources', '.streamlit', 'stores'):
     if (root / directory).exists():
         datas.append((str(root / directory), directory))
