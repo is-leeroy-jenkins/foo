@@ -15,6 +15,10 @@
         <link rel="canonical" href="https://is-leeroy-jenkins.github.io/foo/windows-installation/">
       
       
+        <link rel="prev" href="../development/">
+      
+      
+        <link rel="next" href="../api/">
       
       
         
@@ -25,7 +29,7 @@
     
     
       
-        <title>Foo — Windows Desktop Installation Guide - Foo Documentation</title>
+        <title>Windows Installation - Foo Documentation</title>
       
     
     
@@ -114,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Foo — Windows Desktop Installation Guide
+              Windows Installation
             
           </span>
         </div>
@@ -386,6 +390,27 @@
     
   
   Development
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Windows Installation
 
       </a>
     </li>
@@ -704,6 +729,312 @@
       
   
   
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Windows Installation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Windows Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Requirements
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Requirements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#for-people-installing-foo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For people installing Foo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#for-people-building-foo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For people building Foo
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-build-and-download-the-installer-from-github-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Build and download the installer from GitHub Actions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-install-foo-on-windows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Install Foo on Windows
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-first-launch-and-normal-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. First launch and normal use
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-data-persistence-and-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Data persistence and configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-optional-capabilities-and-external-prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Optional capabilities and external prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-build-locally-from-source-developer-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Build locally from source (developer instructions)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#installer-artifact-is-missing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installer artifact is missing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inno-setup-command-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inno Setup command not found
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#windows-blocks-the-executable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows blocks the executable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#foo-window-is-blank-or-the-server-exits-during-startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Foo window is blank, or the server exits during startup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-scraping-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web scraping fails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nltk-spacy-or-local-model-functionality-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NLTK, spaCy, or local-model functionality fails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-access-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database access fails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#windows-build-runs-out-of-time-or-disk-space" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows build runs out of time or disk space
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-upgrade-or-uninstall" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Upgrade or uninstall
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-validation-checklist-before-publishing-an-installer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Validation checklist before publishing an installer
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
   
   
     
@@ -720,10 +1051,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
         
           
-          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
             
   
   
@@ -741,8 +1072,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_10">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1335,7 +1666,7 @@
 <h3 id="for-people-building-foo">For people building Foo<a class="headerlink" href="#for-people-building-foo" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Windows x64 and <strong>Python 3.11</strong>.</li>
-<li>Project dependencies in <a href="../requirements.txt"><code>requirements.txt</code></a>, including the Windows-only PyInstaller and pywebview requirements.</li>
+<li>Project dependencies in <a href="https://github.com/is-leeroy-jenkins/foo/blob/main/requirements.txt"><code>requirements.txt</code></a>, including the Windows-only PyInstaller and pywebview requirements.</li>
 <li><strong>Inno Setup 6</strong> to compile the Windows installer. Inno Setup is a Windows application, not a pip package; obtain it from <a href="https://jrsoftware.org/isinfo.php">jrsoftware.org</a>.</li>
 <li>Native build tools where required by dependencies without compatible Windows wheels.</li>
 <li>Edge WebView2 Runtime for testing.</li>
@@ -1354,13 +1685,13 @@
 </thead>
 <tbody>
 <tr>
-<td><a href="../.github/workflows/build-windows-installer.yml">Build Foo Windows desktop installer</a></td>
+<td><a href="https://github.com/is-leeroy-jenkins/foo/blob/main/.github/workflows/build-windows-installer.yml">Build Foo Windows desktop installer</a></td>
 <td>Manual</td>
 <td><code>desktop/foo.iss</code></td>
 <td><code>dist/installer/</code></td>
 </tr>
 <tr>
-<td><a href="../.github/workflows/windows-installer.yml">Build Foo Windows Installer</a></td>
+<td><a href="https://github.com/is-leeroy-jenkins/foo/blob/main/.github/workflows/windows-installer.yml">Build Foo Windows Installer</a></td>
 <td>Manual or <code>desktop-v*</code> tag</td>
 <td><code>installer/foo.iss</code></td>
 <td><code>dist-installer/</code></td>
@@ -1504,7 +1835,7 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Executable provenance, security scanning, and signing policy have been reviewed.</li>
 </ul>
 <hr />
-<p>Return to the <a href="../README.md">Foo README</a>.</p>
+<p>Return to the <a href="https://github.com/is-leeroy-jenkins/foo/blob/main/README.md">Foo README</a>.</p>
 
 
 
