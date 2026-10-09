@@ -20,7 +20,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install -r requirements.txt
-          python -m pip install "pyinstaller>=6,<7" "pywebview>=5,<7"
       - name: Validate launcher and configuration
         shell: pwsh
         run: |

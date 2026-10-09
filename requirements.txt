@@ -81,3 +81,6 @@ mkdocstrings[python]
 mkdocs-autorefs
 pymdown-extensions
 black
+# Windows desktop executable and embedded WebView2 UI
+pyinstaller>=6.10,<7; sys_platform == "win32"
+pywebview>=5.4,<7; sys_platform == "win32"

@@ -6,6 +6,7 @@ PyInstaller's onedir format, and Inno Setup.
 ## Requirements
 
 - Windows x64, Python 3.11, and Microsoft Edge WebView2 Runtime
+- PyInstaller and pywebview are declared in `requirements.txt` for Windows builds
 - Inno Setup 6 installed (for installer creation)
 - Compiler/build tools needed by native dependencies such as llama-cpp-python
 - Network access during build for pip dependencies and Playwright browser installation
@@ -14,7 +15,6 @@ PyInstaller's onedir format, and Inno Setup.
 
 ```powershell
 python -m pip install -r requirements.txt
-python -m pip install "pyinstaller>=6,<7" "pywebview>=5,<7"
 python -m PyInstaller --noconfirm --clean foo.spec
 & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "desktop\foo.iss"
 ```
