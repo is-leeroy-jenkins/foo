@@ -14,7 +14,7 @@ hiddenimports = []
 binaries = []
 
 # Frameworks rely on runtime imports, templates, package metadata, and native DLLs.
-for package in ('streamlit', 'altair', 'pywebview', 'langchain_core',
+for package in ('streamlit', 'altair', 'webview', 'langchain_core',
                 'langchain_community', 'langchain_text_splitters',
                 'langchain_openai', 'langchain_google_genai',
                 'langchain_mistralai', 'langchain_huggingface',
@@ -29,6 +29,10 @@ for package in ('streamlit', 'altair', 'pywebview', 'langchain_core',
     except ImportError:
         raise RuntimeError(f'Required package missing from build environment: {package}')
 
+hiddenimports += [
+    'config', 'core', 'data', 'agents', 'embedders', 'fetchers', 'generators',
+    'loaders', 'models', 'processors', 'scrapers', 'writers',
+]
 hiddenimports += collect_submodules('stores')
 hiddenimports += collect_submodules('boogr')
 

@@ -7,6 +7,7 @@ Purpose:
 from __future__ import annotations
 
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -46,7 +47,14 @@ def run_server( ) -> None:
 
     base = get_application_directory( )
     app = base / 'app.py'
-    os.chdir( base )
+    state = Path( os.environ[ 'LOCALAPPDATA' ] ) / 'Foo'
+    state.mkdir( parents=True, exist_ok=True )
+    for folder in ('resources', '.streamlit', 'stores'):
+        bundled = base / folder
+        installed = state / folder
+        if bundled.exists( ):
+            shutil.copytree( bundled, installed, dirs_exist_ok=True )
+    os.chdir( state )
     bootstrap.run( str( app ), False, [ ], {
         'server.address': '127.0.0.1',
         'server.port': int( os.environ[ 'FOO_DESKTOP_PORT' ] ),
