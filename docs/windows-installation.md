@@ -19,7 +19,7 @@ Installing an existing, fully built Foo Setup executable should **not** require 
 ### For people building Foo
 
 - Windows x64 and **Python 3.11**.
-- Project dependencies in [`requirements.txt`](../requirements.txt), including the Windows-only PyInstaller and pywebview requirements.
+- Project dependencies in [`requirements.txt`](https://github.com/is-leeroy-jenkins/foo/blob/main/requirements.txt), including the Windows-only PyInstaller and pywebview requirements.
 - **Inno Setup 6** to compile the Windows installer. Inno Setup is a Windows application, not a pip package; obtain it from [jrsoftware.org](https://jrsoftware.org/isinfo.php).
 - Native build tools where required by dependencies without compatible Windows wheels.
 - Edge WebView2 Runtime for testing.
@@ -31,8 +31,8 @@ The repository currently has **two** Windows build workflows. Both produce an ar
 
 | GitHub Actions workflow | Trigger | Inno Setup script | Expected installer directory |
 |---|---|---|---|
-| [Build Foo Windows desktop installer](../.github/workflows/build-windows-installer.yml) | Manual | `desktop/foo.iss` | `dist/installer/` |
-| [Build Foo Windows Installer](../.github/workflows/windows-installer.yml) | Manual or `desktop-v*` tag | `installer/foo.iss` | `dist-installer/` |
+| [Build Foo Windows desktop installer](https://github.com/is-leeroy-jenkins/foo/blob/main/.github/workflows/build-windows-installer.yml) | Manual | `desktop/foo.iss` | `dist/installer/` |
+| [Build Foo Windows Installer](https://github.com/is-leeroy-jenkins/foo/blob/main/.github/workflows/windows-installer.yml) | Manual or `desktop-v*` tag | `installer/foo.iss` | `dist-installer/` |
 
 **Important:** The first workflow invokes Inno Setup from a fixed path without installing it, and the second installs Inno Setup using Chocolatey. The second workflow also installs Playwright Chromium during the build, but this does **not** by itself prove that Chromium is bundled into the installer. Review logs and packaging before using either installer. Do not assume both workflows are interchangeable.
 
@@ -186,4 +186,4 @@ Foo includes heavyweight numerical, geospatial, machine-learning, and browser de
 
 ---
 
-Return to the [Foo README](../README.md).
+Return to the [Foo README](https://github.com/is-leeroy-jenkins/foo/blob/main/README.md).
