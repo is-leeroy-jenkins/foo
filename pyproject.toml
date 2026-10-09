@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "foo-py"
+version = "0.1.0"
+description = "Foo Streamlit workspace for acquisition, analysis and AI workflows."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{name = "Terry D. Eppler"}]
+dynamic = ["dependencies"]
+
+[project.urls]
+Repository = "https://github.com/is-leeroy-jenkins/foo"
+Documentation = "https://is-leeroy-jenkins.github.io/foo/"
+
+[project.scripts]
+foo-app = "foo_cli:main"
+
+[tool.setuptools]
+py-modules = ["agents", "app", "config", "core", "data", "desktop", "embedders", "fetchers", "generators", "loaders", "models", "processors", "scrapers", "writers"]
+packages = ["boogr", "stores", "foo_assets"]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.package-data]
+foo_assets = ["streamlit_config.toml", "resources/images/*"]
+boogr = ["*.ico", "resources/ico/*.ico", "resources/img/**/*.png", "resources/img/**/*.ico"]
