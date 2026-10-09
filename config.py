@@ -185,6 +185,12 @@ def get_text( name: str, default: str ) -> str:
 
 BASE_DIR = Path( __file__ ).resolve( ).parent
 ROOT_DIR = Path( __file__ ).resolve( ).parent
+# Frozen desktop builds keep mutable data outside the installed application directory.
+if os.getenv( 'FOO_DESKTOP' ) == '1':
+	ROOT_DIR = Path( os.environ[ 'LOCALAPPDATA' ] ) / 'Foo'
+	ROOT_DIR.mkdir( parents=True, exist_ok=True )
+	( ROOT_DIR / 'logging' ).mkdir( parents=True, exist_ok=True )
+	( ROOT_DIR / 'stores' / 'sqlite' / 'datamodels' ).mkdir( parents=True, exist_ok=True )
 LOG_DIR = get_path( 'LOG_DIR', ROOT_DIR / 'logging' )
 LOG_PATH = get_text( 'LOG_PATH', str( LOG_DIR / 'Exceptions.db' ) )
 LOG_FILE = get_text( 'LOG_FILE', 'Exceptions' )
@@ -243,7 +249,7 @@ SKYMAP_TOKEN = os.getenv( 'SKY_MAP_TOKEN' )
 APP_TITLE = 'Foo'
 BLUE_DIVIDER = "<div style='height:2px;align:left;background:#0078FC;margin:6px 30px 30px 0;'></div>"
 SQLSERVER_DRIVER = r'DRIVER={ ODBC Driver 17 for SQL Server };SERVER=.\SQLExpress;'
-DB_PATH = BASE_DIR / 'stores' / 'sqlite' / 'datamodels' / 'Data.db'
+DB_PATH = ROOT_DIR / 'stores' / 'sqlite' / 'datamodels' / 'Data.db'
 AGENTS ='''Mozilla/5.0 Windows NT 10.0; Win64; x64; AppleWebKit/537.36 (KHTML, like Gecko)
 		Chrome/124.0 Safari/537.36'''
 FAVICON = r'resources/images/favicon.ico'

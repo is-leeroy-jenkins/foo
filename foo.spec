@@ -1,47 +1,50 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""Foo Windows onedir build; run on Windows with desktop-requirements.txt installed."""
+"""Build Foo as a Windows onedir application with its existing resources."""
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 root = Path(SPECPATH)
-datas = []
-binaries = []
+datas = [
+    (str(root / 'app.py'), '.'),
+    (str(root / '.streamlit'), '.streamlit'),
+    (str(root / 'resources'), 'resources'),
+    (str(root / 'stores'), 'stores'),
+]
 hiddenimports = []
-for package in (
-    'streamlit', 'webview', 'langchain', 'langchain_core',
-    'langchain_community', 'langchain_text_splitters', 'chromadb',
-    'sentence_transformers', 'transformers', 'sklearn', 'spacy',
-    'nltk', 'plotly', 'altair', 'playwright', 'crawl4ai',
-):
-    package_data, package_binaries, package_imports = collect_all(package)
-    datas += package_data
-    binaries += package_binaries
-    hiddenimports += package_imports
+binaries = []
 
-for module in (
-    'agents', 'config', 'core', 'data', 'embedders', 'fetchers',
-    'generators', 'loaders', 'models', 'processors', 'scrapers',
-    'writers', 'boogr', 'stores',
-):
-    hiddenimports += collect_submodules(module)
+# Frameworks rely on runtime imports, templates, package metadata, and native DLLs.
+for package in ('streamlit', 'altair', 'webview', 'langchain_core',
+                'langchain_community', 'langchain_text_splitters',
+                'langchain_openai', 'langchain_google_genai',
+                'langchain_mistralai', 'langchain_huggingface',
+                'langchain_chroma', 'chromadb', 'sklearn', 'spacy',
+                'nltk', 'torch', 'sentence_transformers',
+                'playwright', 'crawl4ai'):
+    try:
+        package_datas, package_bins, package_hidden = collect_all(package)
+        datas += package_datas
+        binaries += package_bins
+        hiddenimports += package_hidden
+    except ImportError:
+        raise RuntimeError(f'Required package missing from build environment: {package}')
 
-datas += [(str(root / 'app.py'), '.')]
-if (root / 'playwright-browsers').exists():
-    datas.append((str(root / 'playwright-browsers'), 'playwright-browsers'))
-for directory in ('resources', '.streamlit', 'stores'):
-    if (root / directory).exists():
-        datas.append((str(root / directory), directory))
+hiddenimports += [
+    'config', 'core', 'data', 'agents', 'embedders', 'fetchers', 'generators',
+    'loaders', 'models', 'processors', 'scrapers', 'writers',
+]
+hiddenimports += collect_submodules('stores')
+hiddenimports += collect_submodules('boogr')
 
 a = Analysis(
-    ['desktop.py'],
+    [str(root / 'desktop' / 'launcher.py')],
     pathex=[str(root)],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
-    hooksconfig={},
     runtime_hooks=[],
-    excludes=['mkdocs', 'pytest', 'black', 'jupyterlab', 'notebook'],
+    excludes=[],
     noarchive=False,
 )
 pyz = PYZ(a.pure)
@@ -52,4 +55,5 @@ exe = EXE(
     console=False,
     disable_windowed_traceback=False,
 )
-coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name='Foo')
+coll = COLLECT(exe, a.binaries, a.datas, strip=False,
+    upx=False, name='Foo')
