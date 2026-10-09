@@ -49,6 +49,9 @@ def prepare_user_data( ) -> Path:
     """
     destination = user_data_root( )
     source = application_root( )
+    browsers = source / 'playwright-browsers'
+    if browsers.exists( ):
+        os.environ[ 'PLAYWRIGHT_BROWSERS_PATH' ] = str( browsers )
     for name in ( 'resources', '.streamlit', 'stores' ):
         directory = source / name
         if directory.exists( ):
