@@ -10,7 +10,7 @@ AppVersion={#MyAppVersion}
 AppPublisher=is-leeroy-jenkins
 DefaultDirName={autopf}\Foo
 DefaultGroupName=Foo
-OutputDir=dist-installer
+OutputDir=..\dist-installer
 OutputBaseFilename=Foo-Setup-{#MyAppVersion}
 Compression=lzma2
 SolidCompression=yes
@@ -22,7 +22,7 @@ UninstallDisplayName=Foo
 CloseApplications=yes
 
 [Files]
-Source: "dist\Foo\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\Foo\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"
