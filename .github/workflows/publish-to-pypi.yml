@@ -1,6 +1,12 @@
 name: Validate and publish foo-py
 
 on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing version tag to publish, e.g. v0.1.1'
+        required: true
+        type: string
   pull_request:
     paths:
       - 'pyproject.toml'
@@ -27,13 +33,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Validate release version
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_dispatch'
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag }}
         run: |
           python - <<'PY'
           import os
