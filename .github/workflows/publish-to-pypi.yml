@@ -1,0 +1,83 @@
+name: Validate and publish foo-py
+
+on:
+  pull_request:
+    paths:
+      - 'pyproject.toml'
+      - 'foo_cli.py'
+      - 'foo_assets/**'
+      - '.github/workflows/publish-to-pypi.yml'
+      - 'requirements.txt'
+  push:
+    branches: [main]
+    paths:
+      - 'pyproject.toml'
+      - 'foo_cli.py'
+      - 'foo_assets/**'
+      - '.github/workflows/publish-to-pypi.yml'
+      - 'requirements.txt'
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate release version
+        if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import tomllib
+          info = tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8'))['project']
+          assert info['name'] == 'foo-py'
+          assert os.environ['RELEASE_TAG'] == f"v{info['version']}"
+          PY
+      - name: Build package
+        run: |
+          python -m pip install --upgrade build twine
+          python -m compileall -q foo_cli.py foo_assets
+          python -m build
+          python -m twine check dist/*
+      - name: Confirm wheel contents
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          wheel = next(Path('dist').glob('*.whl'))
+          with ZipFile(wheel) as archive:
+              names = set(archive.namelist())
+              for item in ['app.py','foo_cli.py','foo_assets/__init__.py','foo_assets/streamlit_config.toml','boogr/__init__.py','stores/vector.py']:
+                  assert item in names, f'Missing from wheel: {item}'
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    if: github.event_name == 'release'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/foo-py/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

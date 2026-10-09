@@ -1,0 +1,65 @@
+<svg width="920" height="700" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .box { fill:#f4f4f4; stroke:#333; stroke-width:1.5; }
+    text { font-family:Arial, sans-serif; font-size:14px; }
+    .title { font-weight:bold; }
+    .section { font-style:italic; }
+  </style>
+
+  <!-- Fetch -->
+  <rect class="box" x="40" y="40" width="360" height="220" rx="6" />
+  <text x="50" y="65" class="title">Fetch</text>
+
+  <text x="50" y="95" class="section">Fields</text>
+  <text x="60" y="115">db_uri</text>
+  <text x="60" y="135">doc_paths</text>
+  <text x="60" y="155">model</text>
+  <text x="60" y="175">sql_tool / doc_tool / api_tool</text>
+
+  <text x="50" y="205" class="section">Methods</text>
+  <text x="60" y="225">query_sql()</text>
+  <text x="60" y="245">query_docs()</text>
+  <text x="60" y="265">query_chat()</text>
+
+  <!-- SqlQueryTool -->
+  <rect class="box" x="40" y="300" width="260" height="140" rx="6" />
+  <text x="50" y="325" class="title">SqlQueryTool</text>
+  <text x="50" y="355" class="section">Methods</text>
+  <text x="60" y="375">run()</text>
+  <text x="60" y="395">_execute_sql()</text>
+
+  <!-- DocumentQueryTool -->
+  <rect class="box" x="340" y="300" width="260" height="160" rx="6" />
+  <text x="350" y="325" class="title">DocumentQueryTool</text>
+  <text x="350" y="355" class="section">Methods</text>
+  <text x="360" y="375">run()</text>
+  <text x="360" y="395">_load_documents()</text>
+  <text x="360" y="415">_embed_and_store()</text>
+  <text x="360" y="435">_retrieve()</text>
+
+  <!-- ApiTool -->
+  <rect class="box" x="640" y="300" width="220" height="100" rx="6" />
+  <text x="650" y="325" class="title">ApiTool</text>
+  <text x="650" y="355" class="section">Methods</text>
+  <text x="660" y="375">run()</text>
+
+  <!-- Error -->
+  <rect class="box" x="640" y="40" width="240" height="120" rx="6" />
+  <text x="650" y="65" class="title">Error</text>
+  <text x="650" y="95" class="section">Fields</text>
+  <text x="660" y="115">message, module, cause, method</text>
+
+  <!-- ErrorDialog -->
+  <rect class="box" x="640" y="180" width="240" height="100" rx="6" />
+  <text x="650" y="205" class="title">ErrorDialog</text>
+  <text x="650" y="235" class="section">Methods</text>
+  <text x="660" y="255">show()</text>
+
+  <!-- throw_if -->
+  <rect class="box" x="360" y="520" width="220" height="120" rx="6" />
+  <text x="370" y="545" class="title">throw_if (utility)</text>
+  <text x="370" y="575" class="section">Methods</text>
+  <text x="380" y="595">empty()</text>
+  <text x="380" y="615">null()</text>
+  <text x="380" y="635">negative()</text>
+</svg>
