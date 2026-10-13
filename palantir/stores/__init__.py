@@ -1,0 +1,1 @@
+"""Foo vector-store implementations."""
