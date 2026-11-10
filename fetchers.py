@@ -3235,13 +3235,11 @@ class GoogleWeather( Fetcher ):
 			throw_if( 'units_system', units_system )
 			throw_if( 'language_code', language_code )
 			throw_if( 'time', time )
-			
 			self.mode = 'hourly_history'
 			self.hours = int( hours )
 			self.units_system = str( units_system ).strip( )
 			self.language_code = str( language_code ).strip( )
 			self.timeout = int( time )
-			
 			if self.hours < 1 or self.hours > 24:
 				raise ValueError( 'hours must be between 1 and 24 for hourly history.' )
 			
