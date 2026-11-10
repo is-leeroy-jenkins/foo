@@ -21803,7 +21803,7 @@ class PurpleAir( Fetcher ):
 				
 				self.params[ key ] = value
 			
-			self.headers[ 'X-API-Key' ] = self.validate_api_key( )
+			self.headers[ 'X-API-Key' ] = self.api_key
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -22777,7 +22777,7 @@ class OpenAQ( Fetcher ):
 				
 				self.params[ key ] = value
 			
-			self.headers[ 'X-API-Key' ] = self.validate_api_key( )
+			self.headers[ 'X-API-Key' ] = self.api_key
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -23748,7 +23748,7 @@ class Firms( Fetcher ):
 			self.timeout = int( time )
 			self.params = { 'source': self.source, 'area_coordinates': self.area_coordinates,
 					'day_range': self.day_range, 'date': self.date }
-			self.url = (f'{self.base_url}/area/csv/{self.validate_map_key( )}/'
+			self.url = (f'{self.base_url}/area/csv/{self.map_key}/'
 			            f'{self.source}/{self.area_coordinates}/{self.day_range}')
 			
 			if self.date:
@@ -23795,7 +23795,7 @@ class Firms( Fetcher ):
 			self.timeout = int( time )
 			self.params = { 'sensor': self.sensor }
 			self.url = (f'{self.base_url}/data_availability/csv/'
-			            f'{self.validate_map_key( )}/{self.sensor}')
+			            f'{self.map_key}/{self.sensor}')
 			
 			self.request_csv( url=self.url, time=self.timeout )
 			rows = self.csv_to_rows( self.payload )
