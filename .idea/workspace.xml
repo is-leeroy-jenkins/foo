@@ -5,21 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="649d1b1c-e24f-435b-9576-30e7d61c1f89" name="Changes" comment="updates">
-      <change afterPath="$PROJECT_DIR$/palantir/app.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/palantir/boogr/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/palantir/config.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/palantir/core.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/palantir/embedders.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/palantir/fetchers.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/palantir/generators.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/palantir/loaders.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/palantir/meta.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/palantir/models.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/palantir/processors.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/palantir/scrapers.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/palantir/stores/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/palantir/stores/vector.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/palantir/writers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/foo-py.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/foo-py.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_10_9_2026_3_36_PM_[Changes]/shelved.patch" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_10_9_2026_3_36_PM__Changes_.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -51,7 +39,7 @@
             <option value="$PROJECT_DIR$/agents.py" />
             <option value="$PROJECT_DIR$/app.py" />
             <option value="$PROJECT_DIR$/fetchers.py" />
-            <option value="$PROJECT_DIR$/app.py" />
+            <option value="$PROJECT_DIR$/fetchers.py" />
           </set>
         </option>
       </LargeFiles>
@@ -80,33 +68,33 @@
     <option name="showLibraryContents" value="true" />
     <option name="showMembers" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "SHELLCHECK.PATH": "C:\\Users\\terry\\AppData\\Roaming\\JetBrains\\PyCharm2025.2\\plugins\\Shell Script\\shellcheck.exe",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "C:/Users/terry/source/repos/foo/palantir",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.jshint": "true",
-    "node.js.detected.package.standard": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.jshint": "",
-    "node.js.selected.package.standard": "",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "python.packages.toolwindow.project.migrated.to.right.top.v2": "true",
-    "settings.editor.selected.configurable": "MTCustomThemeConfigurable",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;SHELLCHECK.PATH&quot;: &quot;C:\\Users\\terry\\AppData\\Roaming\\JetBrains\\PyCharm2025.2\\plugins\\Shell Script\\shellcheck.exe&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/terry/source/repos/foo/palantir&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.jshint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.standard&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.jshint&quot;: &quot;&quot;,
+    &quot;node.js.selected.package.standard&quot;: &quot;&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;python.packages.toolwindow.project.migrated.to.right.top.v2&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;MTCustomThemeConfigurable&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\terry\source\repos\foo\palantir" />
@@ -122,8 +110,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-PY-262.10968.92" />
-        <option value="bundled-python-sdk-73a66231627c-5bd6d13a2a75-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-262.10968.92" />
+        <option value="bundled-js-predefined-d6986cc7102b-56aff7b04f6f-JavaScript-PY-263.7307.206" />
+        <option value="bundled-python-sdk-34611be1ca5a-e0583fc556d1-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-263.7307.206" />
       </set>
     </attachedChunks>
   </component>
@@ -200,15 +188,10 @@
       <workItem from="1791559690438" duration="273000" />
       <workItem from="1791563188462" duration="5819000" />
       <workItem from="1791574427634" duration="1348000" />
-      <workItem from="1791852096029" duration="333000" />
-    </task>
-    <task id="LOCAL-00158" summary="updates">
-      <option name="closed" value="true" />
-      <created>1788824584734</created>
-      <option name="number" value="00158" />
-      <option name="presentableId" value="LOCAL-00158" />
-      <option name="project" value="LOCAL" />
-      <updated>1788824584734</updated>
+      <workItem from="1791852096029" duration="590000" />
+      <workItem from="1791852740663" duration="144000" />
+      <workItem from="1794170602007" duration="743000" />
+      <workItem from="1794352693695" duration="634000" />
     </task>
     <task id="LOCAL-00159" summary="updates">
       <option name="closed" value="true" />
@@ -594,7 +577,15 @@
       <option name="project" value="LOCAL" />
       <updated>1791579684633</updated>
     </task>
-    <option name="localTasksCounter" value="207" />
+    <task id="LOCAL-00207" summary="updates">
+      <option name="closed" value="true" />
+      <created>1791852711176</created>
+      <option name="number" value="00207" />
+      <option name="presentableId" value="LOCAL-00207" />
+      <option name="project" value="LOCAL" />
+      <updated>1791852711176</updated>
+    </task>
+    <option name="localTasksCounter" value="208" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
