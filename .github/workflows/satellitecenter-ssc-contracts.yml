@@ -1,0 +1,28 @@
+name: NASA SSC SatelliteCenter contracts
+
+on:
+  pull_request:
+    paths:
+      - fetchers.py
+      - tests/test_satellitecenter_ssc_contracts.py
+      - .github/workflows/satellitecenter-ssc-contracts.yml
+  push:
+    branches: [ main ]
+    paths:
+      - fetchers.py
+      - tests/test_satellitecenter_ssc_contracts.py
+      - .github/workflows/satellitecenter-ssc-contracts.yml
+  workflow_dispatch:
+
+jobs:
+  satellitecenter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Compile production source and tests
+        run: python -m compileall -q fetchers.py tests/test_satellitecenter_ssc_contracts.py
+      - name: Run isolated SSC provider tests
+        run: python -m unittest discover -s tests -p 'test_satellitecenter_ssc_contracts.py' -v

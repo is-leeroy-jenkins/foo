@@ -3707,8 +3707,14 @@ class SatelliteCenter( Fetcher ):
 		"""
 		try:
 			self.ssc = SscWs( user_agent=self.agents, timeout=self.timeout )
-			result = self.ssc.get_observatories( )
-			return result
+			self.result = self.ssc.get_observatories( )
+			if not isinstance( self.result, dict ):
+				raise ValueError( 'SSC observatories response must be a dictionary.' )
+			if self.result.get( 'HttpStatus', 200 ) != 200:
+				raise ValueError( self.result.get( 'ErrorMessage',
+					self.result.get( 'HttpText', 'SSC observatories request failed.' ) ) )
+			self.observatories = self.result.get( 'Observatory', [ ] )
+			return self.result
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -3734,8 +3740,14 @@ class SatelliteCenter( Fetcher ):
 		"""
 		try:
 			self.ssc = SscWs( user_agent=self.agents, timeout=self.timeout )
-			result = self.ssc.get_ground_stations( )
-			return result
+			self.result = self.ssc.get_ground_stations( )
+			if not isinstance( self.result, dict ):
+				raise ValueError( 'SSC ground stations response must be a dictionary.' )
+			if self.result.get( 'HttpStatus', 200 ) != 200:
+				raise ValueError( self.result.get( 'ErrorMessage',
+					self.result.get( 'HttpText', 'SSC ground stations request failed.' ) ) )
+			self.ground_stations = self.result.get( 'GroundStation', [ ] )
+			return self.result
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -3777,21 +3789,48 @@ class SatelliteCenter( Fetcher ):
 			throw_if( 'observatories', observatories )
 			throw_if( 'start_time', start_time )
 			throw_if( 'end_time', end_time )
+			self.observatory_ids = str( observatories ).strip( )
+			self.start_time = str( start_time ).strip( )
+			self.end_time = str( end_time ).strip( )
+			self.coordinate_systems = str( coordinate_systems ).strip( ).lower( )
+			self.resolution_factor = int( resolution_factor )
 			self.timeout = int( time )
-			obs = observatories.strip( )
-			time_range = f'{start_time.strip( )},{end_time.strip( )}'
-			coords = (coordinate_systems or 'gse').strip( )
-			request_url = (f'{self.url}/locations/'
-			               f'{obs}/'
-			               f'{time_range}/'
-			               f'{coords}/')
-			
-			self.params = { 'resolutionFactor': max( 1, int( resolution_factor ) ) }
-			self.response = requests.get( url=request_url, params=self.params,
+			if self.timeout < 1:
+				raise ValueError( 'time must be greater than or equal to 1.' )
+			if self.resolution_factor < 1:
+				raise ValueError( 'resolution_factor must be greater than or equal to 1.' )
+			if not re.fullmatch( r'[A-Za-z0-9_-]+(?:,[A-Za-z0-9_-]+)*',
+					self.observatory_ids ):
+				raise ValueError( 'observatories must contain comma-separated SSC identifiers.' )
+
+			supported = { 'geo', 'gm', 'gse', 'gsm', 'sm', 'geitod', 'geij2000' }
+			requested = self.coordinate_systems.split( ',' )
+			if any( item not in supported for item in requested ):
+				raise ValueError( 'Unsupported SSC coordinate system.' )
+
+			pattern = r'\d{8}T\d{6}Z'
+			if not re.fullmatch( pattern, self.start_time ) or not re.fullmatch(
+					pattern, self.end_time ):
+				raise ValueError(
+					'SSC location times must use YYYYMMDDTHHMMSSZ (UTC).' )
+			start_date = dt.datetime.strptime( self.start_time, '%Y%m%dT%H%M%SZ' )
+			end_date = dt.datetime.strptime( self.end_time, '%Y%m%dT%H%M%SZ' )
+			if start_date >= end_date:
+				raise ValueError( 'start_time must precede end_time.' )
+
+			self.request_url = (f'{self.url}/locations/{self.observatory_ids}/'
+				f'{self.start_time},{self.end_time}/{self.coordinate_systems}/')
+			self.params = { 'resolutionFactor': self.resolution_factor }
+			self.response = requests.get( url=self.request_url, params=self.params,
 				headers=self.headers, timeout=self.timeout )
-			
 			self.response.raise_for_status( )
-			return self.response.json( )
+			self.result = self.response.json( )
+			if not isinstance( self.result, dict ):
+				raise ValueError( 'SSC locations response must be a dictionary.' )
+			if self.result.get( 'HttpStatus', 200 ) != 200:
+				raise ValueError( self.result.get( 'ErrorMessage',
+					self.result.get( 'HttpText', 'SSC locations request failed.' ) ) )
+			return self.result
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
