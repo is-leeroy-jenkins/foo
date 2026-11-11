@@ -531,7 +531,7 @@ class WebFetcher( Fetcher ):
 			self.left_host = urllib.parse.urlparse( self.left_url ).netloc.lower( )
 			self.right_host = urllib.parse.urlparse( self.right_url ).netloc.lower( )
 			
-			return bool( self.left_host ) and self.left_host == self.right_host
+			return ( self.left_host ) and self.left_host == self.right_host
 		
 		except Exception:
 			return False
@@ -689,7 +689,7 @@ class WebFetcher( Fetcher ):
 		try:
 			throw_if( 'uri', uri )
 			self.url = ( uri ).strip( )
-			self.fetch( self.url, time=int( self.timeout or 10 ) )
+			self.fetch( self.url, time=( self.timeout or 10 ) )
 			return self.extract_structured_data( self.url, 
 				self.html or '', ['scrape_paragraphs' ] ).get( 'Paragraphs', [ ] )
 		
@@ -753,7 +753,7 @@ class WebFetcher( Fetcher ):
 		try:
 			throw_if( 'uri', uri )
 			self.url = ( uri ).strip( )
-			self.fetch( self.url, time=int( self.timeout or 10 ) )
+			self.fetch( self.url, time=( self.timeout or 10 ) )
 			return self.extract_structured_data( self.url, self.html or '',
 				[ 'scrape_tables' ] ).get( 'Tables', [ ] )
 		
@@ -817,7 +817,7 @@ class WebFetcher( Fetcher ):
 		try:
 			throw_if( 'uri', uri )
 			self.url = ( uri ).strip( )
-			self.fetch( self.url, time=int( self.timeout or 10 ) )
+			self.fetch( self.url, time=( self.timeout or 10 ) )
 			return self.extract_structured_data( self.url, self.html or '', [
 					'scrape_headings' ] ).get( 'Headings', [ ] )
 		
@@ -849,7 +849,7 @@ class WebFetcher( Fetcher ):
 		try:
 			throw_if( 'uri', uri )
 			self.url = ( uri ).strip( )
-			self.fetch( self.url, time=int( self.timeout or 10 ) )
+			self.fetch( self.url, time=( self.timeout or 10 ) )
 			return self.extract_structured_data( self.url, self.html or '',
 				[ 'scrape_divisions' ] ).get( 'Divisions', [ ] )
 		
@@ -881,7 +881,7 @@ class WebFetcher( Fetcher ):
 		try:
 			throw_if( 'uri', uri )
 			self.url = ( uri ).strip( )
-			self.fetch( self.url, time=int( self.timeout or 10 ) )
+			self.fetch( self.url, time=( self.timeout or 10 ) )
 			return self.extract_structured_data( self.url, self.html or '',
 				[ 'scrape_sections' ] ).get( 'Sections', [ ] )
 		
@@ -913,7 +913,7 @@ class WebFetcher( Fetcher ):
 		try:
 			throw_if( 'uri', uri )
 			self.url = ( uri ).strip( )
-			self.fetch( self.url, time=int( self.timeout or 10 ) )
+			self.fetch( self.url, time=( self.timeout or 10 ) )
 			return self.extract_structured_data( self.url,
 				self.html or '', [ 'scrape_blockquotes' ] ).get( 'Blockquotes', [ ] )
 		
@@ -945,7 +945,7 @@ class WebFetcher( Fetcher ):
 		try:
 			throw_if( 'uri', uri )
 			self.url = ( uri ).strip( )
-			self.fetch( self.url, time=int( self.timeout or 10 ) )
+			self.fetch( self.url, time=( self.timeout or 10 ) )
 			return self.extract_structured_data( self.url,
 				self.html or '', [ 'scrape_hyperlinks' ] ).get( 'Hyperlinks', [ ] )
 		
@@ -977,7 +977,7 @@ class WebFetcher( Fetcher ):
 		try:
 			throw_if( 'uri', uri )
 			self.url = ( uri ).strip( )
-			self.fetch( self.url, time=int( self.timeout or 10 ) )
+			self.fetch( self.url, time=( self.timeout or 10 ) )
 			return self.extract_structured_data( self.url,
 				self.html or '', [ 'scrape_images' ] ).get( 'Images', [ ] )
 		
@@ -1346,7 +1346,7 @@ class WebCrawler( WebFetcher ):
 			
 			finished_at = dt.datetime.now( )
 			error_count = sum( len( page.get( 'errors', [ ] ) or [ ] ) for page in pages )
-			total_bytes = sum( int( page.get( 'content_bytes', 0 ) or 0 ) for page in pages )
+			total_bytes = sum( ( page.get( 'content_bytes', 0 ) or 0 ) for page in pages )
 			self.pages = pages
 			self.summary = { 'mode': 'recursive' if recursive else 'single-page',
 					'seed_url': normalized_seed, 'pages_processed': len( pages ),
@@ -1356,9 +1356,9 @@ class WebCrawler( WebFetcher ):
 					'recursive_requested': ( recursive ), 'max_depth': ( max_depth ),
 					'max_pages': ( max_pages ), 'same_domain_only': ( same_domain_only ),
 					'request_timeout': ( request_timeout ),
-					'delay_seconds': ( delay_seconds ), 'max_bytes_per_page': int(
+					'delay_seconds': ( delay_seconds ), 'max_bytes_per_page': (
 						max_bytes ),
-					'use_playwright': bool( self.use_playwright ),
+					'use_playwright': ( self.use_playwright ),
 					'started_at': started_at.isoformat( ), 'finished_at': finished_at.isoformat( ),
 					'elapsed_seconds': round( (finished_at - started_at).total_seconds( ), 3 ),
 					'visited_urls': list( visited ), 'skipped_urls': skipped_urls, }
@@ -1452,12 +1452,12 @@ class ArXiv( Fetcher ):
 		try:
 			throw_if( 'question', question )
 			self.query = question.strip( )
-			max_docs = self.max_documents if max_documents is None else max( 1, min( int(
+			max_docs = self.max_documents if max_documents is None else max( 1, min( (
 				max_documents ), 300 ) )
 			
 			get_full = self.full_documents if full_documents is None else ( full_documents )
 			
-			load_meta = self.include_metadata if include_metadata is None else bool(
+			load_meta = self.include_metadata if include_metadata is None else (
 				include_metadata )
 			
 			self.fetcher = ArxivRetriever( load_max_docs=max_docs, get_full_documents=get_full,
@@ -1769,7 +1769,7 @@ class Wikipedia( Fetcher ):
 			throw_if( 'question', question )
 			self.query = question.strip( )
 			lang = self.language if language is None else (language.strip( ) if language else 'en')
-			max_docs = self.max_documents if max_documents is None else max( 1, min( int(
+			max_docs = self.max_documents if max_documents is None else max( 1, min( (
 				max_documents ), 300 ) )
 			
 			load_meta = self.include_metadata if include_metadata is None else include_metadata
@@ -1999,7 +1999,7 @@ class TheNews( Fetcher ):
 				if published_on and published_on.strip( ):
 					self.params[ 'published_on' ] = published_on.strip( )
 				
-				self.params[ 'headlines_per_category' ] = max( 1, min( int(
+				self.params[ 'headlines_per_category' ] = max( 1, min( (
 					headlines_per_category ), 10 ) )
 				
 				self.params[ 'include_similar' ] = 'true' if ( include_similar ) else 'false'
@@ -4054,7 +4054,7 @@ class EarthObservatory( Fetcher ):
 				raise ValueError( 'status must be open, closed, or all.' )
 			if self.limit < 1 or self.days < 1:
 				raise ValueError( 'limit and days must be positive integers.' )
-			if bool( self.start_date ) != bool( self.end_date ):
+			if ( self.start_date ) != ( self.end_date ):
 				raise ValueError( 'start_date and end_date must be supplied together.' )
 			if self.start_date:
 				start = dt.datetime.strptime( self.start_date, '%Y-%m-%d' ).date( )
@@ -4563,7 +4563,7 @@ class GlobalImagery( Fetcher ):
 				raise ValueError( 'GIBS WMS version must be 1.1.1 or 1.3.0.' )
 			if len( bbox ) != 4:
 				raise ValueError( 'bbox must contain west, south, east, north.' )
-			self.bbox = tuple( float( value ) for value in bbox )
+			self.bbox = tuple( ( value ) for value in bbox )
 			if not all( float( '-inf' ) < value < float( 'inf' ) for value in self.bbox ):
 				raise ValueError( 'bbox coordinates must be finite.' )
 			west, south, east, north = self.bbox
@@ -4688,8 +4688,8 @@ class GlobalImagery( Fetcher ):
 					'status_code': self.response.status_code, 'bytes': len(
 						self.response.content ),
 					'layer': self.layer, 'image_date': self.image_date,
-					'bbox': { 'west': float( self.bbox[ 0 ] ), 'south': float( self.bbox[ 1 ] ),
-							'east': float( self.bbox[ 2 ] ), 'north': float( self.bbox[ 3 ] ) },
+					'bbox': { 'west': ( self.bbox[ 0 ] ), 'south': ( self.bbox[ 1 ] ),
+							'east': ( self.bbox[ 2 ] ), 'north': ( self.bbox[ 3 ] ) },
 					'summary': { 'rows': 1, 'columns': 8,
 							'description': 'NASA GIBS WMS image written to disk.' } }
 			
@@ -5997,7 +5997,7 @@ class SpaceWeather( Fetcher ):
 				raise ValueError( 'Unsupported NASA DONKI endpoint.' )
 			self.start_date = ( start_date or '' ).strip( )
 			self.end_date = ( end_date or '' ).strip( )
-			if bool( self.start_date ) != bool( self.end_date ):
+			if ( self.start_date ) != ( self.end_date ):
 				raise ValueError( 'start_date and end_date must be supplied together.' )
 			if self.start_date:
 				start = dt.datetime.strptime( self.start_date, '%Y-%m-%d' ).date( )
@@ -6115,9 +6115,9 @@ class SpaceWeather( Fetcher ):
 			
 			return self.fetch_endpoint( endpoint=endpoint_map[
 				active_mode ], start_date=( start_date ).strip( ), end_date=( end_date
-			).strip( ), time=( time ), location=( location or 'ALL' ).strip( ), catalog=str(
+			).strip( ), time=( time ), location=( location or 'ALL' ).strip( ), catalog=(
 				catalog or 'ALL' ).strip( ), notification_type=( notification_type or 'all'
-			).strip( ), most_accurate_only=( most_accurate_only ), complete_entry_only=bool(
+			).strip( ), most_accurate_only=( most_accurate_only ), complete_entry_only=(
 				complete_entry_only ), speed=( speed ), half_angle=( half_angle ),
 				keyword=( keyword or '' ).strip( ), api_key=api_key )
 		
@@ -10566,7 +10566,7 @@ class Grokipedia( Fetcher ):
 				offset=self.offset )
 			
 			self.result = { 'mode': 'search', 'url': self.url, 'params': self.params,
-					'api_key_configured': bool( str( self.api_key or '' ).strip( ) ),
+					'api_key_configured': bool( ( self.api_key or '' ).strip( ) ),
 					'data': self.response }
 			
 			return self.result
@@ -10606,7 +10606,7 @@ class Grokipedia( Fetcher ):
 			self.params = { 'page': self.page, 'include_content': self.include_content }
 			self.response = self.client.get_page( self.page, include_content=self.include_content )
 			self.result = { 'mode': 'page', 'url': self.url, 'params': self.params,
-					'api_key_configured': bool( str( self.api_key or '' ).strip( ) ),
+					'api_key_configured': bool( ( self.api_key or '' ).strip( ) ),
 					'data': self.response }
 			
 			return self.result
@@ -18997,7 +18997,7 @@ related operations.
 			start_value = ( start_date or '' ).strip( )
 			end_value = ( end_date or '' ).strip( )
 			
-			if bool( start_value ) != bool( end_value ):
+			if ( start_value ) != ( end_value ):
 				raise ValueError( 'start_date and end_date must either both be supplied or both be '
 				                  'blank.' )
 			
