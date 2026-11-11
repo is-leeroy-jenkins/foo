@@ -1,0 +1,33 @@
+name: Fetcher argument and state contracts
+
+on:
+  push:
+    branches:
+      - fix/fetcher-argument-state-contracts-20261110
+  pull_request:
+    paths:
+      - fetchers.py
+      - tests/test_fetcher_argument_state_contracts.py
+      - .github/workflows/fetcher-contracts.yml
+
+permissions:
+  contents: read
+
+jobs:
+  contract-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile affected source and tests
+        run: python -m compileall -q fetchers.py tests/test_fetcher_argument_state_contracts.py
+
+      - name: Run isolated fetcher regression tests
+        run: python -m unittest discover -s tests -p 'test_fetcher_argument_state_contracts.py' -v
