@@ -6056,6 +6056,8 @@ class AstroCatalog( Fetcher ):
 		Returns:
 		    Dict[str, Any]: Catalog name, columns, rows, and number of records.
 		"""
+		throw_if( 'table', table )
+		throw_if( 'catalog', catalog )
 		rows: List[ Dict[ str, Any ] ] = [ ]
 		for record in table:
 			item: Dict[ str, Any ] = { }
@@ -6212,12 +6214,12 @@ class AstroCatalog( Fetcher ):
 				raise ValueError( 'Legacy quantity/attributes paths are not supported by SIMBAD; '
 					'use arguments="provider=vizier,catalog=<ID>" instead.' )
 			
-			route = '/'.join( route_parts )
-			params = self.parse_argument( arguments )
+			self.route = '/'.join( route_parts )
+			self.params = self.parse_argument( arguments )
 			if self.format:
-				params[ 'format' ] = self.format
-			
-			return self.request( route=route, params=params, time=time )
+				self.params[ 'format' ] = self.format
+			self.timeout = int( time )
+			return self.request( route=self.route, params=self.params, time=self.timeout )
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -6267,20 +6269,20 @@ class AstroCatalog( Fetcher ):
 				raise ValueError( 'radius must be positive.' )
 			if self.format not in ('json', 'csv', 'tsv'):
 				raise ValueError( 'Unsupported AstroCatalog output format.' )
-			route = 'catalog'
+			self.route = 'catalog'
 			attr_path = self.normalize_attribute_path( quantity, attributes )
 			if attr_path:
 				raise ValueError( 'Legacy quantity/attributes paths are not supported by SIMBAD; '
 					'use arguments="provider=vizier,catalog=<ID>" instead.' )
 			
-			params = self.parse_argument( arguments )
-			params[ 'ra' ] = self.right_ascension
-			params[ 'dec' ] = self.declination
-			params[ 'radius' ] = str( self.radius )
+			self.params = self.parse_argument( arguments )
+			self.params[ 'ra' ] = self.right_ascension
+			self.params[ 'dec' ] = self.declination
+			self.params[ 'radius' ] = str( self.radius )
 			if self.format:
-				params[ 'format' ] = self.format
-			
-			return self.request( route=route, params=params, time=time )
+				self.params[ 'format' ] = self.format
+			self.timeout = int( time )
+			return self.request( route=self.route, params=self.params, time=self.timeout )
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
