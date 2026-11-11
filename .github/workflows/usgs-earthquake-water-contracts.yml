@@ -1,0 +1,28 @@
+name: USGS Earthquake and Water Data contracts
+
+on:
+  pull_request:
+    paths:
+      - fetchers.py
+      - tests/test_usgs_earthquake_water_contracts.py
+      - .github/workflows/usgs-earthquake-water-contracts.yml
+  push:
+    branches: [ main ]
+    paths:
+      - fetchers.py
+      - tests/test_usgs_earthquake_water_contracts.py
+      - .github/workflows/usgs-earthquake-water-contracts.yml
+  workflow_dispatch:
+
+jobs:
+  usgs-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Compile production and regression tests
+        run: python -m compileall -q fetchers.py tests/test_usgs_earthquake_water_contracts.py
+      - name: Execute isolated USGS regression tests
+        run: python -m unittest discover -s tests -p 'test_usgs_earthquake_water_contracts.py' -v

@@ -14385,6 +14385,8 @@ class USGSEarthquakes( Fetcher ):
 			throw_if( name, value )
 			
 			number = float( value )
+			if not math.isfinite( number ):
+				raise ValueError( 'validate_magnitude must be finite.' )
 			if number < 0.0 or number > 10.0:
 				raise ValueError( f'{name} must be between 0.0 and 10.0.' )
 			
@@ -14455,6 +14457,8 @@ class USGSEarthquakes( Fetcher ):
 			throw_if( 'latitude', latitude )
 			
 			value = float( latitude )
+			if not math.isfinite( value ):
+				raise ValueError( 'validate_latitude must be finite.' )
 			if value < -90.0 or value > 90.0:
 				raise ValueError( 'latitude must be between -90 and 90.' )
 			
@@ -14488,6 +14492,8 @@ class USGSEarthquakes( Fetcher ):
 			throw_if( 'longitude', longitude )
 			
 			value = float( longitude )
+			if not math.isfinite( value ):
+				raise ValueError( 'validate_longitude must be finite.' )
 			if value < -180.0 or value > 180.0:
 				raise ValueError( 'longitude must be between -180 and 180.' )
 			
@@ -14522,6 +14528,8 @@ class USGSEarthquakes( Fetcher ):
 			throw_if( 'max_radius_km', radius )
 			
 			value = float( radius )
+			if not math.isfinite( value ):
+				raise ValueError( 'validate_radius must be finite.' )
 			if value < 0.0 or value > 20001.6:
 				raise ValueError( 'max_radius_km must be between 0.0 and 20001.6.' )
 			
@@ -14763,7 +14771,11 @@ class USGSEarthquakes( Fetcher ):
 				timeout=self.timeout )
 			self.response.raise_for_status( )
 			
-			self.payload = self.response.json( ) or { }
+			self.payload = self.response.json( )
+			if not isinstance( self.payload, dict ) or self.payload.get( 'error' ):
+				raise ValueError( 'USGS earthquake response must be a successful GeoJSON object.' )
+			if not isinstance( self.payload.get( 'features' ), list ):
+				raise ValueError( 'USGS earthquake response requires a features array.' )
 			
 			return self.package_response( )
 		
@@ -14821,6 +14833,18 @@ class USGSEarthquakes( Fetcher ):
 			self.feed = ''
 			self.start_date = self.to_iso_date( start_date )
 			self.end_date = self.to_iso_date( end_date )
+			try:
+				start_dt = dt.datetime.fromisoformat( self.start_date.replace( 'Z', '+00:00' ) )
+				end_dt = dt.datetime.fromisoformat( self.end_date.replace( 'Z', '+00:00' ) )
+			except ValueError as error:
+				raise ValueError( 'start_date and end_date must be ISO 8601 dates.' ) from error
+			if start_dt.tzinfo is None and end_dt.tzinfo is not None or start_dt.tzinfo is not None and end_dt.tzinfo is None:
+				raise ValueError( 'start_date and end_date must use consistent timezones.' )
+			if start_dt > end_dt:
+				raise ValueError( 'start_date must precede or equal end_date.' )
+			self.latitude = None
+			self.longitude = None
+			self.max_radius_km = None
 			self.min_magnitude = self.validate_magnitude( 'min_magnitude', min_magnitude )
 			self.max_magnitude = self.validate_magnitude( 'max_magnitude', max_magnitude )
 			self.limit = self.validate_limit( limit )
@@ -14851,7 +14875,7 @@ class USGSEarthquakes( Fetcher ):
 				self.params[ 'longitude' ] = self.longitude
 			
 			if max_radius_km is not None:
-				if self.latitude is None or self.longitude is None:
+				if latitude is None or longitude is None:
 					raise ValueError( 'max_radius_km requires both latitude and longitude.' )
 				
 				self.max_radius_km = self.validate_radius( max_radius_km )
@@ -14861,7 +14885,11 @@ class USGSEarthquakes( Fetcher ):
 				timeout=self.timeout )
 			self.response.raise_for_status( )
 			
-			self.payload = self.response.json( ) or { }
+			self.payload = self.response.json( )
+			if not isinstance( self.payload, dict ) or self.payload.get( 'error' ):
+				raise ValueError( 'USGS earthquake response must be a successful GeoJSON object.' )
+			if not isinstance( self.payload.get( 'features' ), list ):
+				raise ValueError( 'USGS earthquake response requires a features array.' )
 			
 			return self.package_response( )
 		
@@ -15544,6 +15572,8 @@ value.
 			throw_if( 'params', params )
 			throw_if( 'time', time )
 			
+			if not isinstance( params, dict ):
+				raise ValueError( 'params must be a dictionary.' )
 			self.collection = self.validate_collection( collection )
 			self.timeout = int( time )
 			self.url = f'{self.base_url}/{self.collection}/items'
@@ -15567,8 +15597,14 @@ value.
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
-			self.payload = self.response.json( ) or { }
-			self.result = { 'url': self.response.url, 'params': self.params, 'raw': self.payload }
+			self.payload = self.response.json( )
+			if not isinstance( self.payload, dict ):
+				raise ValueError( 'USGS Water Data response must be a JSON object.' )
+			if self.payload.get( 'error' ) or self.payload.get( 'type' ) == 'https://www.opengis.net/def/exceptions/ogcapi-features-1/1.0':
+				raise ValueError( str( self.payload.get( 'detail', self.payload.get( 'error', 'USGS Water Data API request failed.' ) ) ) )
+			if isinstance( self.payload.get( 'status' ), int ) and self.payload[ 'status' ] >= 400:
+				raise ValueError( 'USGS Water Data API returned an error status.' )
+			self.result = { 'url': self.url, 'params': self.params, 'raw': self.payload }
 			
 			return self.result
 		
