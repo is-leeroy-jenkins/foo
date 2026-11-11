@@ -1,0 +1,26 @@
+name: USGS National Map and ScienceBase contracts
+
+on:
+  pull_request:
+    paths:
+      - fetchers.py
+      - tests/test_usgs_national_map_sciencebase_contracts.py
+      - .github/workflows/usgs-national-map-sciencebase-contracts.yml
+  push:
+    paths:
+      - fetchers.py
+      - tests/test_usgs_national_map_sciencebase_contracts.py
+      - .github/workflows/usgs-national-map-sciencebase-contracts.yml
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Compile fetchers
+        run: python -m py_compile fetchers.py
+      - name: Run isolated provider contracts
+        run: python -m unittest discover -s tests -p 'test_usgs_national_map_sciencebase_contracts.py' -v
