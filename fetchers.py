@@ -2879,8 +2879,8 @@ class GoogleWeather( Fetcher ):
 		"""
 		return [ 'api_key', 'url', 'timeout', 'headers', 'gmaps', 'mode', 'latitude', 'longitude',
 				'coordinates', 'address', 'params', 'response', 'payload', 'result',
-				'units_system',
-				'language_code', 'hours', 'days', 'path', 'agents', 'resolve_coordinates',
+				'units_system', 'language_code', 'hours', 'days', 'path',
+				'agents', 'resolve_coordinates',
 				'request', 'package_response', 'fetch_current', 'fetch_hourly_forecast',
 				'fetch_daily_forecast', 'fetch_hourly_history', 'fetch_alerts' ]
 	
@@ -3315,17 +3315,17 @@ class NavalObservatory( Fetcher ):
 	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
 	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
 	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
+	        provider call.
 	    date_value (Optional[str]): Current date value retained by the NavalObservatory workflow
-	    between related operations.
+	        between related operations.
 	    time_value (Optional[str]): Current time value retained by the NavalObservatory workflow
-	    between related operations.
+	        between related operations.
 	    latitude (Optional[float]): Current latitude retained by the NavalObservatory workflow
-	    between related operations.
+	        between related operations.
 	    longitude (Optional[float]): Current longitude retained by the NavalObservatory workflow
-	    between related operations.
+	        between related operations.
 	    location_label (Optional[str]): Current location label retained by the NavalObservatory
-	    workflow between related operations.
+	        workflow between related operations.
 	    agents (Optional[str]): Configured user-agent string sent with web requests.
 	    headers (Any): HTTP headers sent with the current request.
 	"""
@@ -3562,7 +3562,7 @@ class NavalObservatory( Fetcher ):
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			active_mode = str( mode or 'celnav' ).strip( ).lower( )
@@ -3634,14 +3634,14 @@ class SatelliteCenter( Fetcher ):
 
 	Attributes:
 	    ssc (Optional[SscWs]): Current ssc retained by the SatelliteCenter workflow between
-	    related operations.
+	        related operations.
 	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
 	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
+	        provider call.
 	    observatories (Optional[List[Dict[str, Any]]]): Current observatories retained by the
-	    SatelliteCenter workflow between related operations.
+	        SatelliteCenter workflow between related operations.
 	    ground_stations (Optional[List[Dict[str, Any]]]): Current ground stations retained by the
-	    SatelliteCenter workflow between related operations.
+	        SatelliteCenter workflow between related operations.
 	    timeout (Optional[int]): Maximum request duration, in seconds, applied to provider calls.
 	    headers (Any): HTTP headers sent with the current request.
 	    agents (Any): Configured user-agent string sent with web requests.
@@ -3662,7 +3662,7 @@ class SatelliteCenter( Fetcher ):
 
 		Returns:
 		    None: This method updates instance state or validates input and does not return a
-		    value.
+		        value.
 		"""
 		super( ).__init__( )
 		self.ssc = None
@@ -3702,11 +3702,11 @@ class SatelliteCenter( Fetcher ):
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			self.ssc = SscWs( user_agent=self.agents, timeout=self.timeout )
@@ -3729,11 +3729,11 @@ class SatelliteCenter( Fetcher ):
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			self.ssc = SscWs( user_agent=self.agents, timeout=self.timeout )
@@ -3748,8 +3748,8 @@ class SatelliteCenter( Fetcher ):
 			raise exception
 	
 	def fetch_locations( self, observatories: str, start_time: str, end_time: str,
-			coordinate_systems: str='gse', resolution_factor: int=1, time: int=20 ) -> \
-	Dict[ str, Any ] | None:
+			coordinate_systems: str='gse', resolution_factor: int=1,
+			time: int=20 ) ->  Dict[ str, Any ] | None:
 		"""Fetch locations.
 
 		Purpose:
@@ -3757,24 +3757,24 @@ class SatelliteCenter( Fetcher ):
 
 		Args:
 		    observatories (str): Observatories supplied by the caller and interpreted according to
-		    the method contract.
+		        the method contract.
 		    start_time (str): Start time supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    end_time (str): End time supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    coordinate_systems (str): Coordinate systems supplied by the caller and interpreted
-		    according to the method contract.
+		        according to the method contract.
 		    resolution_factor (int): Resolution factor supplied by the caller and interpreted
-		    according to the method contract.
+		        according to the method contract.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'observatories', observatories )
@@ -3803,9 +3803,9 @@ class SatelliteCenter( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='observatories', query: str='', start_time: str='', end_time:
-	str = '', coordinate_systems: str='gse', resolution_factor: int=1, time: int=20 ) -> \
-	Dict[ str, Any ] | None:
+	def fetch( self, mode: str='observatories', query: str='', start_time: str='', end_time: str='',
+			coordinate_systems: str='gse', resolution_factor: int=1,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch.
 
 		Purpose:
@@ -3816,22 +3816,22 @@ class SatelliteCenter( Fetcher ):
 		    mode (str): Provider or loader operating mode selected for the request.
 		    query (str): Search text, prompt, or provider query submitted by the caller.
 		    start_time (str): Start time supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    end_time (str): End time supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    coordinate_systems (str): Coordinate systems supplied by the caller and interpreted
-		    according to the method contract.
+		        according to the method contract.
 		    resolution_factor (int): Resolution factor supplied by the caller and interpreted
-		    according to the method contract.
+		        according to the method contract.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			active_mode = (mode or 'observatories').strip( ).lower( )
@@ -3866,23 +3866,23 @@ class EarthObservatory( Fetcher ):
 	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
 	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
 	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
+	        provider call.
 	    mode (Optional[str]): Current mode retained by the EarthObservatory workflow between
-	    related operations.
+	        related operations.
 	    status (Optional[str]): Current status retained by the EarthObservatory workflow between
-	    related operations.
+	        related operations.
 	    category (Optional[str]): Current category retained by the EarthObservatory workflow
-	    between related operations.
+	        between related operations.
 	    source (Optional[str]): Current source retained by the EarthObservatory workflow between
-	    related operations.
+	        related operations.
 	    days (Optional[int]): Current days retained by the EarthObservatory workflow between
-	    related operations.
+	        related operations.
 	    limit (Optional[int]): Current limit retained by the EarthObservatory workflow between
-	    related operations.
+	        related operations.
 	    start_date (Optional[str]): Current start date retained by the EarthObservatory workflow
-	    between related operations.
+	        between related operations.
 	    end_date (Optional[str]): Current end date retained by the EarthObservatory workflow
-	    between related operations.
+	        between related operations.
 	    agents (Optional[str]): Configured user-agent string sent with web requests.
 	    headers (Any): HTTP headers sent with the current request.
 	"""
@@ -3908,7 +3908,7 @@ class EarthObservatory( Fetcher ):
 
 		Returns:
 		    None: This method updates instance state or validates input and does not return a
-		    value.
+		        value.
 		"""
 		super( ).__init__( )
 		self.headers = { }
@@ -3951,21 +3951,21 @@ class EarthObservatory( Fetcher ):
 
 		Args:
 		    status (str): Status supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    category (str): Category supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    source (str): Source supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    limit (int): Maximum number of records or characters permitted by the operation.
 		    days (int): Days supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    start_date (str): Date boundary or date value used by the request.
 		    end_date (str): Date boundary or date value used by the request.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
@@ -4363,18 +4363,18 @@ class GlobalImagery( Fetcher ):
 
 		Args:
 		    projection (str): Projection supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    quality (str): Quality supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    version (str): Version supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 
 		Returns:
 		    str: Normalized text produced by the operation.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			projection_value = str( projection or 'epsg4326' ).strip( ).lower( )
@@ -4396,7 +4396,8 @@ class GlobalImagery( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def build_wms_url( self, layer: str, image_date: str, bbox: Tuple[ float, float, float, float ],
+	def build_wms_url( self, layer: str, image_date: str,
+			bbox: Tuple[ float, float, float, float ],
 			width: int=1200, height: int=600, projection: str='epsg4326',
 			quality: str='best', image_format: str='image/png', transparent: bool=True,
 			version: str='1.1.1' ) -> str:
@@ -4407,23 +4408,23 @@ class GlobalImagery( Fetcher ):
 
 		Args:
 		    layer (str): Layer supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    image_date (str): Date boundary or date value used by the request.
 		    bbox (Tuple[float, float, float, float]): Bbox supplied by the caller and interpreted
-		    according to the method contract.
+		        according to the method contract.
 		    width (int): Width supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    height (int): Height supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    projection (str): Projection supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    quality (str): Quality supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    image_format (str): Image format supplied by the caller and interpreted according to
-		    the method contract.
+		        the method contract.
 		    transparent (bool): Whether transparent behavior is enabled for the operation.
 		    version (str): Version supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 
 		Returns:
 		    str: Normalized text produced by the operation.
@@ -4442,11 +4443,9 @@ class GlobalImagery( Fetcher ):
 			projection_value = str( projection or 'epsg4326' ).strip( ).lower( )
 			quality_value = str( quality or 'best' ).strip( ).lower( )
 			version_value = str( version or '1.1.1' ).strip( )
-			
 			west, south, east, north = [ float( value ) for value in bbox ]
 			width_value = max( 1, int( width ) )
 			height_value = max( 1, int( height ) )
-			
 			base_url = (f'https://gibs.earthdata.nasa.gov/wms/'
 			            f'{projection_value}/{quality_value}/wms.cgi')
 			
@@ -4480,34 +4479,34 @@ class GlobalImagery( Fetcher ):
 
 		Args:
 		    layer (str): Layer supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    image_date (str): Date boundary or date value used by the request.
 		    bbox (Tuple[float, float, float, float]): Bbox supplied by the caller and interpreted
-		    according to the method contract.
+		        according to the method contract.
 		    width (int): Width supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    height (int): Height supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    projection (str): Projection supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    quality (str): Quality supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    image_format (str): Image format supplied by the caller and interpreted according to
-		    the method contract.
+		        the method contract.
 		    transparent (bool): Whether transparent behavior is enabled for the operation.
 		    output_dir (str): Output dir supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    output_name (str): Output name supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			self.mode = 'wms_map'
