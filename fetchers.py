@@ -4563,7 +4563,7 @@ class GlobalImagery( Fetcher ):
 				raise ValueError( 'GIBS WMS version must be 1.1.1 or 1.3.0.' )
 			if len( bbox ) != 4:
 				raise ValueError( 'bbox must contain west, south, east, north.' )
-			self.bbox = tuple( ( value ) for value in bbox )
+			self.bbox = tuple( float( value ) for value in bbox )
 			if not all( float( '-inf' ) < value < float( 'inf' ) for value in self.bbox ):
 				raise ValueError( 'bbox coordinates must be finite.' )
 			west, south, east, north = self.bbox
