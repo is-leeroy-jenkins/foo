@@ -10266,8 +10266,8 @@ class HistoricalWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_historical( self, lat: float, long: float, date: dt.date, zone: str='auto' ) -> \
-	Dict[ str, Any ] | None:
+	def fetch_historical( self, lat: float, long: float, date: dt.date,
+			zone: str='auto' ) -> Dict[ str, Any ] | None:
 		"""Fetch historical.
 
 		Purpose:
@@ -10338,8 +10338,8 @@ class HistoricalWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, location: str, date: dt.date, zone: str='auto', count: int=10 ) -> Dict[
-		                                                                                        str, Any ] | None:
+	def fetch( self, location: str, date: dt.date, zone: str='auto',
+			count: int=10 ) -> Dict[ str, Any ] | None:
 		"""Fetch.
 
 		Purpose:
@@ -10398,8 +10398,7 @@ class HistoricalWeather( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
-			required:
-	list[ str ] ) -> Dict[ str, str ] | None:
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Create schema.
 
 		Purpose:
