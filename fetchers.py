@@ -2391,7 +2391,7 @@ class GoogleMaps( Fetcher ):
 	    longitude (Optional[float]): Current longitude retained by the GoogleMaps workflow between
 	        related operations.
 	    coordinates (Optional[Tuple[float, float]]): Current coordinates retained by the
-	    GoogleMaps workflow between related operations.
+	        GoogleMaps workflow between related operations.
 	    address (Optional[str]): Current address retained by the GoogleMaps workflow between
 	        related operations.
 	    address_lines (Optional[List[str]]): Current address lines retained by the GoogleMaps
@@ -2507,6 +2507,7 @@ class GoogleMaps( Fetcher ):
 		"""
 		try:
 			throw_if( 'address', address )
+			self.mode = 'geocode_location'
 			self.address = str( address ).strip( )
 			self.url = 'https://maps.googleapis.com/maps/api/geocode/json'
 			self.params = { 'address': self.address, 'key': self.api_key }
@@ -2570,6 +2571,7 @@ class GoogleMaps( Fetcher ):
 			throw_if( 'latitude', lat )
 			throw_if( 'longitude', long )
 			
+			self.mode = 'geocode_coordinates'
 			self.latitude = float( lat )
 			self.longitude = float( long )
 			self.coordinates = (self.latitude, self.longitude)
@@ -2627,6 +2629,7 @@ class GoogleMaps( Fetcher ):
 			if not isinstance( address, list ):
 				raise TypeError( 'address must be a list of address-line strings.' )
 			
+			self.mode = 'validate_address'
 			self.url = 'https://addressvalidation.googleapis.com/v1:validateAddress'
 			self.address_lines = [ str( line ).strip( ) for line in address if
 					line is not None and str( line ).strip( ) ]
@@ -2876,8 +2879,8 @@ class GoogleWeather( Fetcher ):
 		"""
 		return [ 'api_key', 'url', 'timeout', 'headers', 'gmaps', 'mode', 'latitude', 'longitude',
 				'coordinates', 'address', 'params', 'response', 'payload', 'result',
-				'units_system', 'language_code', 'hours', 'days', 'path',
-				'agents', 'resolve_coordinates',
+				'units_system',
+				'language_code', 'hours', 'days', 'path', 'agents', 'resolve_coordinates',
 				'request', 'package_response', 'fetch_current', 'fetch_hourly_forecast',
 				'fetch_daily_forecast', 'fetch_hourly_history', 'fetch_alerts' ]
 	
@@ -3312,17 +3315,17 @@ class NavalObservatory( Fetcher ):
 	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
 	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
 	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	        provider call.
+	    provider call.
 	    date_value (Optional[str]): Current date value retained by the NavalObservatory workflow
-	        between related operations.
+	    between related operations.
 	    time_value (Optional[str]): Current time value retained by the NavalObservatory workflow
-	        between related operations.
+	    between related operations.
 	    latitude (Optional[float]): Current latitude retained by the NavalObservatory workflow
-	        between related operations.
+	    between related operations.
 	    longitude (Optional[float]): Current longitude retained by the NavalObservatory workflow
-	        between related operations.
+	    between related operations.
 	    location_label (Optional[str]): Current location label retained by the NavalObservatory
-	        workflow between related operations.
+	    workflow between related operations.
 	    agents (Optional[str]): Configured user-agent string sent with web requests.
 	    headers (Any): HTTP headers sent with the current request.
 	"""
@@ -3559,7 +3562,7 @@ class NavalObservatory( Fetcher ):
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    to the application logger, and re-raises it.
 		"""
 		try:
 			active_mode = str( mode or 'celnav' ).strip( ).lower( )
@@ -3631,14 +3634,14 @@ class SatelliteCenter( Fetcher ):
 
 	Attributes:
 	    ssc (Optional[SscWs]): Current ssc retained by the SatelliteCenter workflow between
-	        related operations.
+	    related operations.
 	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
 	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	        provider call.
+	    provider call.
 	    observatories (Optional[List[Dict[str, Any]]]): Current observatories retained by the
-	        SatelliteCenter workflow between related operations.
+	    SatelliteCenter workflow between related operations.
 	    ground_stations (Optional[List[Dict[str, Any]]]): Current ground stations retained by the
-	        SatelliteCenter workflow between related operations.
+	    SatelliteCenter workflow between related operations.
 	    timeout (Optional[int]): Maximum request duration, in seconds, applied to provider calls.
 	    headers (Any): HTTP headers sent with the current request.
 	    agents (Any): Configured user-agent string sent with web requests.
@@ -3659,7 +3662,7 @@ class SatelliteCenter( Fetcher ):
 
 		Returns:
 		    None: This method updates instance state or validates input and does not return a
-		        value.
+		    value.
 		"""
 		super( ).__init__( )
 		self.ssc = None
@@ -3699,11 +3702,11 @@ class SatelliteCenter( Fetcher ):
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    to the application logger, and re-raises it.
 		"""
 		try:
 			self.ssc = SscWs( user_agent=self.agents, timeout=self.timeout )
@@ -3726,11 +3729,11 @@ class SatelliteCenter( Fetcher ):
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    to the application logger, and re-raises it.
 		"""
 		try:
 			self.ssc = SscWs( user_agent=self.agents, timeout=self.timeout )
@@ -3745,8 +3748,8 @@ class SatelliteCenter( Fetcher ):
 			raise exception
 	
 	def fetch_locations( self, observatories: str, start_time: str, end_time: str,
-			coordinate_systems: str='gse', resolution_factor: int=1,
-			time: int=20 ) ->  Dict[ str, Any ] | None:
+			coordinate_systems: str='gse', resolution_factor: int=1, time: int=20 ) -> \
+	Dict[ str, Any ] | None:
 		"""Fetch locations.
 
 		Purpose:
@@ -3754,24 +3757,24 @@ class SatelliteCenter( Fetcher ):
 
 		Args:
 		    observatories (str): Observatories supplied by the caller and interpreted according to
-		        the method contract.
+		    the method contract.
 		    start_time (str): Start time supplied by the caller and interpreted according to the
-		        method contract.
+		    method contract.
 		    end_time (str): End time supplied by the caller and interpreted according to the
-		        method contract.
+		    method contract.
 		    coordinate_systems (str): Coordinate systems supplied by the caller and interpreted
-		        according to the method contract.
+		    according to the method contract.
 		    resolution_factor (int): Resolution factor supplied by the caller and interpreted
-		        according to the method contract.
+		    according to the method contract.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'observatories', observatories )
@@ -3800,9 +3803,9 @@ class SatelliteCenter( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='observatories', query: str='', start_time: str='', end_time: str='',
-			coordinate_systems: str='gse', resolution_factor: int=1,
-			time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='observatories', query: str='', start_time: str='', end_time:
+	str = '', coordinate_systems: str='gse', resolution_factor: int=1, time: int=20 ) -> \
+	Dict[ str, Any ] | None:
 		"""Fetch.
 
 		Purpose:
@@ -3813,22 +3816,22 @@ class SatelliteCenter( Fetcher ):
 		    mode (str): Provider or loader operating mode selected for the request.
 		    query (str): Search text, prompt, or provider query submitted by the caller.
 		    start_time (str): Start time supplied by the caller and interpreted according to the
-		        method contract.
+		    method contract.
 		    end_time (str): End time supplied by the caller and interpreted according to the
-		        method contract.
+		    method contract.
 		    coordinate_systems (str): Coordinate systems supplied by the caller and interpreted
-		        according to the method contract.
+		    according to the method contract.
 		    resolution_factor (int): Resolution factor supplied by the caller and interpreted
-		        according to the method contract.
+		    according to the method contract.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    to the application logger, and re-raises it.
 		"""
 		try:
 			active_mode = (mode or 'observatories').strip( ).lower( )
@@ -3863,23 +3866,23 @@ class EarthObservatory( Fetcher ):
 	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
 	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
 	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	        provider call.
+	    provider call.
 	    mode (Optional[str]): Current mode retained by the EarthObservatory workflow between
-	        related operations.
+	    related operations.
 	    status (Optional[str]): Current status retained by the EarthObservatory workflow between
-	        related operations.
+	    related operations.
 	    category (Optional[str]): Current category retained by the EarthObservatory workflow
-	        between related operations.
+	    between related operations.
 	    source (Optional[str]): Current source retained by the EarthObservatory workflow between
-	        related operations.
+	    related operations.
 	    days (Optional[int]): Current days retained by the EarthObservatory workflow between
-	        related operations.
+	    related operations.
 	    limit (Optional[int]): Current limit retained by the EarthObservatory workflow between
-	        related operations.
+	    related operations.
 	    start_date (Optional[str]): Current start date retained by the EarthObservatory workflow
-	        between related operations.
+	    between related operations.
 	    end_date (Optional[str]): Current end date retained by the EarthObservatory workflow
-	        between related operations.
+	    between related operations.
 	    agents (Optional[str]): Configured user-agent string sent with web requests.
 	    headers (Any): HTTP headers sent with the current request.
 	"""
@@ -3905,7 +3908,7 @@ class EarthObservatory( Fetcher ):
 
 		Returns:
 		    None: This method updates instance state or validates input and does not return a
-		        value.
+		    value.
 		"""
 		super( ).__init__( )
 		self.headers = { }
@@ -3948,21 +3951,21 @@ class EarthObservatory( Fetcher ):
 
 		Args:
 		    status (str): Status supplied by the caller and interpreted according to the method
-		        contract.
+		    contract.
 		    category (str): Category supplied by the caller and interpreted according to the
-		        method contract.
+		    method contract.
 		    source (str): Source supplied by the caller and interpreted according to the method
-		        contract.
+		    contract.
 		    limit (int): Maximum number of records or characters permitted by the operation.
 		    days (int): Days supplied by the caller and interpreted according to the method
-		        contract.
+		    contract.
 		    start_date (str): Date boundary or date value used by the request.
 		    end_date (str): Date boundary or date value used by the request.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
@@ -4311,9 +4314,6 @@ class GlobalImagery( Fetcher ):
 		super( ).__init__( )
 		self.api_key = cfg.NASA_API_KEY
 		self.mode = None
-		self.layer = ''
-		self.image_date = ''
-		self.bbox = None
 		self.url = 'https://gibs.earthdata.nasa.gov/wms'
 		self.file_path = None
 		self.longitude = None
@@ -4349,8 +4349,7 @@ class GlobalImagery( Fetcher ):
 		"""
 		return [ 'file_path', 'api_key', 'url', 'latitude', 'longitude', 'coordinates',
 				'calendar_date', 'julian_date', 'sidereal_time', 'utc_time', 'local_time',
-				'params', 'response', 'result', 'mode', 'layer', 'image_date', 'bbox',
-				'timeout', 'headers',
+				'params', 'response', 'result', 'mode', 'timeout', 'headers',
 				'get_capabilities_url', 'build_wms_url', 'fetch_wms_map', 'fetch_map_services',
 				'fetch_mercator_map', 'create_schema' ]
 	
@@ -4364,18 +4363,18 @@ class GlobalImagery( Fetcher ):
 
 		Args:
 		    projection (str): Projection supplied by the caller and interpreted according to the
-		        method contract.
+		    method contract.
 		    quality (str): Quality supplied by the caller and interpreted according to the method
-		        contract.
+		    contract.
 		    version (str): Version supplied by the caller and interpreted according to the method
-		        contract.
+		    contract.
 
 		Returns:
 		    str: Normalized text produced by the operation.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    to the application logger, and re-raises it.
 		"""
 		try:
 			projection_value = str( projection or 'epsg4326' ).strip( ).lower( )
@@ -4397,8 +4396,7 @@ class GlobalImagery( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def build_wms_url( self, layer: str, image_date: str,
-			bbox: Tuple[ float, float, float, float ],
+	def build_wms_url( self, layer: str, image_date: str, bbox: Tuple[ float, float, float, float ],
 			width: int=1200, height: int=600, projection: str='epsg4326',
 			quality: str='best', image_format: str='image/png', transparent: bool=True,
 			version: str='1.1.1' ) -> str:
@@ -4409,23 +4407,23 @@ class GlobalImagery( Fetcher ):
 
 		Args:
 		    layer (str): Layer supplied by the caller and interpreted according to the method
-		        contract.
+		    contract.
 		    image_date (str): Date boundary or date value used by the request.
 		    bbox (Tuple[float, float, float, float]): Bbox supplied by the caller and interpreted
-		        according to the method contract.
+		    according to the method contract.
 		    width (int): Width supplied by the caller and interpreted according to the method
-		        contract.
+		    contract.
 		    height (int): Height supplied by the caller and interpreted according to the method
-		        contract.
+		    contract.
 		    projection (str): Projection supplied by the caller and interpreted according to the
-		        method contract.
+		    method contract.
 		    quality (str): Quality supplied by the caller and interpreted according to the method
-		        contract.
+		    contract.
 		    image_format (str): Image format supplied by the caller and interpreted according to
-		        the method contract.
+		    the method contract.
 		    transparent (bool): Whether transparent behavior is enabled for the operation.
 		    version (str): Version supplied by the caller and interpreted according to the method
-		        contract.
+		    contract.
 
 		Returns:
 		    str: Normalized text produced by the operation.
@@ -4438,33 +4436,27 @@ class GlobalImagery( Fetcher ):
 			throw_if( 'layer', layer )
 			throw_if( 'image_date', image_date )
 			throw_if( 'bbox', bbox )
-			self.layer = str( layer ).strip( )
-			self.image_date = str( image_date ).strip( )
 			if len( bbox ) != 4:
 				raise ValueError( 'bbox must contain west, south, east, north.' )
-			self.bbox = tuple( float( value ) for value in bbox )
 			
 			projection_value = str( projection or 'epsg4326' ).strip( ).lower( )
 			quality_value = str( quality or 'best' ).strip( ).lower( )
 			version_value = str( version or '1.1.1' ).strip( )
-<<<<<<< HEAD
-			west, south, east, north = [ float( value ) for value in bbox ]
-=======
 			
-			west, south, east, north = self.bbox
->>>>>>> origin/main
+			west, south, east, north = [ float( value ) for value in bbox ]
 			width_value = max( 1, int( width ) )
 			height_value = max( 1, int( height ) )
+			
 			base_url = (f'https://gibs.earthdata.nasa.gov/wms/'
 			            f'{projection_value}/{quality_value}/wms.cgi')
 			
 			params = { 'SERVICE': 'WMS', 'VERSION': version_value, 'REQUEST': 'GetMap',
-					'LAYERS': self.layer, 'STYLES': '',
+					'LAYERS': str( layer ).strip( ), 'STYLES': '',
 					'FORMAT': str( image_format or 'image/png' ).strip( ),
 					'TRANSPARENT': str( bool( transparent ) ).lower( ),
 					'SRS': 'EPSG:4326' if projection_value == 'epsg4326' else 'EPSG:3857',
 					'BBOX': f'{west},{south},{east},{north}', 'WIDTH': width_value,
-					'HEIGHT': height_value, 'TIME': self.image_date }
+					'HEIGHT': height_value, 'TIME': str( image_date ).strip( ) }
 			
 			self.params = params
 			return f'{base_url}?{urllib.parse.urlencode( self.params )}'
@@ -4488,48 +4480,39 @@ class GlobalImagery( Fetcher ):
 
 		Args:
 		    layer (str): Layer supplied by the caller and interpreted according to the method
-		        contract.
+		    contract.
 		    image_date (str): Date boundary or date value used by the request.
 		    bbox (Tuple[float, float, float, float]): Bbox supplied by the caller and interpreted
-		        according to the method contract.
+		    according to the method contract.
 		    width (int): Width supplied by the caller and interpreted according to the method
-		        contract.
+		    contract.
 		    height (int): Height supplied by the caller and interpreted according to the method
-		        contract.
+		    contract.
 		    projection (str): Projection supplied by the caller and interpreted according to the
-		        method contract.
+		    method contract.
 		    quality (str): Quality supplied by the caller and interpreted according to the method
-		        contract.
+		    contract.
 		    image_format (str): Image format supplied by the caller and interpreted according to
-		        the method contract.
+		    the method contract.
 		    transparent (bool): Whether transparent behavior is enabled for the operation.
 		    output_dir (str): Output dir supplied by the caller and interpreted according to the
-		        method contract.
+		    method contract.
 		    output_name (str): Output name supplied by the caller and interpreted according to the
-		        method contract.
+		    method contract.
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'layer', layer )
-			throw_if( 'image_date', image_date )
-			throw_if( 'bbox', bbox )
-			self.layer = str( layer ).strip( )
-			self.image_date = str( image_date ).strip( )
-			self.bbox = bbox
 			self.mode = 'wms_map'
 			self.timeout = int( time )
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
-			request_url = self.build_wms_url( layer=self.layer, image_date=self.image_date,
-				bbox=self.bbox,
+			request_url = self.build_wms_url( layer=layer, image_date=image_date, bbox=bbox,
 				width=width, height=height, projection=projection, quality=quality,
 				image_format=image_format, transparent=transparent )
 			
@@ -4538,14 +4521,14 @@ class GlobalImagery( Fetcher ):
 			if output_name:
 				filename = output_name
 			else:
-				safe_layer = re.sub( r'[^A-Za-z0-9_\-]+', '_', self.layer )
-				safe_date = re.sub( r'[^0-9\-]+', '_', self.image_date )
+				safe_layer = re.sub( r'[^A-Za-z0-9_\-]+', '_', str( layer ).strip( ) )
+				safe_date = re.sub( r'[^0-9\-]+', '_', str( image_date ).strip( ) )
 				extension = '.jpg' if image_format == 'image/jpeg' else '.png'
 				filename = f'{safe_layer}_{safe_date}{extension}'
 			
 			self.file_path = str( directory / filename )
 			self.url = request_url
-			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
+			self.response = requests.get( request_url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
 			content_type = self.response.headers.get( 'Content-Type', '' )
 			if 'image' not in content_type.lower( ):
@@ -4560,9 +4543,9 @@ class GlobalImagery( Fetcher ):
 					'image_path': self.file_path, 'content_type': content_type,
 					'status_code': self.response.status_code, 'bytes': len(
 						self.response.content ),
-					'layer': self.layer, 'image_date': self.image_date,
-					'bbox': { 'west': float( self.bbox[ 0 ] ), 'south': float( self.bbox[ 1 ] ),
-							'east': float( self.bbox[ 2 ] ), 'north': float( self.bbox[ 3 ] ) },
+					'layer': layer, 'image_date': image_date,
+					'bbox': { 'west': float( bbox[ 0 ] ), 'south': float( bbox[ 1 ] ),
+							'east': float( bbox[ 2 ] ), 'north': float( bbox[ 3 ] ) },
 					'summary': { 'rows': 1, 'columns': 8,
 							'description': 'NASA GIBS WMS image written to disk.' } }
 			
@@ -4594,6 +4577,7 @@ class GlobalImagery( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			self.mode = 'fetch_map_services'
 			return self.fetch_wms_map( layer='MODIS_Terra_CorrectedReflectance_TrueColor',
 				image_date='2021-09-21', bbox=( -180.0, -90.0, 180.0, 90.0), width=1200,
 				height=600, projection='epsg4326', quality='best', image_format='image/png',
@@ -4628,6 +4612,7 @@ class GlobalImagery( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			self.mode = 'mercator_map'
 			return self.fetch_wms_map(
 				layer='Landsat_WELD_CorrectedReflectance_Bands157_Global_Annual',
 				image_date='2000-12-01', bbox=(
@@ -21180,10 +21165,312 @@ class PurpleAir( Fetcher ):
 		return [ 'base_url', 'api_key', 'mode', 'endpoint', 'sensor_index', 'nwlng', 'nwlat',
 				'selng', 'selat', 'location_type', 'max_age', 'modified_since', 'fields', 'params',
 				'payload', 'result', 'response', 'url', 'timeout', 'agents', 'headers',
-				'normalize_fields',
+				'validate_mode', 'validate_endpoint', 'validate_sensor_index',
+				'validate_longitude', 'validate_latitude', 'validate_bbox',
+				'validate_location_type', 'validate_non_negative_integer', 'normalize_fields',
 				'shape_sensor_list_rows', 'shape_sensor_detail_rows', 'summarize_rows',
 				'package_response', 'request', 'fetch_sensors', 'fetch_sensor', 'fetch',
 				'create_schema' ]
+	
+	def validate_mode( self, mode: str ) -> str:
+		"""Validate mode.
+
+		Purpose:
+		    Validates the mode against provider constraints and returns the accepted value.
+
+		Args:
+		    mode (str): Provider or loader operating mode selected for the request.
+
+		Returns:
+		    str: Normalized text produced by the operation.
+
+		Raises:
+		    Error: Wraps the source exception with module, class, and method metadata, writes it
+		    to the application logger, and re-raises it.
+		"""
+		try:
+			throw_if( 'mode', mode )
+			
+			value = str( mode ).strip( ).lower( )
+			allowed = { 'sensors', 'sensor' }
+			
+			if value not in allowed:
+				raise ValueError( "Unsupported PurpleAir mode. Use 'sensors' or 'sensor'." )
+			
+			return value
+		
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'fetchers'
+			exception.cause = 'PurpleAir'
+			exception.method = 'validate_mode( self, *args, **kwargs ) -> str'
+			Logger( ).write( exception )
+			raise exception
+	
+	def validate_endpoint( self, endpoint: str ) -> str:
+		"""Validate endpoint.
+
+		Purpose:
+		    Validates the endpoint against provider constraints and returns the accepted value.
+
+		Args:
+		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
+		    method contract.
+
+		Returns:
+		    str: Normalized text produced by the operation.
+
+		Raises:
+		    Error: Wraps the source exception with module, class, and method metadata, writes it
+		    to the application logger, and re-raises it.
+		"""
+		try:
+			throw_if( 'endpoint', endpoint )
+			
+			value = str( endpoint ).strip( ).strip( '/' )
+			
+			if value.startswith( 'http://' ) or value.startswith( 'https://' ):
+				raise ValueError( 'endpoint must be a path segment, not a full URL.' )
+			
+			if '..' in value:
+				raise ValueError( 'endpoint cannot contain parent-directory markers.' )
+			
+			if value != 'sensors' and not re.fullmatch( r'sensors/\d+', value ):
+				raise ValueError( "endpoint must be 'sensors' or 'sensors/{sensor_index}'." )
+			
+			return value
+		
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'fetchers'
+			exception.cause = 'PurpleAir'
+			exception.method = 'validate_endpoint( self, *args, **kwargs ) -> str'
+			Logger( ).write( exception )
+			raise exception
+	
+	def validate_sensor_index( self, sensor_index: int ) -> int:
+		"""Validate sensor index.
+
+		Purpose:
+		    Validates the sensor index against provider constraints and returns the accepted value.
+
+		Args:
+		    sensor_index (int): Sensor index supplied by the caller and interpreted according to
+		    the method contract.
+
+		Returns:
+		    int: Computed numeric value produced by the operation.
+
+		Raises:
+		    Error: Wraps the source exception with module, class, and method metadata, writes it
+		    to the application logger, and re-raises it.
+		"""
+		try:
+			throw_if( 'sensor_index', sensor_index )
+			
+			value = int( sensor_index )
+			if value < 1:
+				raise ValueError( 'sensor_index must be greater than or equal to 1.' )
+			
+			return value
+		
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'fetchers'
+			exception.cause = 'PurpleAir'
+			exception.method = 'validate_sensor_index( self, *args, **kwargs ) -> int'
+			Logger( ).write( exception )
+			raise exception
+	
+	def validate_longitude( self, name: str, value: float ) -> float:
+		"""Validate longitude.
+
+		Purpose:
+		    Validates the longitude against provider constraints and returns the accepted value.
+
+		Args:
+		    name (str): Argument name included in validation error messages.
+		    value (float): Candidate value to validate or normalize.
+
+		Returns:
+		    float: Computed numeric value produced by the operation.
+
+		Raises:
+		    Error: Wraps the source exception with module, class, and method metadata, writes it
+		    to the application logger, and re-raises it.
+		"""
+		try:
+			throw_if( 'name', name )
+			throw_if( name, value )
+			
+			number = float( value )
+			if number < -180.0 or number > 180.0:
+				raise ValueError( f'{name} must be between -180 and 180.' )
+			
+			return number
+		
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'fetchers'
+			exception.cause = 'PurpleAir'
+			exception.method = 'validate_longitude( self, *args, **kwargs ) -> float'
+			Logger( ).write( exception )
+			raise exception
+	
+	def validate_latitude( self, name: str, value: float ) -> float:
+		"""Validate latitude.
+
+		Purpose:
+		    Validates the latitude against provider constraints and returns the accepted value.
+
+		Args:
+		    name (str): Argument name included in validation error messages.
+		    value (float): Candidate value to validate or normalize.
+
+		Returns:
+		    float: Computed numeric value produced by the operation.
+
+		Raises:
+		    Error: Wraps the source exception with module, class, and method metadata, writes it
+		    to the application logger, and re-raises it.
+		"""
+		try:
+			throw_if( 'name', name )
+			throw_if( name, value )
+			
+			number = float( value )
+			if number < -90.0 or number > 90.0:
+				raise ValueError( f'{name} must be between -90 and 90.' )
+			
+			return number
+		
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'fetchers'
+			exception.cause = 'PurpleAir'
+			exception.method = 'validate_latitude( self, *args, **kwargs ) -> float'
+			Logger( ).write( exception )
+			raise exception
+	
+	def validate_bbox( self, nwlng: float, nwlat: float, selng: float, selat: float ) -> Tuple[
+		float, float, float, float ]:
+		"""Validate bbox.
+
+		Purpose:
+		    Validates the bbox against provider constraints and returns the accepted value.
+
+		Args:
+		    nwlng (float): Nwlng supplied by the caller and interpreted according to the method
+		    contract.
+		    nwlat (float): Nwlat supplied by the caller and interpreted according to the method
+		    contract.
+		    selng (float): Selng supplied by the caller and interpreted according to the method
+		    contract.
+		    selat (float): Selat supplied by the caller and interpreted according to the method
+		    contract.
+
+		Returns:
+		    Tuple[float, float, float, float]: Ordered values or records produced by the operation.
+
+		Raises:
+		    Error: Wraps the source exception with module, class, and method metadata, writes it
+		    to the application logger, and re-raises it.
+		"""
+		try:
+			nw_lng = self.validate_longitude( 'nwlng', nwlng )
+			nw_lat = self.validate_latitude( 'nwlat', nwlat )
+			se_lng = self.validate_longitude( 'selng', selng )
+			se_lat = self.validate_latitude( 'selat', selat )
+			
+			if nw_lng >= se_lng:
+				raise ValueError( 'nwlng must be less than selng.' )
+			
+			if nw_lat <= se_lat:
+				raise ValueError( 'nwlat must be greater than selat.' )
+			
+			return nw_lng, nw_lat, se_lng, se_lat
+		
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'fetchers'
+			exception.cause = 'PurpleAir'
+			exception.method = ('validate_bbox( self, *args, **kwargs ) '
+			                    '-> Tuple[ float, float, float, float ]')
+			Logger( ).write( exception )
+			raise exception
+	
+	def validate_location_type( self, location_type: int ) -> int:
+		"""Validate location type.
+
+		Purpose:
+		    Validates the location type against provider constraints and returns the accepted
+		    value.
+
+		Args:
+		    location_type (int): Location type supplied by the caller and interpreted according to
+		    the method contract.
+
+		Returns:
+		    int: Computed numeric value produced by the operation.
+
+		Raises:
+		    Error: Wraps the source exception with module, class, and method metadata, writes it
+		    to the application logger, and re-raises it.
+		"""
+		try:
+			throw_if( 'location_type', location_type if location_type == 0 else location_type )
+			
+			value = int( location_type )
+			if value not in (0, 1):
+				raise ValueError( 'location_type must be 0 or 1.' )
+			
+			return value
+		
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'fetchers'
+			exception.cause = 'PurpleAir'
+			exception.method = 'validate_location_type( self, *args, **kwargs ) -> int'
+			Logger( ).write( exception )
+			raise exception
+	
+	def validate_non_negative_integer( self, name: str, value: int ) -> int:
+		"""Validate non negative integer.
+
+		Purpose:
+		    Validates the non negative integer against provider constraints and returns the
+		    accepted value.
+
+		Args:
+		    name (str): Argument name included in validation error messages.
+		    value (int): Candidate value to validate or normalize.
+
+		Returns:
+		    int: Computed numeric value produced by the operation.
+
+		Raises:
+		    Error: Wraps the source exception with module, class, and method metadata, writes it
+		    to the application logger, and re-raises it.
+		"""
+		try:
+			throw_if( 'name', name )
+			
+			if value is None:
+				raise ValueError( f'{name} cannot be None.' )
+			
+			number = int( value )
+			if number < 0:
+				raise ValueError( f'{name} must be greater than or equal to 0.' )
+			
+			return number
+		
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'fetchers'
+			exception.cause = 'PurpleAir'
+			exception.method = ('validate_non_negative_integer( self, *args, **kwargs ) -> int')
+			Logger( ).write( exception )
+			raise exception
 	
 	def normalize_fields( self, fields: str, default_fields: str ) -> str:
 		"""Normalize fields.
@@ -21445,11 +21732,7 @@ class PurpleAir( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'endpoint', endpoint )
-			self.endpoint = str( endpoint ).strip( ).strip( '/' )
-			if self.endpoint != 'sensors' and not re.fullmatch(
-					r'sensors/[1-9][0-9]*', self.endpoint ):
-				raise ValueError( 'endpoint must identify sensors or a positive sensor index.' )
+			self.endpoint = self.validate_endpoint( endpoint )
 			throw_if( 'time', time )
 			
 			self.timeout = int( time )
@@ -21526,25 +21809,12 @@ class PurpleAir( Fetcher ):
 			                  'location_type')
 			
 			self.mode = 'sensors'
-			throw_if( 'nwlng', nwlng )
-			throw_if( 'nwlat', nwlat )
-			throw_if( 'selng', selng )
-			throw_if( 'selat', selat )
-			self.nwlng = float( nwlng )
-			self.nwlat = float( nwlat )
-			self.selng = float( selng )
-			self.selat = float( selat )
-			self.location_type = int( location_type )
-			self.max_age = int( max_age )
-			self.modified_since = int( modified_since )
-			if not -180.0 <= self.nwlng < self.selng <= 180.0:
-				raise ValueError( 'Longitude bounds must satisfy -180 <= nwlng < selng <= 180.' )
-			if not -90.0 <= self.selat < self.nwlat <= 90.0:
-				raise ValueError( 'Latitude bounds must satisfy -90 <= selat < nwlat <= 90.' )
-			if self.location_type not in (0, 1):
-				raise ValueError( 'location_type must be 0 or 1.' )
-			if self.max_age < 0 or self.modified_since < 0:
-				raise ValueError( 'max_age and modified_since cannot be negative.' )
+			self.nwlng, self.nwlat, self.selng, self.selat = self.validate_bbox( nwlng=nwlng,
+				nwlat=nwlat, selng=selng, selat=selat )
+			self.location_type = self.validate_location_type( location_type )
+			self.max_age = self.validate_non_negative_integer( 'max_age', max_age )
+			self.modified_since = self.validate_non_negative_integer( 'modified_since',
+				modified_since )
 			self.fields = self.normalize_fields( fields=fields, default_fields=default_fields )
 			self.timeout = int( time )
 			
@@ -21596,10 +21866,7 @@ class PurpleAir( Fetcher ):
 			                  'rssi')
 			
 			self.mode = 'sensor'
-			throw_if( 'sensor_index', sensor_index )
-			self.sensor_index = int( sensor_index )
-			if self.sensor_index < 1:
-				raise ValueError( 'sensor_index must be greater than or equal to 1.' )
+			self.sensor_index = self.validate_sensor_index( sensor_index )
 			self.fields = self.normalize_fields( fields=fields, default_fields=default_fields )
 			self.timeout = int( time )
 			
@@ -21661,35 +21928,15 @@ class PurpleAir( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'mode', mode )
-			self.mode = str( mode ).strip( ).lower( )
+			self.mode = self.validate_mode( mode )
 			
 			if self.mode == 'sensors':
-				throw_if( 'nwlng', nwlng )
-				throw_if( 'nwlat', nwlat )
-				throw_if( 'selng', selng )
-				throw_if( 'selat', selat )
-				self.nwlng = float( nwlng )
-				self.nwlat = float( nwlat )
-				self.selng = float( selng )
-				self.selat = float( selat )
-				self.location_type = location_type
-				self.max_age = max_age
-				self.modified_since = modified_since
-				self.fields = fields
-				self.timeout = time
-				return self.fetch_sensors( nwlng=self.nwlng, nwlat=self.nwlat,
-					selng=self.selng, selat=self.selat, location_type=self.location_type,
-					max_age=self.max_age, modified_since=self.modified_since,
-					fields=self.fields, time=self.timeout )
+				return self.fetch_sensors( nwlng=nwlng, nwlat=nwlat, selng=selng, selat=selat,
+					location_type=location_type, max_age=max_age, modified_since=modified_since,
+					fields=fields, time=time )
 			
 			if self.mode == 'sensor':
-				throw_if( 'sensor_index', sensor_index )
-				self.sensor_index = int( sensor_index )
-				self.fields = fields
-				self.timeout = time
-				return self.fetch_sensor( sensor_index=self.sensor_index,
-					fields=self.fields, time=self.timeout )
+				return self.fetch_sensor( sensor_index=sensor_index, fields=fields, time=time )
 			
 			raise ValueError( "Unsupported PurpleAir mode. Use 'sensors' or 'sensor'." )
 		
@@ -22433,9 +22680,7 @@ class OpenAQ( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'endpoint', endpoint )
-			self.endpoint = str( endpoint ).strip( ).strip( '/' )
-			self.endpoint = self.validate_endpoint( self.endpoint )
+			self.endpoint = self.validate_endpoint( endpoint )
 			throw_if( 'time', time )
 			
 			self.timeout = int( time )
@@ -23393,9 +23638,7 @@ class Firms( Fetcher ):
 		"""
 		try:
 			self.mode = 'area'
-			throw_if( 'source', source )
-			self.source = source
-			self.source = self.validate_source( self.source )
+			self.source = self.validate_source( source )
 			self.area_coordinates = self.validate_area_coordinates( area_coordinates )
 			self.day_range = self.validate_day_range( day_range )
 			self.date = self.validate_date( date )
