@@ -5441,7 +5441,7 @@ class OpenScience( Fetcher ):
 		    List[str]: Ordered public member names exposed by the instance.
 		"""
 		return [ 'base_url', 'url', 'params', 'query_text', 'format_value', 'size', 'endpoint',
-				'fetch_dataset', 'fetch_metadata', 'fetch_assays', 'fetch_data', 'fetch',
+				'request', 'fetch_dataset', 'fetch_metadata', 'fetch_assays', 'fetch_data', 'fetch',
 				'create_schema' ]
 	
 	def validate_format( self, format_value: str ) -> str:
@@ -5516,6 +5516,41 @@ class OpenScience( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
+	def request( self, time: int=20 ) -> Dict[ str, Any ] | str:
+		"""Request and decode NASA OSDR data using its advertised content type.
+
+		Purpose:
+		    Validates the timeout, retrieves the configured OSDR resource, and
+		    stores its response and decoded payload for all retrieval methods.
+
+		Args:
+		    time (int): Positive HTTP timeout in seconds.
+
+		Returns:
+		    Dict[str, Any] | str: JSON or text response from OSDR.
+
+		Raises:
+		    Error: If the request, timeout or provider response fails.
+		"""
+		try:
+			self.timeout = int( time )
+			if self.timeout < 1:
+				raise ValueError( 'time must be a positive integer.' )
+			self.response = requests.get( url=self.url, params=self.params,
+				headers=self.headers, timeout=self.timeout )
+			self.response.raise_for_status( )
+			self.payload = self.coerce_response( self.response )
+			if isinstance( self.payload, dict ) and self.payload.get( 'error' ):
+				raise ValueError( f"NASA OSDR API error: {self.payload[ 'error' ]}" )
+			return self.payload
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'fetchers'
+			exception.cause = 'OpenScience'
+			exception.method = "request( self, time: int=20 ) -> Dict[ str, Any ] | str"
+			raise exception
+
+
 	def fetch_dataset( self, accession: str, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch dataset.
 
@@ -5537,16 +5572,15 @@ class OpenScience( Fetcher ):
 		"""
 		try:
 			throw_if( 'accession', accession )
-			value = str( accession ).strip( )
-			self.endpoint = f'/v2/dataset/{value}/'
+			self.accession = str( accession ).strip( )
+			if not re.fullmatch( r'[A-Za-z0-9_-]+', self.accession ):
+				raise ValueError( 'Invalid OSDR dataset accession.' )
+			self.endpoint = f'/v2/dataset/{self.accession}/'
 			self.url = f'{self.base_url}{self.endpoint}'
 			self.params = { }
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
-			self.response.raise_for_status( )
-			
-			return { 'mode': 'dataset', 'url': self.url, 'params': self.params,
-					'data': self.coerce_response( self.response ) }
+			self.result = { 'mode': 'dataset', 'url': self.url,
+				'params': self.params, 'data': self.request( time=time ) }
+			return self.result
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -5584,13 +5618,13 @@ to the application logger, and re-raises it.
 			self.format_value = self.validate_format( format_value )
 			self.endpoint = '/v2/query/metadata/'
 			self.url = f'{self.base_url}{self.endpoint}'
-			self.params = { 'query': self.query_text, 'format': self.format_value }
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
-			self.response.raise_for_status( )
-			
-			return { 'mode': 'metadata', 'url': self.url, 'params': self.params,
-					'data': self.coerce_response( self.response ) }
+			self.params = dict( urllib.parse.parse_qsl( self.query_text,
+				keep_blank_values=True ) ) if '=' in self.query_text else {
+				'query': self.query_text }
+			self.params[ 'format' ] = self.format_value
+			self.result = { 'mode': 'metadata', 'url': self.url,
+				'params': self.params, 'data': self.request( time=time ) }
+			return self.result
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -5625,20 +5659,17 @@ to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'query', query )
-			
 			self.query_text = str( query ).strip( )
 			self.format_value = self.validate_format( format_value )
 			self.endpoint = '/v2/query/assays/'
 			self.url = f'{self.base_url}{self.endpoint}'
-			self.params = { 'query': self.query_text, 'format': self.format_value }
-			
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
-			self.response.raise_for_status( )
-			
-			return { 'mode': 'assays', 'url': self.url, 'params': self.params,
-					'data': self.coerce_response( self.response ) }
-		
+			self.params = dict( urllib.parse.parse_qsl( self.query_text,
+				keep_blank_values=True ) ) if '=' in self.query_text else {
+				'query': self.query_text }
+			self.params[ 'format' ] = self.format_value
+			self.result = { 'mode': 'assays', 'url': self.url,
+				'params': self.params, 'data': self.request( time=time ) }
+			return self.result
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -5673,20 +5704,17 @@ to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'query', query )
-			
 			self.query_text = str( query ).strip( )
 			self.format_value = self.validate_format( format_value )
 			self.endpoint = '/v2/query/data/'
 			self.url = f'{self.base_url}{self.endpoint}'
-			self.params = { 'query': self.query_text, 'format': self.format_value }
-			
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
-			self.response.raise_for_status( )
-			
-			return { 'mode': 'data', 'url': self.url, 'params': self.params,
-					'data': self.coerce_response( self.response ) }
-		
+			self.params = dict( urllib.parse.parse_qsl( self.query_text,
+				keep_blank_values=True ) ) if '=' in self.query_text else {
+				'query': self.query_text }
+			self.params[ 'format' ] = self.format_value
+			self.result = { 'mode': 'data', 'url': self.url,
+				'params': self.params, 'data': self.request( time=time ) }
+			return self.result
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
