@@ -2697,12 +2697,10 @@ class GoogleMaps( Fetcher ):
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
-			
 			self.payload = self.response.json( )
 			routes = self.payload.get( 'routes', [ ] ) if isinstance( self.payload, dict ) else [ ]
 			self.directions = routes[ 0 ] if routes else { }
 			self.result = self.directions
-			
 			return self.result
 		
 		except Error:
