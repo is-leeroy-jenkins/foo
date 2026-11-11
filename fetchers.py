@@ -4352,7 +4352,8 @@ class GlobalImagery( Fetcher ):
 		"""
 		return [ 'file_path', 'api_key', 'url', 'latitude', 'longitude', 'coordinates',
 				'calendar_date', 'julian_date', 'sidereal_time', 'utc_time', 'local_time',
-				'params', 'response', 'result', 'mode', 'timeout', 'headers',
+				'params', 'response', 'result', 'mode', 'layer', 'image_date', 'bbox',
+				'timeout', 'headers',
 				'get_capabilities_url', 'build_wms_url', 'fetch_wms_map', 'fetch_map_services',
 				'fetch_mercator_map', 'create_schema' ]
 	
