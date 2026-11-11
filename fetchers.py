@@ -109,7 +109,7 @@ def throw_if( name: str, value: object ) -> None:
 	"""
 	if value is None:
 		raise ValueError( f'Argument "{name}" cannot be empty!' )
-	if isinstance( value, str ) and (not value.strip( )):
+	if isinstance( value, str ) and not value.strip( ):
 		raise ValueError( f'Argument "{name}" cannot be empty!' )
 	if isinstance( value, (list, tuple, dict, set) ) and len( value ) == 0:
 		raise ValueError( f'Argument "{name}" cannot be empty!' )
@@ -531,7 +531,7 @@ class WebFetcher( Fetcher ):
 			self.left_host = urllib.parse.urlparse( self.left_url ).netloc.lower( )
 			self.right_host = urllib.parse.urlparse( self.right_url ).netloc.lower( )
 			
-			return ( self.left_host != '' ) and self.left_host == self.right_host
+			return self.left_host != '' and self.left_host == self.right_host
 		
 		except Exception:
 			return False
@@ -3447,9 +3447,9 @@ class NavalObservatory( Fetcher ):
 			throw_if( 'longitude', longitude )
 			lat = latitude
 			lon = longitude
-			if not math.isfinite( lat ) or not (-90.0 <= lat <= 90.0):
+			if not math.isfinite( lat ) or not -90.0 <= lat <= 90.0:
 				raise ValueError( 'Latitude must be between -90 and 90 and finite.' )
-			if not math.isfinite( lon ) or not (-180.0 <= lon <= 180.0):
+			if not math.isfinite( lon ) or not -180.0 <= lon <= 180.0:
 				raise ValueError( 'Longitude must be between -180 and 180 and finite.' )
 			return lat, lon
 		except Exception as e:
@@ -6022,7 +6022,7 @@ class SpaceWeather( Fetcher ):
 			if self.endpoint == 'CMEAnalysis':
 				self.speed = speed
 				self.half_angle = half_angle
-				if self.speed < 0 or not (0 <= self.half_angle <= 180):
+				if self.speed < 0 or not 0 <= self.half_angle <= 180:
 					raise ValueError( 'CME speed and half_angle must be nonnegative; half_angle <= 180.' )
 				self.params[ 'mostAccurateOnly' ] = str( bool( most_accurate_only ) ).lower( )
 				self.params[ 'completeEntryOnly' ] = str( bool( complete_entry_only ) ).lower( )
@@ -9806,7 +9806,7 @@ class OpenWeather( Fetcher ):
 			self.mode = 'current'
 			self.latitude = lat
 			self.longitude = long
-			if not (-90.0 <= self.latitude <= 90.0) or not (-180.0 <= self.longitude <= 180.0) or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
+			if not -90.0 <= self.latitude <= 90.0 or not -180.0 <= self.longitude <= 180.0 or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
 				raise ValueError( 'Invalid latitude or longitude.' )
 			self.timezone = ( zone or 'auto' ).strip( )
 			
@@ -9874,7 +9874,7 @@ class OpenWeather( Fetcher ):
 			self.mode = 'hourly'
 			self.latitude = lat
 			self.longitude = long
-			if not (-90.0 <= self.latitude <= 90.0) or not (-180.0 <= self.longitude <= 180.0) or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
+			if not -90.0 <= self.latitude <= 90.0 or not -180.0 <= self.longitude <= 180.0 or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
 				raise ValueError( 'Invalid latitude or longitude.' )
 			self.timezone = ( zone or 'auto' ).strip( )
 			self.params = { 'latitude': self.latitude, 'longitude': self.longitude,
@@ -9941,7 +9941,7 @@ class OpenWeather( Fetcher ):
 			self.mode = 'daily'
 			self.latitude = lat
 			self.longitude = long
-			if not (-90.0 <= self.latitude <= 90.0) or not (-180.0 <= self.longitude <= 180.0) or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
+			if not -90.0 <= self.latitude <= 90.0 or not -180.0 <= self.longitude <= 180.0 or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
 				raise ValueError( 'Invalid latitude or longitude.' )
 			self.timezone = ( zone or 'auto' ).strip( )
 			self.params = { 'latitude': self.latitude, 'longitude': self.longitude,
@@ -10301,7 +10301,7 @@ class HistoricalWeather( Fetcher ):
 			
 			self.latitude = lat
 			self.longitude = long
-			if not (-90.0 <= self.latitude <= 90.0) or not (-180.0 <= self.longitude <= 180.0) or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
+			if not -90.0 <= self.latitude <= 90.0 or not -180.0 <= self.longitude <= 180.0 or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
 				raise ValueError( 'Invalid latitude or longitude.' )
 			if not isinstance( date, dt.date ):
 				raise ValueError( 'date must be a datetime.date instance.' )
@@ -10984,7 +10984,7 @@ class GoogleGeocoding( Fetcher ):
 			self.mode = 'reverse'
 			self.latitude = latitude
 			self.longitude = longitude
-			if not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ) or not (-90 <= self.latitude <= 90) or not (-180 <= self.longitude <= 180):
+			if not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ) or not -90 <= self.latitude <= 90 or not -180 <= self.longitude <= 180:
 				raise ValueError( 'Latitude or longitude is outside valid geographic bounds.' )
 			self.language = ( language or 'en' ).strip( )
 			self.result_type = ( result_type or '' ).strip( )
