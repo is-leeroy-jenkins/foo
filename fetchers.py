@@ -2507,7 +2507,6 @@ class GoogleMaps( Fetcher ):
 		"""
 		try:
 			throw_if( 'address', address )
-			self.mode = 'geocode_location'
 			self.address = str( address ).strip( )
 			self.url = 'https://maps.googleapis.com/maps/api/geocode/json'
 			self.params = { 'address': self.address, 'key': self.api_key }
@@ -2571,7 +2570,6 @@ class GoogleMaps( Fetcher ):
 			throw_if( 'latitude', lat )
 			throw_if( 'longitude', long )
 			
-			self.mode = 'geocode_coordinates'
 			self.latitude = float( lat )
 			self.longitude = float( long )
 			self.coordinates = (self.latitude, self.longitude)
@@ -2629,7 +2627,6 @@ class GoogleMaps( Fetcher ):
 			if not isinstance( address, list ):
 				raise TypeError( 'address must be a list of address-line strings.' )
 			
-			self.mode = 'validate_address'
 			self.url = 'https://addressvalidation.googleapis.com/v1:validateAddress'
 			self.address_lines = [ str( line ).strip( ) for line in address if
 					line is not None and str( line ).strip( ) ]
@@ -22432,7 +22429,9 @@ class OpenAQ( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.endpoint = self.validate_endpoint( endpoint )
+			throw_if( 'endpoint', endpoint )
+			self.endpoint = str( endpoint ).strip( ).strip( '/' )
+			self.endpoint = self.validate_endpoint( self.endpoint )
 			throw_if( 'time', time )
 			
 			self.timeout = int( time )
@@ -23390,7 +23389,9 @@ class Firms( Fetcher ):
 		"""
 		try:
 			self.mode = 'area'
-			self.source = self.validate_source( source )
+			throw_if( 'source', source )
+			self.source = source
+			self.source = self.validate_source( self.source )
 			self.area_coordinates = self.validate_area_coordinates( area_coordinates )
 			self.day_range = self.validate_day_range( day_range )
 			self.date = self.validate_date( date )
