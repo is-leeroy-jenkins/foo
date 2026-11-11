@@ -1,0 +1,28 @@
+name: NASA DONKI SpaceWeather contracts
+
+on:
+  pull_request:
+    paths:
+      - fetchers.py
+      - tests/test_spaceweather_donki_contracts.py
+      - .github/workflows/spaceweather-donki-contracts.yml
+  push:
+    branches: [ main ]
+    paths:
+      - fetchers.py
+      - tests/test_spaceweather_donki_contracts.py
+      - .github/workflows/spaceweather-donki-contracts.yml
+  workflow_dispatch:
+
+jobs:
+  spaceweather:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Compile source and tests
+        run: python -m compileall -q fetchers.py tests/test_spaceweather_donki_contracts.py
+      - name: Run isolated DONKI regression tests
+        run: python -m unittest discover -s tests -p 'test_spaceweather_donki_contracts.py' -v
