@@ -18176,7 +18176,14 @@ class ClimateData( Fetcher ):
 			throw_if( 'end_date', end_date )
 			start_value = str( start_date ).strip( )
 			end_value = str( end_date ).strip( )
-			if start_value > end_value:
+			try:
+				start_time = dt.datetime.fromisoformat( start_value.replace( 'Z', '+00:00' ).replace( 'z', '+00:00' ) )
+				end_time = dt.datetime.fromisoformat( end_value.replace( 'Z', '+00:00' ).replace( 'z', '+00:00' ) )
+			except ValueError as exc:
+				raise ValueError( 'Dates must be valid ISO 8601 values.' ) from exc
+			if (start_time.tzinfo is None) != (end_time.tzinfo is None):
+				raise ValueError( 'Both dates must use compatible time zones.' )
+			if start_time > end_time:
 				raise ValueError( 'start_date must be on or before end_date.' )
 			
 			return start_value, end_value
@@ -18415,6 +18422,8 @@ class ClimateData( Fetcher ):
 			throw_if( 'url', url )
 			throw_if( 'params', params )
 			throw_if( 'time', time )
+			if not isinstance( params, dict ):
+				raise ValueError( 'params must be a dictionary.' )
 			
 			self.url = str( url ).strip( )
 			self.timeout = int( time )
@@ -18436,12 +18445,15 @@ class ClimateData( Fetcher ):
 				timeout=self.timeout )
 			self.response.raise_for_status( )
 			content_type = str( self.response.headers.get( 'Content-Type', '' ) ).lower( )
-			if 'application/json' in content_type:
-				self.payload = self.response.json( ) or { }
+			if 'application/json' in content_type or '+json' in content_type:
+				self.payload = self.response.json( )
 			else:
 				self.payload = self.response.text or ''
-			
-			self.result = { 'url': self.response.url, 'params': self.params, 'raw': self.payload }
+			if not isinstance( self.payload, (dict, list) ):
+				raise ValueError( 'NOAA returned a non-JSON response.' )
+			if isinstance( self.payload, dict ) and any( self.payload.get( key ) for key in ('error', 'errors', 'errorMessage', 'errorCode') ):
+				raise ValueError( 'NOAA reported a provider error.' )
+			self.result = { 'url': self.url, 'params': self.params, 'raw': self.payload }
 			
 			return self.result
 		
@@ -18493,6 +18505,13 @@ class ClimateData( Fetcher ):
 			if self.start_date and self.end_date:
 				self.start_date, self.end_date = self.validate_date_range( self.start_date,
 					self.end_date )
+			else:
+				for date_value in (self.start_date, self.end_date):
+					if date_value:
+						try:
+							dt.datetime.fromisoformat( date_value.replace( 'Z', '+00:00' ).replace( 'z', '+00:00' ) )
+						except ValueError as exc:
+							raise ValueError( 'Dates must be valid ISO 8601 values.' ) from exc
 			
 			self.request( url=f'{self.search_url}/datasets', params={ 'keyword': self.keyword,
 					'startDate': self.start_date, 'endDate': self.end_date, 'limit': self.limit,
@@ -18951,6 +18970,8 @@ related operations.
 				raise ValueError( 'bbox must use min_lon,max_lat,max_lon,min_lat format.' )
 			
 			numbers = [ float( part ) for part in parts ]
+			if not all( math.isfinite( number ) for number in numbers ):
+				raise ValueError( 'bbox coordinates must be finite.' )
 			min_lon, max_lat, max_lon, min_lat = numbers
 			
 			if min_lon < -180.0 or min_lon > 180.0:
@@ -19006,8 +19027,14 @@ related operations.
 				raise ValueError( 'start_date and end_date must either both be supplied or both be '
 				                  'blank.' )
 			
-			if start_value and end_value and start_value > end_value:
-				raise ValueError( 'start_date must be on or before end_date.' )
+			if start_value and end_value:
+				try:
+					start_time = dt.datetime.strptime( start_value, '%Y-%m-%d' )
+					end_time = dt.datetime.strptime( end_value, '%Y-%m-%d' )
+				except ValueError as exc:
+					raise ValueError( 'EONET dates must use valid YYYY-MM-DD values.' ) from exc
+				if start_time > end_time:
+					raise ValueError( 'start_date must be on or before end_date.' )
 			
 			return start_value, end_value
 		
@@ -19045,7 +19072,9 @@ related operations.
 				categories = item.get( 'categories', [ ] ) or [ ]
 				sources = item.get( 'sources', [ ] ) or [ ]
 				geometry = item.get( 'geometry', [ ] ) or [ ]
-				last_geometry = geometry[ -1 ] if geometry else { }
+				last_geometry = geometry[ -1 ] if isinstance( geometry, list ) and geometry else { }
+				if not isinstance( last_geometry, dict ):
+					last_geometry = { }
 				coordinates = last_geometry.get( 'coordinates', [ ] ) or [ ]
 				geometry_type = str( last_geometry.get( 'type', '' ) or '' )
 				latitude = None
@@ -19066,7 +19095,7 @@ related operations.
 				rows.append( { 'Id': item.get( 'id', '' ), 'Title': item.get( 'title', '' ),
 						'Status': status, 'Closed Date': closed_date, 'Categories':
 							category_titles,
-						'Sources': source_ids, 'Geometry Count': len( geometry ),
+						'Sources': source_ids, 'Geometry Count': len( geometry ) if isinstance( geometry, list ) else 0,
 						'Last Geometry Type': geometry_type,
 						'Last Geometry Date': last_geometry.get( 'date', '' ), 'Latitude':
 							latitude,
@@ -19223,6 +19252,8 @@ related operations.
 		try:
 			throw_if( 'endpoint', endpoint )
 			throw_if( 'time', time )
+			if params is not None and not isinstance( params, dict ):
+				raise ValueError( 'params must be a dictionary.' )
 			
 			self.endpoint = self.validate_endpoint( endpoint )
 			self.timeout = int( time )
@@ -19244,8 +19275,15 @@ related operations.
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
-			self.payload = self.response.json( ) or { }
-			self.result = { 'url': self.response.url, 'params': self.params, 'raw': self.payload }
+			self.payload = self.response.json( )
+			if not isinstance( self.payload, dict ):
+				raise ValueError( 'EONET returned an invalid JSON object.' )
+			if self.payload.get( 'error' ) or self.payload.get( 'errors' ):
+				raise ValueError( 'EONET reported a provider error.' )
+			record_key = 'events' if self.endpoint == 'events' else 'categories'
+			if not isinstance( self.payload.get( record_key ), list ) or any( not isinstance( item, dict ) for item in self.payload[ record_key ] ):
+				raise ValueError( 'EONET returned an invalid record collection.' )
+			self.result = { 'url': self.url, 'params': self.params, 'raw': self.payload }
 			
 			return self.result
 		
