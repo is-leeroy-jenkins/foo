@@ -9974,9 +9974,8 @@ class OpenWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, location: str, mode: str='current', zone: str='auto', forecast_days: int
-	= 7, past_days: int=0, count: int=10 ) -> \
-	Dict[ str, Any ] | None:
+	def fetch( self, location: str, mode: str='current', zone: str='auto', forecast_days: int=7,
+			past_days: int=0, count: int=10 ) -> Dict[ str, Any ] | None:
 		"""Fetch.
 
 		Purpose:
@@ -10021,9 +10020,9 @@ class OpenWeather( Fetcher ):
 			
 			active_mode = mode.strip( ).lower( )
 			if active_mode == 'current':
-				result = self.fetch_current( lat=float( lat ), long=float( long ), zone=( zone
-				                                                                             or
-				                                                                             'auto' ).strip( ), past_days=past_days ) or { }
+				result = self.fetch_current( lat=float( lat ),
+					long=float( long ), zone=( zone or 'auto' ).strip( ),
+					past_days=past_days ) or { }
 			
 			elif active_mode == 'hourly':
 				result = self.fetch_hourly( lat=float( lat ), long=float( long ), zone=( zone
@@ -10050,8 +10049,7 @@ class OpenWeather( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
-			required:
-	list[ str ] ) -> Dict[ str, str ] | None:
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Create schema.
 
 		Purpose:
@@ -10213,18 +10211,17 @@ class HistoricalWeather( Fetcher ):
 		"""Geocode location.
 
 		Purpose:
-		    Resolves location through the configured geocoding service and returns geographic
- results.
+		    Resolves location through the configured geocoding service and returns geographic results.
 
 		Args:
 		    location (str): Location supplied by the caller and interpreted according to the
-		    method contract.
+		        method contract.
 		    count (int): Count supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
@@ -10237,7 +10234,6 @@ class HistoricalWeather( Fetcher ):
 			if self.result_limit < 1:
 				raise ValueError( 'count must be positive.' )
 			self.geocode_params = { 'name': self.location, 'count': self.result_limit }
-			
 			self.url = self.geocode_url
 			self.response = requests.get( self.url, params=self.geocode_params,
 				headers=self.headers, timeout=20 )
