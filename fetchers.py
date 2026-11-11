@@ -531,7 +531,7 @@ class WebFetcher( Fetcher ):
 			self.left_host = urllib.parse.urlparse( self.left_url ).netloc.lower( )
 			self.right_host = urllib.parse.urlparse( self.right_url ).netloc.lower( )
 			
-			return ( self.left_host ) and self.left_host == self.right_host
+			return ( self.left_host != '' ) and self.left_host == self.right_host
 		
 		except Exception:
 			return False
@@ -4054,7 +4054,7 @@ class EarthObservatory( Fetcher ):
 				raise ValueError( 'status must be open, closed, or all.' )
 			if self.limit < 1 or self.days < 1:
 				raise ValueError( 'limit and days must be positive integers.' )
-			if ( self.start_date ) != ( self.end_date ):
+			if ( self.start_date != '' ) != ( self.end_date != '' ):
 				raise ValueError( 'start_date and end_date must be supplied together.' )
 			if self.start_date:
 				start = dt.datetime.strptime( self.start_date, '%Y-%m-%d' ).date( )
@@ -5997,7 +5997,7 @@ class SpaceWeather( Fetcher ):
 				raise ValueError( 'Unsupported NASA DONKI endpoint.' )
 			self.start_date = ( start_date or '' ).strip( )
 			self.end_date = ( end_date or '' ).strip( )
-			if ( self.start_date ) != ( self.end_date ):
+			if ( self.start_date != '' ) != ( self.end_date != '' ):
 				raise ValueError( 'start_date and end_date must be supplied together.' )
 			if self.start_date:
 				start = dt.datetime.strptime( self.start_date, '%Y-%m-%d' ).date( )
@@ -18997,7 +18997,7 @@ related operations.
 			start_value = ( start_date or '' ).strip( )
 			end_value = ( end_date or '' ).strip( )
 			
-			if ( start_value ) != ( end_value ):
+			if ( start_value != '' ) != ( end_value != '' ):
 				raise ValueError( 'start_date and end_date must either both be supplied or both be '
 				                  'blank.' )
 			
