@@ -21176,7 +21176,7 @@ class PurpleAir( Fetcher ):
 		return [ 'base_url', 'api_key', 'mode', 'endpoint', 'sensor_index', 'nwlng', 'nwlat',
 				'selng', 'selat', 'location_type', 'max_age', 'modified_since', 'fields', 'params',
 				'payload', 'result', 'response', 'url', 'timeout', 'agents', 'headers',
-												'normalize_fields',
+				'normalize_fields',
 				'shape_sensor_list_rows', 'shape_sensor_detail_rows', 'summarize_rows',
 				'package_response', 'request', 'fetch_sensors', 'fetch_sensor', 'fetch',
 				'create_schema' ]
