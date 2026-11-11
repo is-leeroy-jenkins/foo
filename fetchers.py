@@ -24114,7 +24114,7 @@ class Firms( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			text = ( csv_text or '' )
+			text = csv_text or ''
 			
 			if not text.strip( ):
 				return [ ]
