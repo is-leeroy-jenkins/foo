@@ -53,6 +53,7 @@ from __future__ import annotations
 import base64
 import datetime as dt
 import io
+import math
 import re
 import os
 import urllib.parse
@@ -4377,6 +4378,18 @@ class GlobalImagery( Fetcher ):
 		super( ).__init__( )
 		self.api_key = cfg.NASA_API_KEY
 		self.mode = None
+		self.layer = ''
+		self.image_date = ''
+		self.bbox = None
+		self.projection = 'epsg4326'
+		self.quality = 'best'
+		self.version = '1.1.1'
+		self.image_format = 'image/png'
+		self.transparent = True
+		self.width = 1200
+		self.height = 600
+		self.wms_url = ''
+		self.epsg = 'EPSG:4326'
 		self.url = 'https://gibs.earthdata.nasa.gov/wms'
 		self.file_path = None
 		self.longitude = None
@@ -4413,6 +4426,8 @@ class GlobalImagery( Fetcher ):
 		return [ 'file_path', 'api_key', 'url', 'latitude', 'longitude', 'coordinates',
 				'calendar_date', 'julian_date', 'sidereal_time', 'utc_time', 'local_time',
 				'params', 'response', 'result', 'mode', 'timeout', 'headers',
+				'layer', 'image_date', 'bbox', 'projection', 'quality', 'version',
+				'image_format', 'transparent', 'width', 'height', 'wms_url', 'epsg',
 				'get_capabilities_url', 'build_wms_url', 'fetch_wms_map', 'fetch_map_services',
 				'fetch_mercator_map', 'create_schema' ]
 	
@@ -4440,17 +4455,21 @@ class GlobalImagery( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			projection_value = str( projection or 'epsg4326' ).strip( ).lower( )
-			quality_value = str( quality or 'best' ).strip( ).lower( )
-			version_value = str( version or '1.1.1' ).strip( )
-			
-			base_url = (f'https://gibs.earthdata.nasa.gov/wms/'
-			            f'{projection_value}/{quality_value}/wms.cgi')
-			
-			params = { 'SERVICE': 'WMS', 'REQUEST': 'GetCapabilities', 'VERSION': version_value }
-			
-			return f'{base_url}?{urllib.parse.urlencode( params )}'
-		
+			self.projection = str( projection ).strip( ).lower( ).replace( ':', '' )
+			self.quality = str( quality ).strip( ).lower( )
+			self.version = str( version ).strip( )
+			if self.projection not in ( 'epsg4326', 'epsg3857', 'epsg3413', 'epsg3031' ):
+				raise ValueError( 'Unsupported NASA GIBS WMS projection.' )
+			if not re.fullmatch( r'[a-z0-9_-]+', self.quality ):
+				raise ValueError( 'Invalid NASA GIBS service quality identifier.' )
+			if self.version not in ( '1.1.1', '1.3.0' ):
+				raise ValueError( 'GIBS WMS version must be 1.1.1 or 1.3.0.' )
+			self.wms_url = (f'https://gibs.earthdata.nasa.gov/wms/'
+				f'{self.projection}/{self.quality}/wms.cgi')
+			self.params = { 'SERVICE': 'WMS', 'REQUEST': 'GetCapabilities',
+				'VERSION': self.version }
+			return f'{self.wms_url}?{urllib.parse.urlencode( self.params )}'
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -4499,31 +4518,56 @@ class GlobalImagery( Fetcher ):
 			throw_if( 'layer', layer )
 			throw_if( 'image_date', image_date )
 			throw_if( 'bbox', bbox )
+			self.layer = str( layer ).strip( )
+			self.image_date = str( image_date ).strip( )
+			self.projection = str( projection ).strip( ).lower( ).replace( ':', '' )
+			self.quality = str( quality ).strip( ).lower( )
+			self.version = str( version ).strip( )
+			self.image_format = str( image_format ).strip( ).lower( )
+			self.width = int( width )
+			self.height = int( height )
+			self.transparent = transparent
+			if self.projection not in ( 'epsg4326', 'epsg3857', 'epsg3413', 'epsg3031' ):
+				raise ValueError( 'Unsupported NASA GIBS WMS projection.' )
+			if not re.fullmatch( r'[a-z0-9_-]+', self.quality ):
+				raise ValueError( 'Invalid NASA GIBS service quality identifier.' )
+			if self.version not in ( '1.1.1', '1.3.0' ):
+				raise ValueError( 'GIBS WMS version must be 1.1.1 or 1.3.0.' )
 			if len( bbox ) != 4:
 				raise ValueError( 'bbox must contain west, south, east, north.' )
-			
-			projection_value = str( projection or 'epsg4326' ).strip( ).lower( )
-			quality_value = str( quality or 'best' ).strip( ).lower( )
-			version_value = str( version or '1.1.1' ).strip( )
-			
-			west, south, east, north = [ float( value ) for value in bbox ]
-			width_value = max( 1, int( width ) )
-			height_value = max( 1, int( height ) )
-			
-			base_url = (f'https://gibs.earthdata.nasa.gov/wms/'
-			            f'{projection_value}/{quality_value}/wms.cgi')
-			
-			params = { 'SERVICE': 'WMS', 'VERSION': version_value, 'REQUEST': 'GetMap',
-					'LAYERS': str( layer ).strip( ), 'STYLES': '',
-					'FORMAT': str( image_format or 'image/png' ).strip( ),
-					'TRANSPARENT': str( bool( transparent ) ).lower( ),
-					'SRS': 'EPSG:4326' if projection_value == 'epsg4326' else 'EPSG:3857',
-					'BBOX': f'{west},{south},{east},{north}', 'WIDTH': width_value,
-					'HEIGHT': height_value, 'TIME': str( image_date ).strip( ) }
-			
-			self.params = params
-			return f'{base_url}?{urllib.parse.urlencode( self.params )}'
-		
+			self.bbox = tuple( float( value ) for value in bbox )
+			if not all( math.isfinite( value ) for value in self.bbox ):
+				raise ValueError( 'bbox coordinates must be finite.' )
+			west, south, east, north = self.bbox
+			if west >= east or south >= north:
+				raise ValueError( 'bbox bounds must increase from west to east and south to north.' )
+			if self.width < 1 or self.height < 1:
+				raise ValueError( 'width and height must be positive.' )
+			if self.image_format not in ( 'image/png', 'image/jpeg' ):
+				raise ValueError( 'GIBS WMS image_format must be image/png or image/jpeg.' )
+			if not re.fullmatch( r'[A-Za-z0-9_,-]+', self.layer ):
+				raise ValueError( 'Invalid WMS layer identifier.' )
+			if not isinstance( self.transparent, bool ):
+				raise ValueError( 'transparent must be a boolean.' )
+			self.wms_url = (f'https://gibs.earthdata.nasa.gov/wms/'
+				f'{self.projection}/{self.quality}/wms.cgi')
+			self.epsg = f'EPSG:{self.projection[ 4: ]}'
+			self.params = { 'SERVICE': 'WMS', 'VERSION': self.version,
+				'REQUEST': 'GetMap', 'LAYERS': self.layer, 'STYLES': '',
+				'FORMAT': self.image_format,
+				'TRANSPARENT': str( self.transparent ).lower( ),
+				'WIDTH': self.width, 'HEIGHT': self.height, 'TIME': self.image_date }
+			if self.version == '1.3.0':
+				self.params[ 'CRS' ] = self.epsg
+				if self.projection == 'epsg4326':
+					self.params[ 'BBOX' ] = f'{south},{west},{north},{east}'
+				else:
+					self.params[ 'BBOX' ] = f'{west},{south},{east},{north}'
+			else:
+				self.params[ 'SRS' ] = self.epsg
+				self.params[ 'BBOX' ] = f'{west},{south},{east},{north}'
+			return f'{self.wms_url}?{urllib.parse.urlencode( self.params )}'
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -4573,9 +4617,18 @@ class GlobalImagery( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			throw_if( 'layer', layer )
+			throw_if( 'image_date', image_date )
+			throw_if( 'bbox', bbox )
+			self.layer = str( layer ).strip( )
+			self.image_date = str( image_date ).strip( )
+			self.bbox = bbox
 			self.mode = 'wms_map'
 			self.timeout = int( time )
-			request_url = self.build_wms_url( layer=layer, image_date=image_date, bbox=bbox,
+			if self.timeout < 1:
+				raise ValueError( 'time must be greater than or equal to 1.' )
+			request_url = self.build_wms_url( layer=self.layer, image_date=self.image_date,
+				bbox=self.bbox,
 				width=width, height=height, projection=projection, quality=quality,
 				image_format=image_format, transparent=transparent )
 			
@@ -4584,14 +4637,14 @@ class GlobalImagery( Fetcher ):
 			if output_name:
 				filename = output_name
 			else:
-				safe_layer = re.sub( r'[^A-Za-z0-9_\-]+', '_', str( layer ).strip( ) )
-				safe_date = re.sub( r'[^0-9\-]+', '_', str( image_date ).strip( ) )
-				extension = '.jpg' if image_format == 'image/jpeg' else '.png'
+				safe_layer = re.sub( r'[^A-Za-z0-9_\-]+', '_', self.layer )
+				safe_date = re.sub( r'[^0-9\-]+', '_', self.image_date )
+				extension = '.jpg' if self.image_format == 'image/jpeg' else '.png'
 				filename = f'{safe_layer}_{safe_date}{extension}'
 			
 			self.file_path = str( directory / filename )
 			self.url = request_url
-			self.response = requests.get( request_url, headers=self.headers, timeout=self.timeout )
+			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
 			content_type = self.response.headers.get( 'Content-Type', '' )
 			if 'image' not in content_type.lower( ):
@@ -4606,9 +4659,9 @@ class GlobalImagery( Fetcher ):
 					'image_path': self.file_path, 'content_type': content_type,
 					'status_code': self.response.status_code, 'bytes': len(
 						self.response.content ),
-					'layer': layer, 'image_date': image_date,
-					'bbox': { 'west': float( bbox[ 0 ] ), 'south': float( bbox[ 1 ] ),
-							'east': float( bbox[ 2 ] ), 'north': float( bbox[ 3 ] ) },
+					'layer': self.layer, 'image_date': self.image_date,
+					'bbox': { 'west': float( self.bbox[ 0 ] ), 'south': float( self.bbox[ 1 ] ),
+							'east': float( self.bbox[ 2 ] ), 'north': float( self.bbox[ 3 ] ) },
 					'summary': { 'rows': 1, 'columns': 8,
 							'description': 'NASA GIBS WMS image written to disk.' } }
 			
@@ -4640,7 +4693,6 @@ class GlobalImagery( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.mode = 'fetch_map_services'
 			return self.fetch_wms_map( layer='MODIS_Terra_CorrectedReflectance_TrueColor',
 				image_date='2021-09-21', bbox=( -180.0, -90.0, 180.0, 90.0), width=1200,
 				height=600, projection='epsg4326', quality='best', image_format='image/png',
@@ -4675,7 +4727,6 @@ class GlobalImagery( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.mode = 'mercator_map'
 			return self.fetch_wms_map(
 				layer='Landsat_WELD_CorrectedReflectance_Bands157_Global_Annual',
 				image_date='2000-12-01', bbox=(
