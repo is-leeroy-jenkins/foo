@@ -29,8 +29,6 @@ REMOVED_WRAPPERS = {
     'Firms': 'validate_map_key',
 }
 DOMAIN_VALIDATORS = {
-    'PurpleAir': ( 'validate_mode', 'validate_endpoint', 'validate_bbox',
-                   'validate_sensor_index', 'validate_location_type' ),
     'OpenAQ': ( 'validate_mode', 'validate_endpoint', 'validate_coordinates',
                 'validate_radius', 'validate_positive_integer' ),
     'Firms': ( 'validate_mode', 'validate_source', 'validate_sensor',
@@ -128,3 +126,38 @@ def test_domain_validation_remains_available( ) -> None:
         methods = { node.name for node in classes[ class_name ].body
             if isinstance( node, ast.FunctionDef ) }
         assert set( validators ).issubset( methods ), class_name
+
+
+def test_purpleair_inline_constraints( ) -> None:
+    """Ensure removed PurpleAir wrappers do not return and provider constraints remain.
+
+    Purpose:
+        Protect mandatory input guards, valid sensor identifiers, bounding boxes,
+        optional control ranges, and request endpoint selection.
+
+    Returns:
+        None: Assertions fail when the inline validation contract is violated.
+    """
+    cls = get_classes( )[ 'PurpleAir' ]
+    methods = { node.name: node for node in cls.body if isinstance( node, ast.FunctionDef ) }
+    assert not any( name.startswith( 'validate_' ) for name in methods )
+    exposed = { node.value for node in ast.walk( methods[ '__dir__' ] )
+        if isinstance( node, ast.Constant ) and isinstance( node.value, str ) }
+    assert not any( name.startswith( 'validate_' ) for name in exposed )
+
+    for method_name, required in {
+        'request': ( 'endpoint', ),
+        'fetch_sensors': ( 'nwlng', 'nwlat', 'selng', 'selat' ),
+        'fetch_sensor': ( 'sensor_index', ),
+        'fetch': ( 'mode', ),
+    }.items( ):
+        guards = { node.args[ 0 ].value for node in ast.walk( methods[ method_name ] )
+            if isinstance( node, ast.Call ) and isinstance( node.func, ast.Name )
+            and node.func.id == 'throw_if' and node.args
+            and isinstance( node.args[ 0 ], ast.Constant ) }
+        assert set( required ).issubset( guards ), method_name
+
+    assert any( isinstance( node, ast.Compare ) for node in ast.walk( methods[ 'fetch_sensors' ] ) )
+    assert any( isinstance( node, ast.Compare ) for node in ast.walk( methods[ 'fetch_sensor' ] ) )
+    assert any( isinstance( node, ast.Call ) and isinstance( node.func, ast.Attribute )
+        and node.func.attr == 'fullmatch' for node in ast.walk( methods[ 'request' ] ) )

@@ -21165,312 +21165,10 @@ class PurpleAir( Fetcher ):
 		return [ 'base_url', 'api_key', 'mode', 'endpoint', 'sensor_index', 'nwlng', 'nwlat',
 				'selng', 'selat', 'location_type', 'max_age', 'modified_since', 'fields', 'params',
 				'payload', 'result', 'response', 'url', 'timeout', 'agents', 'headers',
-				'validate_mode', 'validate_endpoint', 'validate_sensor_index',
-				'validate_longitude', 'validate_latitude', 'validate_bbox',
-				'validate_location_type', 'validate_non_negative_integer', 'normalize_fields',
+				'normalize_fields',
 				'shape_sensor_list_rows', 'shape_sensor_detail_rows', 'summarize_rows',
 				'package_response', 'request', 'fetch_sensors', 'fetch_sensor', 'fetch',
 				'create_schema' ]
-	
-	def validate_mode( self, mode: str ) -> str:
-		"""Validate mode.
-
-		Purpose:
-		    Validates the mode against provider constraints and returns the accepted value.
-
-		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-
-		Returns:
-		    str: Normalized text produced by the operation.
-
-		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
-		"""
-		try:
-			throw_if( 'mode', mode )
-			
-			value = str( mode ).strip( ).lower( )
-			allowed = { 'sensors', 'sensor' }
-			
-			if value not in allowed:
-				raise ValueError( "Unsupported PurpleAir mode. Use 'sensors' or 'sensor'." )
-			
-			return value
-		
-		except Exception as e:
-			exception = Error( e )
-			exception.module = 'fetchers'
-			exception.cause = 'PurpleAir'
-			exception.method = 'validate_mode( self, *args, **kwargs ) -> str'
-			Logger( ).write( exception )
-			raise exception
-	
-	def validate_endpoint( self, endpoint: str ) -> str:
-		"""Validate endpoint.
-
-		Purpose:
-		    Validates the endpoint against provider constraints and returns the accepted value.
-
-		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
-
-		Returns:
-		    str: Normalized text produced by the operation.
-
-		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
-		"""
-		try:
-			throw_if( 'endpoint', endpoint )
-			
-			value = str( endpoint ).strip( ).strip( '/' )
-			
-			if value.startswith( 'http://' ) or value.startswith( 'https://' ):
-				raise ValueError( 'endpoint must be a path segment, not a full URL.' )
-			
-			if '..' in value:
-				raise ValueError( 'endpoint cannot contain parent-directory markers.' )
-			
-			if value != 'sensors' and not re.fullmatch( r'sensors/\d+', value ):
-				raise ValueError( "endpoint must be 'sensors' or 'sensors/{sensor_index}'." )
-			
-			return value
-		
-		except Exception as e:
-			exception = Error( e )
-			exception.module = 'fetchers'
-			exception.cause = 'PurpleAir'
-			exception.method = 'validate_endpoint( self, *args, **kwargs ) -> str'
-			Logger( ).write( exception )
-			raise exception
-	
-	def validate_sensor_index( self, sensor_index: int ) -> int:
-		"""Validate sensor index.
-
-		Purpose:
-		    Validates the sensor index against provider constraints and returns the accepted value.
-
-		Args:
-		    sensor_index (int): Sensor index supplied by the caller and interpreted according to
-		    the method contract.
-
-		Returns:
-		    int: Computed numeric value produced by the operation.
-
-		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
-		"""
-		try:
-			throw_if( 'sensor_index', sensor_index )
-			
-			value = int( sensor_index )
-			if value < 1:
-				raise ValueError( 'sensor_index must be greater than or equal to 1.' )
-			
-			return value
-		
-		except Exception as e:
-			exception = Error( e )
-			exception.module = 'fetchers'
-			exception.cause = 'PurpleAir'
-			exception.method = 'validate_sensor_index( self, *args, **kwargs ) -> int'
-			Logger( ).write( exception )
-			raise exception
-	
-	def validate_longitude( self, name: str, value: float ) -> float:
-		"""Validate longitude.
-
-		Purpose:
-		    Validates the longitude against provider constraints and returns the accepted value.
-
-		Args:
-		    name (str): Argument name included in validation error messages.
-		    value (float): Candidate value to validate or normalize.
-
-		Returns:
-		    float: Computed numeric value produced by the operation.
-
-		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
-		"""
-		try:
-			throw_if( 'name', name )
-			throw_if( name, value )
-			
-			number = float( value )
-			if number < -180.0 or number > 180.0:
-				raise ValueError( f'{name} must be between -180 and 180.' )
-			
-			return number
-		
-		except Exception as e:
-			exception = Error( e )
-			exception.module = 'fetchers'
-			exception.cause = 'PurpleAir'
-			exception.method = 'validate_longitude( self, *args, **kwargs ) -> float'
-			Logger( ).write( exception )
-			raise exception
-	
-	def validate_latitude( self, name: str, value: float ) -> float:
-		"""Validate latitude.
-
-		Purpose:
-		    Validates the latitude against provider constraints and returns the accepted value.
-
-		Args:
-		    name (str): Argument name included in validation error messages.
-		    value (float): Candidate value to validate or normalize.
-
-		Returns:
-		    float: Computed numeric value produced by the operation.
-
-		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
-		"""
-		try:
-			throw_if( 'name', name )
-			throw_if( name, value )
-			
-			number = float( value )
-			if number < -90.0 or number > 90.0:
-				raise ValueError( f'{name} must be between -90 and 90.' )
-			
-			return number
-		
-		except Exception as e:
-			exception = Error( e )
-			exception.module = 'fetchers'
-			exception.cause = 'PurpleAir'
-			exception.method = 'validate_latitude( self, *args, **kwargs ) -> float'
-			Logger( ).write( exception )
-			raise exception
-	
-	def validate_bbox( self, nwlng: float, nwlat: float, selng: float, selat: float ) -> Tuple[
-		float, float, float, float ]:
-		"""Validate bbox.
-
-		Purpose:
-		    Validates the bbox against provider constraints and returns the accepted value.
-
-		Args:
-		    nwlng (float): Nwlng supplied by the caller and interpreted according to the method
-		    contract.
-		    nwlat (float): Nwlat supplied by the caller and interpreted according to the method
-		    contract.
-		    selng (float): Selng supplied by the caller and interpreted according to the method
-		    contract.
-		    selat (float): Selat supplied by the caller and interpreted according to the method
-		    contract.
-
-		Returns:
-		    Tuple[float, float, float, float]: Ordered values or records produced by the operation.
-
-		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
-		"""
-		try:
-			nw_lng = self.validate_longitude( 'nwlng', nwlng )
-			nw_lat = self.validate_latitude( 'nwlat', nwlat )
-			se_lng = self.validate_longitude( 'selng', selng )
-			se_lat = self.validate_latitude( 'selat', selat )
-			
-			if nw_lng >= se_lng:
-				raise ValueError( 'nwlng must be less than selng.' )
-			
-			if nw_lat <= se_lat:
-				raise ValueError( 'nwlat must be greater than selat.' )
-			
-			return nw_lng, nw_lat, se_lng, se_lat
-		
-		except Exception as e:
-			exception = Error( e )
-			exception.module = 'fetchers'
-			exception.cause = 'PurpleAir'
-			exception.method = ('validate_bbox( self, *args, **kwargs ) '
-			                    '-> Tuple[ float, float, float, float ]')
-			Logger( ).write( exception )
-			raise exception
-	
-	def validate_location_type( self, location_type: int ) -> int:
-		"""Validate location type.
-
-		Purpose:
-		    Validates the location type against provider constraints and returns the accepted
-		    value.
-
-		Args:
-		    location_type (int): Location type supplied by the caller and interpreted according to
-		    the method contract.
-
-		Returns:
-		    int: Computed numeric value produced by the operation.
-
-		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
-		"""
-		try:
-			throw_if( 'location_type', location_type if location_type == 0 else location_type )
-			
-			value = int( location_type )
-			if value not in (0, 1):
-				raise ValueError( 'location_type must be 0 or 1.' )
-			
-			return value
-		
-		except Exception as e:
-			exception = Error( e )
-			exception.module = 'fetchers'
-			exception.cause = 'PurpleAir'
-			exception.method = 'validate_location_type( self, *args, **kwargs ) -> int'
-			Logger( ).write( exception )
-			raise exception
-	
-	def validate_non_negative_integer( self, name: str, value: int ) -> int:
-		"""Validate non negative integer.
-
-		Purpose:
-		    Validates the non negative integer against provider constraints and returns the
-		    accepted value.
-
-		Args:
-		    name (str): Argument name included in validation error messages.
-		    value (int): Candidate value to validate or normalize.
-
-		Returns:
-		    int: Computed numeric value produced by the operation.
-
-		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
-		"""
-		try:
-			throw_if( 'name', name )
-			
-			if value is None:
-				raise ValueError( f'{name} cannot be None.' )
-			
-			number = int( value )
-			if number < 0:
-				raise ValueError( f'{name} must be greater than or equal to 0.' )
-			
-			return number
-		
-		except Exception as e:
-			exception = Error( e )
-			exception.module = 'fetchers'
-			exception.cause = 'PurpleAir'
-			exception.method = ('validate_non_negative_integer( self, *args, **kwargs ) -> int')
-			Logger( ).write( exception )
-			raise exception
 	
 	def normalize_fields( self, fields: str, default_fields: str ) -> str:
 		"""Normalize fields.
@@ -21732,7 +21430,11 @@ class PurpleAir( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.endpoint = self.validate_endpoint( endpoint )
+			throw_if( 'endpoint', endpoint )
+			self.endpoint = str( endpoint ).strip( ).strip( '/' )
+			if self.endpoint != 'sensors' and not re.fullmatch(
+					r'sensors/[1-9][0-9]*', self.endpoint ):
+				raise ValueError( 'endpoint must identify sensors or a positive sensor index.' )
 			throw_if( 'time', time )
 			
 			self.timeout = int( time )
@@ -21809,12 +21511,25 @@ class PurpleAir( Fetcher ):
 			                  'location_type')
 			
 			self.mode = 'sensors'
-			self.nwlng, self.nwlat, self.selng, self.selat = self.validate_bbox( nwlng=nwlng,
-				nwlat=nwlat, selng=selng, selat=selat )
-			self.location_type = self.validate_location_type( location_type )
-			self.max_age = self.validate_non_negative_integer( 'max_age', max_age )
-			self.modified_since = self.validate_non_negative_integer( 'modified_since',
-				modified_since )
+			throw_if( 'nwlng', nwlng )
+			throw_if( 'nwlat', nwlat )
+			throw_if( 'selng', selng )
+			throw_if( 'selat', selat )
+			self.nwlng = float( nwlng )
+			self.nwlat = float( nwlat )
+			self.selng = float( selng )
+			self.selat = float( selat )
+			self.location_type = int( location_type )
+			self.max_age = int( max_age )
+			self.modified_since = int( modified_since )
+			if not -180.0 <= self.nwlng < self.selng <= 180.0:
+				raise ValueError( 'Longitude bounds must satisfy -180 <= nwlng < selng <= 180.' )
+			if not -90.0 <= self.selat < self.nwlat <= 90.0:
+				raise ValueError( 'Latitude bounds must satisfy -90 <= selat < nwlat <= 90.' )
+			if self.location_type not in (0, 1):
+				raise ValueError( 'location_type must be 0 or 1.' )
+			if self.max_age < 0 or self.modified_since < 0:
+				raise ValueError( 'max_age and modified_since cannot be negative.' )
 			self.fields = self.normalize_fields( fields=fields, default_fields=default_fields )
 			self.timeout = int( time )
 			
@@ -21866,7 +21581,10 @@ class PurpleAir( Fetcher ):
 			                  'rssi')
 			
 			self.mode = 'sensor'
-			self.sensor_index = self.validate_sensor_index( sensor_index )
+			throw_if( 'sensor_index', sensor_index )
+			self.sensor_index = int( sensor_index )
+			if self.sensor_index < 1:
+				raise ValueError( 'sensor_index must be greater than or equal to 1.' )
 			self.fields = self.normalize_fields( fields=fields, default_fields=default_fields )
 			self.timeout = int( time )
 			
@@ -21928,7 +21646,8 @@ class PurpleAir( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.mode = self.validate_mode( mode )
+			throw_if( 'mode', mode )
+			self.mode = str( mode ).strip( ).lower( )
 			
 			if self.mode == 'sensors':
 				return self.fetch_sensors( nwlng=nwlng, nwlat=nwlat, selng=selng, selat=selat,
