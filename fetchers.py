@@ -4314,6 +4314,9 @@ class GlobalImagery( Fetcher ):
 		super( ).__init__( )
 		self.api_key = cfg.NASA_API_KEY
 		self.mode = None
+		self.layer = ''
+		self.image_date = ''
+		self.bbox = None
 		self.url = 'https://gibs.earthdata.nasa.gov/wms'
 		self.file_path = None
 		self.longitude = None
@@ -4349,7 +4352,8 @@ class GlobalImagery( Fetcher ):
 		"""
 		return [ 'file_path', 'api_key', 'url', 'latitude', 'longitude', 'coordinates',
 				'calendar_date', 'julian_date', 'sidereal_time', 'utc_time', 'local_time',
-				'params', 'response', 'result', 'mode', 'timeout', 'headers',
+				'params', 'response', 'result', 'mode', 'layer', 'image_date', 'bbox',
+				'timeout', 'headers',
 				'get_capabilities_url', 'build_wms_url', 'fetch_wms_map', 'fetch_map_services',
 				'fetch_mercator_map', 'create_schema' ]
 	
@@ -4436,14 +4440,17 @@ class GlobalImagery( Fetcher ):
 			throw_if( 'layer', layer )
 			throw_if( 'image_date', image_date )
 			throw_if( 'bbox', bbox )
+			self.layer = str( layer ).strip( )
+			self.image_date = str( image_date ).strip( )
 			if len( bbox ) != 4:
 				raise ValueError( 'bbox must contain west, south, east, north.' )
+			self.bbox = tuple( float( value ) for value in bbox )
 			
 			projection_value = str( projection or 'epsg4326' ).strip( ).lower( )
 			quality_value = str( quality or 'best' ).strip( ).lower( )
 			version_value = str( version or '1.1.1' ).strip( )
 			
-			west, south, east, north = [ float( value ) for value in bbox ]
+			west, south, east, north = self.bbox
 			width_value = max( 1, int( width ) )
 			height_value = max( 1, int( height ) )
 			
@@ -4451,12 +4458,12 @@ class GlobalImagery( Fetcher ):
 			            f'{projection_value}/{quality_value}/wms.cgi')
 			
 			params = { 'SERVICE': 'WMS', 'VERSION': version_value, 'REQUEST': 'GetMap',
-					'LAYERS': str( layer ).strip( ), 'STYLES': '',
+					'LAYERS': self.layer, 'STYLES': '',
 					'FORMAT': str( image_format or 'image/png' ).strip( ),
 					'TRANSPARENT': str( bool( transparent ) ).lower( ),
 					'SRS': 'EPSG:4326' if projection_value == 'epsg4326' else 'EPSG:3857',
 					'BBOX': f'{west},{south},{east},{north}', 'WIDTH': width_value,
-					'HEIGHT': height_value, 'TIME': str( image_date ).strip( ) }
+					'HEIGHT': height_value, 'TIME': self.image_date }
 			
 			self.params = params
 			return f'{base_url}?{urllib.parse.urlencode( self.params )}'
@@ -4510,9 +4517,18 @@ class GlobalImagery( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			throw_if( 'layer', layer )
+			throw_if( 'image_date', image_date )
+			throw_if( 'bbox', bbox )
+			self.layer = str( layer ).strip( )
+			self.image_date = str( image_date ).strip( )
+			self.bbox = bbox
 			self.mode = 'wms_map'
 			self.timeout = int( time )
-			request_url = self.build_wms_url( layer=layer, image_date=image_date, bbox=bbox,
+			if self.timeout < 1:
+				raise ValueError( 'time must be greater than or equal to 1.' )
+			request_url = self.build_wms_url( layer=self.layer, image_date=self.image_date,
+				bbox=self.bbox,
 				width=width, height=height, projection=projection, quality=quality,
 				image_format=image_format, transparent=transparent )
 			
@@ -4521,14 +4537,14 @@ class GlobalImagery( Fetcher ):
 			if output_name:
 				filename = output_name
 			else:
-				safe_layer = re.sub( r'[^A-Za-z0-9_\-]+', '_', str( layer ).strip( ) )
-				safe_date = re.sub( r'[^0-9\-]+', '_', str( image_date ).strip( ) )
+				safe_layer = re.sub( r'[^A-Za-z0-9_\-]+', '_', self.layer )
+				safe_date = re.sub( r'[^0-9\-]+', '_', self.image_date )
 				extension = '.jpg' if image_format == 'image/jpeg' else '.png'
 				filename = f'{safe_layer}_{safe_date}{extension}'
 			
 			self.file_path = str( directory / filename )
 			self.url = request_url
-			self.response = requests.get( request_url, headers=self.headers, timeout=self.timeout )
+			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
 			content_type = self.response.headers.get( 'Content-Type', '' )
 			if 'image' not in content_type.lower( ):
@@ -4543,9 +4559,9 @@ class GlobalImagery( Fetcher ):
 					'image_path': self.file_path, 'content_type': content_type,
 					'status_code': self.response.status_code, 'bytes': len(
 						self.response.content ),
-					'layer': layer, 'image_date': image_date,
-					'bbox': { 'west': float( bbox[ 0 ] ), 'south': float( bbox[ 1 ] ),
-							'east': float( bbox[ 2 ] ), 'north': float( bbox[ 3 ] ) },
+					'layer': self.layer, 'image_date': self.image_date,
+					'bbox': { 'west': float( self.bbox[ 0 ] ), 'south': float( self.bbox[ 1 ] ),
+							'east': float( self.bbox[ 2 ] ), 'north': float( self.bbox[ 3 ] ) },
 					'summary': { 'rows': 1, 'columns': 8,
 							'description': 'NASA GIBS WMS image written to disk.' } }
 			
@@ -4577,7 +4593,6 @@ class GlobalImagery( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.mode = 'fetch_map_services'
 			return self.fetch_wms_map( layer='MODIS_Terra_CorrectedReflectance_TrueColor',
 				image_date='2021-09-21', bbox=( -180.0, -90.0, 180.0, 90.0), width=1200,
 				height=600, projection='epsg4326', quality='best', image_format='image/png',
@@ -4612,7 +4627,6 @@ class GlobalImagery( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.mode = 'mercator_map'
 			return self.fetch_wms_map(
 				layer='Landsat_WELD_CorrectedReflectance_Bands157_Global_Annual',
 				image_date='2000-12-01', bbox=(
@@ -21650,12 +21664,31 @@ class PurpleAir( Fetcher ):
 			self.mode = str( mode ).strip( ).lower( )
 			
 			if self.mode == 'sensors':
-				return self.fetch_sensors( nwlng=nwlng, nwlat=nwlat, selng=selng, selat=selat,
-					location_type=location_type, max_age=max_age, modified_since=modified_since,
-					fields=fields, time=time )
+				throw_if( 'nwlng', nwlng )
+				throw_if( 'nwlat', nwlat )
+				throw_if( 'selng', selng )
+				throw_if( 'selat', selat )
+				self.nwlng = float( nwlng )
+				self.nwlat = float( nwlat )
+				self.selng = float( selng )
+				self.selat = float( selat )
+				self.location_type = location_type
+				self.max_age = max_age
+				self.modified_since = modified_since
+				self.fields = fields
+				self.timeout = time
+				return self.fetch_sensors( nwlng=self.nwlng, nwlat=self.nwlat,
+					selng=self.selng, selat=self.selat, location_type=self.location_type,
+					max_age=self.max_age, modified_since=self.modified_since,
+					fields=self.fields, time=self.timeout )
 			
 			if self.mode == 'sensor':
-				return self.fetch_sensor( sensor_index=sensor_index, fields=fields, time=time )
+				throw_if( 'sensor_index', sensor_index )
+				self.sensor_index = int( sensor_index )
+				self.fields = fields
+				self.timeout = time
+				return self.fetch_sensor( sensor_index=self.sensor_index,
+					fields=self.fields, time=self.timeout )
 			
 			raise ValueError( "Unsupported PurpleAir mode. Use 'sensors' or 'sensor'." )
 		
