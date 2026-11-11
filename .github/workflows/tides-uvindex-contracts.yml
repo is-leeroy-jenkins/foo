@@ -1,0 +1,26 @@
+name: NOAA Tides and EPA UV Index provider contracts
+
+on:
+  pull_request:
+    paths:
+      - fetchers.py
+      - tests/test_tides_uvindex_contracts.py
+      - .github/workflows/tides-uvindex-contracts.yml
+  push:
+    paths:
+      - fetchers.py
+      - tests/test_tides_uvindex_contracts.py
+      - .github/workflows/tides-uvindex-contracts.yml
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Compile production fetchers
+        run: python -m py_compile fetchers.py
+      - name: Run isolated provider regressions
+        run: python -m unittest discover -s tests -p 'test_tides_uvindex_contracts.py' -v
