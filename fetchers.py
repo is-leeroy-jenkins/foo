@@ -10870,6 +10870,10 @@ class GoogleGeocoding( Fetcher ):
 			
 			
 			self.timeout = int( time )
+			if self.timeout < 1:
+				raise ValueError( 'time must be a positive integer.' )
+			if not isinstance( params, dict ):
+				raise ValueError( 'params must be a dictionary.' )
 			self.params = { }
 			
 			for key, value in (params or { }).items( ):
@@ -10895,7 +10899,7 @@ class GoogleGeocoding( Fetcher ):
 			if status and status != 'OK':
 				detail = f' — {error_message}' if error_message else ''
 				raise ValueError( f'Google Geocoding failed: {status}{detail}' )
-			self.result = { 'mode': self.mode, 'url': self.url, 'params': self.params,
+			self.result = { 'mode': self.mode, 'url': self.url, 'params': { key: value for key, value in self.params.items( ) if key != 'key' },
 					'status': self.payload.get( 'status', '' ) if isinstance( self.payload,
 						dict ) else '',
 					'results': self.payload.get( 'results', [ ] ) if isinstance( self.payload,
@@ -11006,6 +11010,8 @@ class GoogleGeocoding( Fetcher ):
 			self.mode = 'reverse'
 			self.latitude = float( latitude )
 			self.longitude = float( longitude )
+			if not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ) or not (-90 <= self.latitude <= 90) or not (-180 <= self.longitude <= 180):
+				raise ValueError( 'Latitude or longitude is outside valid geographic bounds.' )
 			self.language = str( language or 'en' ).strip( )
 			self.result_type = str( result_type or '' ).strip( )
 			self.location_type = str( location_type or '' ).strip( )
@@ -11462,17 +11468,24 @@ class CensusData( Fetcher ):
 			self.year = str( year ).strip( )
 			self.dataset = str( dataset ).strip( ).strip( '/' )
 			self.timeout = int( time )
+			if not re.fullmatch( r'\\d{4}', self.year ):
+				raise ValueError( 'year must be a four-digit Census vintage.' )
+			if not re.fullmatch( r'[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*', self.dataset ):
+				raise ValueError( 'dataset must contain valid Census dataset path segments.' )
+			if self.timeout < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.url = f'{self.base_url}/{self.year}/{self.dataset}/variables.json'
 			self.params = { }
 			
-			if self.api_key:
-				self.params[ 'key' ] = self.api_key
+			# Census metadata does not require an API key.
 			
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
 			self.payload = self.response.json( )
-			self.result = { 'mode': self.mode, 'url': self.response.url, 'params': self.params,
+			if not isinstance( self.payload, dict ) or self.payload.get( 'error' ):
+				raise ValueError( 'Census variables response must be a valid JSON object.' )
+			self.result = { 'mode': self.mode, 'url': self.url, 'params': { key: value for key, value in self.params.items( ) if key != 'key' },
 					'data': self.payload, }
 			
 			return self.result
@@ -11531,6 +11544,12 @@ class CensusData( Fetcher ):
 			self.geography_in = str( geography_in or '' ).strip( )
 			self.predicates = self.parse_predicates( predicates )
 			self.timeout = int( time )
+			if not re.fullmatch( r'\\d{4}', self.year ):
+				raise ValueError( 'year must be a four-digit Census vintage.' )
+			if not re.fullmatch( r'[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*', self.dataset ):
+				raise ValueError( 'dataset must contain valid Census dataset path segments.' )
+			if self.timeout < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.url = f'{self.base_url}/{self.year}/{self.dataset}'
 			self.params = { 'get': self.normalize_fields( fields ), 'for': self.geography_for, }
 			
@@ -11547,7 +11566,9 @@ class CensusData( Fetcher ):
 				timeout=self.timeout )
 			self.response.raise_for_status( )
 			self.payload = self.response.json( )
-			self.result = { 'mode': self.mode, 'url': self.response.url, 'params': self.params,
+			if not isinstance( self.payload, list ) or not self.payload or not isinstance( self.payload[ 0 ], list ):
+				raise ValueError( 'Census data response must be a table with a header row.' )
+			self.result = { 'mode': self.mode, 'url': self.url, 'params': { key: value for key, value in self.params.items( ) if key != 'key' },
 					'data': self.shape_table( self.payload ), 'raw': self.payload, }
 			
 			return self.result
