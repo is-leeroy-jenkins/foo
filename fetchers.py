@@ -206,7 +206,7 @@ class Fetcher:
 
 		Raises:
 		    NotImplementedError: Raised when the method cannot satisfy its documented
-		    notimplemented requirement.
+		        not implemented requirement.
 		"""
 		raise NotImplementedError( 'Must be implemented by a subclass.' )
 
@@ -315,11 +315,10 @@ class WebFetcher( Fetcher ):
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'url', url )
-			throw_if( 'time', time )
 			self.url = str( url ).strip( )
 			self.timeout = int( time )
 			self.response = requests.get( url=self.url, headers=self.headers,
@@ -457,7 +456,6 @@ class WebFetcher( Fetcher ):
 		"""
 		try:
 			throw_if( 'text', text )
-			throw_if( 'limit', limit )
 			self.text = str( text )
 			self.limit = int( limit )
 			if len( self.text ) <= self.limit:
@@ -489,16 +487,13 @@ class WebFetcher( Fetcher ):
 		try:
 			throw_if( 'base_url', base_url )
 			throw_if( 'href', href )
-			
 			self.source_url = str( base_url ).strip( )
 			self.href = str( href ).strip( )
-			
 			if self.href.startswith( ('mailto:', 'tel:', 'javascript:', '#') ):
 				return ''
 			
 			self.absolute_url = urllib.parse.urljoin( self.source_url, self.href )
 			self.parsed_url = urllib.parse.urlparse( self.absolute_url )
-			
 			if self.parsed_url.scheme not in ('http', 'https'):
 				return ''
 			
@@ -531,7 +526,6 @@ class WebFetcher( Fetcher ):
 		try:
 			throw_if( 'left_url', left_url )
 			throw_if( 'right_url', right_url )
-			
 			self.left_url = str( left_url ).strip( )
 			self.right_url = str( right_url ).strip( )
 			self.left_host = urllib.parse.urlparse( self.left_url ).netloc.lower( )
@@ -562,16 +556,13 @@ class WebFetcher( Fetcher ):
 		try:
 			throw_if( 'base_url', base_url )
 			throw_if( 'html', html )
-			
 			self.source_url = str( base_url ).strip( )
 			self.source_html = str( html )
 			self.soup = BeautifulSoup( self.source_html, 'html.parser' )
 			self.results = [ ]
 			self.seen = set( )
-			
 			for tag in self.soup.find_all( 'a', href=True ):
 				self.candidate = self.normalize_url( self.source_url, tag.get( 'href', '' ) )
-				
 				if self.candidate and self.candidate not in self.seen:
 					self.seen.add( self.candidate )
 					self.results.append( self.candidate )
@@ -587,7 +578,7 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def extract_structured_data( self, url: str, html: str, 
-			selected_methods: Optional[ List[ str ] ] = None ) -> Dict[ str, List[ str ] ]:
+			selected_methods: Optional[ List[ str ] ]=None ) -> Dict[ str, List[ str ] ]:
 		"""Extract structured data.
 
 		Purpose:
@@ -651,8 +642,7 @@ class WebFetcher( Fetcher ):
 					'scrape_images': ('Images',
 							lambda: [ self.normalize_url( self.source_url, tag.get( 'src', '' ) )
 									for tag in self.soup.find_all( 'img', src=True ) if
-									self.normalize_url( self.source_url, tag.get( 'src', '' ) )
-							]), }
+									self.normalize_url( self.source_url, tag.get( 'src', '' ) ) ]),}
 			
 			for self.method_name in self.selected_methods:
 				if self.method_name not in self.registry:
@@ -675,8 +665,7 @@ class WebFetcher( Fetcher ):
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'WebFetcher'
-			exception.method = ('extract_structured_data( self, *args, **kwargs ) -> Dict[ str, '
-			                    'List[ str ] ]')
+			exception.method = 'extract_structured_data( self, **args ) -> Dict[ str, List[ str ]]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -732,9 +721,9 @@ class WebFetcher( Fetcher ):
 		try:
 			throw_if( 'uri', uri )
 			self.url = str( uri ).strip( )
-			self.fetch( self.url, time=int( self.timeout or 10 ) )
-			return self.extract_structured_data( self.url, self.html or '', [
-					'scrape_lists' ] ).get( 'Lists', [ ] )
+			self.fetch( self.url, time=self.timeout or 10 )
+			return self.extract_structured_data( self.url,
+				self.html or '', [ 'scrape_lists' ] ).get( 'Lists', [ ] )
 		
 		except Exception as exc:
 			exception = Error( exc )
@@ -765,8 +754,8 @@ class WebFetcher( Fetcher ):
 			throw_if( 'uri', uri )
 			self.url = str( uri ).strip( )
 			self.fetch( self.url, time=int( self.timeout or 10 ) )
-			return self.extract_structured_data( self.url, self.html or '', [
-					'scrape_tables' ] ).get( 'Tables', [ ] )
+			return self.extract_structured_data( self.url, self.html or '',
+				[ 'scrape_tables' ] ).get( 'Tables', [ ] )
 		
 		except Exception as exc:
 			exception = Error( exc )
@@ -796,9 +785,9 @@ class WebFetcher( Fetcher ):
 		try:
 			throw_if( 'uri', uri )
 			self.url = str( uri ).strip( )
-			self.fetch( self.url, time=int( self.timeout or 10 ) )
-			return self.extract_structured_data( self.url, self.html or '', [
-					'scrape_articles' ] ).get( 'Articles', [ ] )
+			self.fetch( self.url, time=self.timeout or 10 )
+			return self.extract_structured_data( self.url,
+				self.html or '', [ 'scrape_articles' ] ).get( 'Articles', [ ] )
 		
 		except Exception as exc:
 			exception = Error( exc )
@@ -827,7 +816,6 @@ class WebFetcher( Fetcher ):
 		"""
 		try:
 			throw_if( 'uri', uri )
-			
 			self.url = str( uri ).strip( )
 			self.fetch( self.url, time=int( self.timeout or 10 ) )
 			return self.extract_structured_data( self.url, self.html or '', [
@@ -862,8 +850,8 @@ class WebFetcher( Fetcher ):
 			throw_if( 'uri', uri )
 			self.url = str( uri ).strip( )
 			self.fetch( self.url, time=int( self.timeout or 10 ) )
-			return self.extract_structured_data( self.url, self.html or '', [
-					'scrape_divisions' ] ).get( 'Divisions', [ ] )
+			return self.extract_structured_data( self.url, self.html or '',
+				[ 'scrape_divisions' ] ).get( 'Divisions', [ ] )
 		
 		except Exception as exc:
 			exception = Error( exc )
@@ -892,11 +880,10 @@ class WebFetcher( Fetcher ):
 		"""
 		try:
 			throw_if( 'uri', uri )
-			
 			self.url = str( uri ).strip( )
 			self.fetch( self.url, time=int( self.timeout or 10 ) )
-			return self.extract_structured_data( self.url, self.html or '', [
-					'scrape_sections' ] ).get( 'Sections', [ ] )
+			return self.extract_structured_data( self.url, self.html or '',
+				[ 'scrape_sections' ] ).get( 'Sections', [ ] )
 		
 		except Exception as exc:
 			exception = Error( exc )
@@ -927,8 +914,8 @@ class WebFetcher( Fetcher ):
 			throw_if( 'uri', uri )
 			self.url = str( uri ).strip( )
 			self.fetch( self.url, time=int( self.timeout or 10 ) )
-			return self.extract_structured_data( self.url, self.html or '', [
-					'scrape_blockquotes' ] ).get( 'Blockquotes', [ ] )
+			return self.extract_structured_data( self.url,
+				self.html or '', [ 'scrape_blockquotes' ] ).get( 'Blockquotes', [ ] )
 		
 		except Exception as exc:
 			exception = Error( exc )
@@ -959,8 +946,8 @@ class WebFetcher( Fetcher ):
 			throw_if( 'uri', uri )
 			self.url = str( uri ).strip( )
 			self.fetch( self.url, time=int( self.timeout or 10 ) )
-			return self.extract_structured_data( self.url, self.html or '', [
-					'scrape_hyperlinks' ] ).get( 'Hyperlinks', [ ] )
+			return self.extract_structured_data( self.url,
+				self.html or '', [ 'scrape_hyperlinks' ] ).get( 'Hyperlinks', [ ] )
 		
 		except Exception as exc:
 			exception = Error( exc )
@@ -991,8 +978,8 @@ class WebFetcher( Fetcher ):
 			throw_if( 'uri', uri )
 			self.url = str( uri ).strip( )
 			self.fetch( self.url, time=int( self.timeout or 10 ) )
-			return self.extract_structured_data( self.url, self.html or '', [
-					'scrape_images' ] ).get( 'Images', [ ] )
+			return self.extract_structured_data( self.url,
+				self.html or '', [ 'scrape_images' ] ).get( 'Images', [ ] )
 		
 		except Exception as exc:
 			exception = Error( exc )
@@ -1030,10 +1017,7 @@ class WebFetcher( Fetcher ):
 			throw_if( 'tool', tool )
 			throw_if( 'description', description )
 			throw_if( 'parameters', parameters )
-			
-			if required is None:
-				required = list( parameters.keys( ) )
-			
+			throw_if( 'required', required )
 			return { 'name': function.strip( ),
 					'description': (f'{description.strip( )} This function uses the '
 					                f'{tool.strip( )} service.'),
@@ -1100,8 +1084,7 @@ class WebCrawler( WebFetcher ):
 		self.response = None
 		self.pages = [ ]
 		self.summary = { }
-		self.use_playwright = bool( use_playwright )
-		
+		self.use_playwright = use_playwright
 		if headers is not None:
 			self.headers = headers
 		
@@ -1144,7 +1127,6 @@ class WebCrawler( WebFetcher ):
 		"""
 		try:
 			throw_if( 'url', url )
-			
 			if self.use_playwright:
 				self.url = str( url ).strip( )
 				self.timeout = int( time )
@@ -1184,7 +1166,6 @@ class WebCrawler( WebFetcher ):
 		"""
 		try:
 			throw_if( 'url', url )
-			
 			with sync_playwright( ) as p:
 				browser = p.chromium.launch( )
 				page = browser.new_page( )
@@ -1245,16 +1226,13 @@ class WebCrawler( WebFetcher ):
 				page_result[ 'encoding' ] = 'rendered'
 			raw_bytes = raw_html.encode( 'utf-8', errors='ignore' )
 			page_result[ 'content_bytes' ] = len( raw_bytes )
-			
 			if int( max_bytes ) > 0 and len( raw_bytes ) > int( max_bytes ):
 				raw_html = raw_bytes[ : int( max_bytes ) ].decode( 'utf-8', errors='ignore' )
 				page_result[ 'truncated_by_max_bytes' ] = True
-				page_result[
-					'errors' ].append( f'Response exceeded max bytes and was truncated to '
-				                       f'{int( max_bytes )} bytes.' )
+				page_result[ 'errors' ].append(
+					f'Response exceeded max bytes and was truncated to {int( max_bytes )} bytes.' )
 			
 			page_result[ 'links_discovered' ] = self.extract_links( url, raw_html )
-			
 			if include_title:
 				page_result[ 'title' ] = self.extract_title( raw_html )
 			
@@ -1267,8 +1245,7 @@ class WebCrawler( WebFetcher ):
 			if include_raw_html:
 				page_result[ 'raw_html' ] = raw_html
 			
-			page_result[
-				'data' ] = self.extract_structured_data( url=url, html=raw_html,
+			page_result[ 'data' ] = self.extract_structured_data( url=url, html=raw_html,
 				selected_methods=methods )
 			return page_result
 		except Exception as exc:
@@ -1329,7 +1306,6 @@ class WebCrawler( WebFetcher ):
 			enqueued: set[ str ] = { normalized_seed }
 			skipped_urls: List[ str ] = [ ]
 			pages: List[ Dict[ str, Any ] ] = [ ]
-			
 			index = 0
 			while index < len( queue ) and len( pages ) < int( max_pages ):
 				current_url, depth = queue[ index ]
@@ -1796,9 +1772,7 @@ class Wikipedia( Fetcher ):
 			max_docs = self.max_documents if max_documents is None else max( 1, min( int(
 				max_documents ), 300 ) )
 			
-			load_meta = self.include_metadata if include_metadata is None else bool(
-				include_metadata )
-			
+			load_meta = self.include_metadata if include_metadata is None else include_metadata
 			self.fetcher = WikipediaRetriever( lang=lang, load_max_docs=max_docs,
 				load_all_available_meta=load_meta )
 			
