@@ -1,0 +1,28 @@
+name: Open-Meteo forecast and archive contracts
+
+on:
+  pull_request:
+    paths:
+      - fetchers.py
+      - tests/test_openmeteo_weather_contracts.py
+      - .github/workflows/openmeteo-weather-contracts.yml
+  push:
+    branches: [ main ]
+    paths:
+      - fetchers.py
+      - tests/test_openmeteo_weather_contracts.py
+      - .github/workflows/openmeteo-weather-contracts.yml
+  workflow_dispatch:
+
+jobs:
+  openmeteo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Compile production source and regression tests
+        run: python -m compileall -q fetchers.py tests/test_openmeteo_weather_contracts.py
+      - name: Run isolated forecast and historical weather tests
+        run: python -m unittest discover -s tests -p 'test_openmeteo_weather_contracts.py' -v
