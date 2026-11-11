@@ -16183,7 +16183,13 @@ class USGSTheNationalMap( Fetcher ):
 				raise ValueError( 'bbox must use minx,miny,maxx,maxy format.' )
 			
 			numbers = [ float( part ) for part in parts ]
+			if not all( math.isfinite( number ) for number in numbers ):
+				raise ValueError( 'bbox coordinates must be finite.' )
 			minx, miny, maxx, maxy = numbers
+			if not (-180 <= minx <= 180 and -180 <= maxx <= 180):
+				raise ValueError( 'bbox longitude must be between -180 and 180.' )
+			if not (-90 <= miny <= 90 and -90 <= maxy <= 90):
+				raise ValueError( 'bbox latitude must be between -90 and 90.' )
 			
 			if minx >= maxx:
 				raise ValueError( 'bbox minx must be less than maxx.' )
@@ -16450,6 +16456,8 @@ class USGSTheNationalMap( Fetcher ):
 			throw_if( 'endpoint', endpoint )
 			throw_if( 'params', params )
 			throw_if( 'time', time )
+			if not isinstance( params, dict ):
+				raise ValueError( 'params must be a dictionary.' )
 			
 			self.endpoint = self.validate_endpoint( endpoint )
 			self.timeout = int( time )
@@ -16471,8 +16479,12 @@ class USGSTheNationalMap( Fetcher ):
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
-			self.payload = self.response.json( ) or { }
-			self.result = { 'url': self.response.url, 'params': self.params, 'raw': self.payload }
+			self.payload = self.response.json( )
+			if not isinstance( self.payload, (dict, list) ):
+				raise ValueError( 'The National Map returned an invalid JSON payload.' )
+			if isinstance( self.payload, dict ) and (self.payload.get( 'error' ) or self.payload.get( 'errors' )):
+				raise ValueError( 'The National Map returned an API error.' )
+			self.result = { 'url': self.url, 'params': self.params, 'raw': self.payload }
 			
 			return self.result
 		
@@ -16809,7 +16821,7 @@ class USGSScienceBase( Fetcher ):
 			if '..' in value:
 				raise ValueError( 'endpoint cannot contain parent-directory markers.' )
 			
-			if value != 'items' and not value.startswith( 'item/' ):
+			if value != 'items' and (not value.startswith( 'item/' ) or not value[ 5: ] or '/' in value[ 5: ] or '?' in value or '#' in value):
 				raise ValueError( "endpoint must be 'items' or 'item/{id}'." )
 			
 			return value
@@ -16843,8 +16855,8 @@ class USGSScienceBase( Fetcher ):
 			throw_if( 'max_items', max_items )
 			
 			value = int( max_items )
-			if value < 1 or value > 1000:
-				raise ValueError( 'max_items must be between 1 and 1000.' )
+			if value < 5 or value > 1000 or value % 5 != 0:
+				raise ValueError( 'max_items must be a multiple of 5 between 5 and 1000.' )
 			
 			return value
 		
@@ -16877,8 +16889,8 @@ class USGSScienceBase( Fetcher ):
 				raise ValueError( 'offset cannot be None.' )
 			
 			value = int( offset )
-			if value < 0 or value > 150000:
-				raise ValueError( 'offset must be between 0 and 150000.' )
+			if value < 0 or value > 150000 or value % 5 != 0:
+				raise ValueError( 'offset must be a multiple of 5 between 0 and 150000.' )
 			
 			return value
 		
@@ -17129,6 +17141,9 @@ class USGSScienceBase( Fetcher ):
 			if self.timeout < 1:
 				raise ValueError( 'time must be greater than or equal to 1.' )
 			
+			if params is not None and not isinstance( params, dict ):
+				raise ValueError( 'params must be a dictionary.' )
+			
 			for key, value in (params or { }).items( ):
 				if value is None:
 					continue
@@ -17141,8 +17156,12 @@ class USGSScienceBase( Fetcher ):
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
-			self.payload = self.response.json( ) or { }
-			self.result = { 'url': self.response.url, 'params': self.params, 'raw': self.payload }
+			self.payload = self.response.json( )
+			if not isinstance( self.payload, dict ):
+				raise ValueError( 'ScienceBase returned an invalid JSON payload.' )
+			if self.payload.get( 'error' ) or self.payload.get( 'errors' ) or (isinstance( self.payload.get( 'status' ), int ) and self.payload[ 'status' ] >= 400):
+				raise ValueError( 'ScienceBase returned an API error.' )
+			self.result = { 'url': self.url, 'params': self.params, 'raw': self.payload }
 			
 			return self.result
 		
@@ -17191,7 +17210,7 @@ class USGSScienceBase( Fetcher ):
 			self.timeout = int( time )
 			
 			self.request( endpoint='items', params={ 'q': self.query_text, 'max': self.max_items,
-					'offset': self.offset, 'fields': self.fields }, time=self.timeout )
+					'offset': self.offset, 'fields': self.fields, 'format': 'json' }, time=self.timeout )
 			
 			records = self.coalesce_records( self.payload )
 			rows = self.shape_item_rows( records )
