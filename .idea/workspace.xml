@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="649d1b1c-e24f-435b-9576-30e7d61c1f89" name="Changes" comment="updates" />
+    <list default="true" id="649d1b1c-e24f-435b-9576-30e7d61c1f89" name="Changes" comment="updates">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fetchers.py" beforeDir="false" afterPath="$PROJECT_DIR$/fetchers.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -46,6 +49,65 @@
     &quot;accountId&quot;: &quot;78145f30-18cb-443d-a346-237522922b0e&quot;
   }
 }</component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.000000000000004" />
+      <entry key="MS500" value="1.0013193106294294" />
+      <entry key="S2" value="1.1905841437789124" />
+      <entry key="S5" value="1.5152698201360546" />
+      <entry key="S10" value="1.717822972700132" />
+      <entry key="S30" value="1.8953766909712286" />
+      <entry key="S60" value="1.9462434628420047" />
+      <entry key="M2" value="1.9727504627816965" />
+      <entry key="M5" value="1.9890097622799607" />
+      <entry key="M10" value="1.9944896994338155" />
+      <entry key="M15" value="1.9963230842877757" />
+      <entry key="M30" value="1.9981598490661583" />
+      <entry key="H1" value="1.9990795008737585" />
+      <entry key="H2" value="1.9995396444732738" />
+      <entry key="H4" value="1.999769795739636" />
+      <entry key="D1" value="1.9999616289426159" />
+      <entry key="W1" value="1.9999945183302283" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="0.0" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="0.0" />
+      <entry key="M30" value="0.0" />
+      <entry key="H1" value="0.0" />
+      <entry key="H2" value="0.0" />
+      <entry key="H4" value="0.0" />
+      <entry key="D1" value="0.0" />
+      <entry key="W1" value="0.0" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="8.718810520064258E-15" />
+      <entry key="MS500" value="0.0021585382960044863" />
+      <entry key="S2" value="0.3558402067452567" />
+      <entry key="S5" value="1.001033959270505" />
+      <entry key="S10" value="1.4145790749443827" />
+      <entry key="S30" value="1.7818486028751928" />
+      <entry key="S60" value="1.887762177594379" />
+      <entry key="M2" value="1.9430673696395002" />
+      <entry key="M5" value="1.977028608432015" />
+      <entry key="M10" value="1.9884809903888463" />
+      <entry key="M15" value="1.9923132380095394" />
+      <entry key="M30" value="1.996152903073983" />
+      <entry key="H1" value="1.9980755216520822" />
+      <entry key="H2" value="1.9990375282419408" />
+      <entry key="H4" value="1.9995187059608304" />
+      <entry key="D1" value="1.9999197762478096" />
+      <entry key="W1" value="1.9999885392661043" />
+    </decayedShown>
+  </component>
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="ProjectErrors" />
   </component>
@@ -186,15 +248,7 @@
       <workItem from="1791852096029" duration="590000" />
       <workItem from="1791852740663" duration="144000" />
       <workItem from="1794170602007" duration="743000" />
-      <workItem from="1794352693695" duration="767000" />
-    </task>
-    <task id="LOCAL-00160" summary="updates">
-      <option name="closed" value="true" />
-      <created>1788833374119</created>
-      <option name="number" value="00160" />
-      <option name="presentableId" value="LOCAL-00160" />
-      <option name="project" value="LOCAL" />
-      <updated>1788833374119</updated>
+      <workItem from="1794352693695" duration="2999000" />
     </task>
     <task id="LOCAL-00161" summary="updates">
       <option name="closed" value="true" />
@@ -580,7 +634,15 @@
       <option name="project" value="LOCAL" />
       <updated>1794353798740</updated>
     </task>
-    <option name="localTasksCounter" value="209" />
+    <task id="LOCAL-00209" summary="updates">
+      <option name="closed" value="true" />
+      <created>1794353955712</created>
+      <option name="number" value="00209" />
+      <option name="presentableId" value="LOCAL-00209" />
+      <option name="project" value="LOCAL" />
+      <updated>1794353955712</updated>
+    </task>
+    <option name="localTasksCounter" value="210" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

@@ -3942,9 +3942,8 @@ class EarthObservatory( Fetcher ):
 				'limit', 'start_date', 'end_date', 'fetch_events', 'fetch_categories',
 				'fetch_sources', 'fetch_layers', 'fetch', 'create_schema' ]
 	
-	def fetch_events( self, status: str='open', category: str='', source: str='', limit: int
-	= 20, days: int=30, start_date: str='', end_date: str='', time: int=20 ) -> \
-	Dict[ str, Any ]:
+	def fetch_events( self, status: str='open', category: str='', source: str='', limit: int=20,
+			days: int=30, start_date: str='', end_date: str='', time: int=20 ) -> Dict[ str, Any ]:
 		"""Fetch events.
 
 		Purpose:
@@ -4136,10 +4135,9 @@ class EarthObservatory( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='events', status: str='open', category: str='', source: str =
-	'', limit: int=20, days: int=30, start_date: str='', end_date: str='', time: int=20
-	) -> \
-	Dict[ str, Any ]:
+	def fetch( self, mode: str='events', status: str='open', category: str='', source: str='',
+			limit: int=20, days: int=30, start_date: str='', end_date: str='',
+			time: int=20 ) ->  Dict[ str, Any ]:
 		"""Fetch.
 
 		Purpose:
@@ -4194,8 +4192,7 @@ class EarthObservatory( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
-			required:
-	list[ str ] ) -> Dict[ str, str ] | None:
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Create schema.
 
 		Purpose:
@@ -4222,7 +4219,6 @@ class EarthObservatory( Fetcher ):
 			throw_if( 'tool', tool )
 			throw_if( 'description', description )
 			throw_if( 'parameters', parameters )
-			
 			if required is None:
 				required = list( parameters.keys( ) )
 			
@@ -4353,13 +4349,12 @@ class GlobalImagery( Fetcher ):
 		"""
 		return [ 'file_path', 'api_key', 'url', 'latitude', 'longitude', 'coordinates',
 				'calendar_date', 'julian_date', 'sidereal_time', 'utc_time', 'local_time',
-				'params',
-				'response', 'result', 'mode', 'timeout', 'headers', 'get_capabilities_url',
-				'build_wms_url', 'fetch_wms_map', 'fetch_map_services', 'fetch_mercator_map',
-				'create_schema' ]
+				'params', 'response', 'result', 'mode', 'timeout', 'headers',
+				'get_capabilities_url', 'build_wms_url', 'fetch_wms_map', 'fetch_map_services',
+				'fetch_mercator_map', 'create_schema' ]
 	
-	def get_capabilities_url( self, projection: str='epsg4326', quality: str='best', version:
-	str = '1.1.1' ) -> str:
+	def get_capabilities_url( self, projection: str='epsg4326', quality: str='best',
+			version: str='1.1.1' ) -> str:
 		"""Get capabilities url.
 
 		Purpose:
@@ -4401,9 +4396,9 @@ class GlobalImagery( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def build_wms_url( self, layer: str, image_date: str, bbox: Tuple[
-		float, float, float, float ], width: int=1200, height: int=600, projection: str =
-	'epsg4326', quality: str='best', image_format: str='image/png', transparent: bool=True,
+	def build_wms_url( self, layer: str, image_date: str, bbox: Tuple[ float, float, float, float ],
+			width: int=1200, height: int=600, projection: str='epsg4326',
+			quality: str='best', image_format: str='image/png', transparent: bool=True,
 			version: str='1.1.1' ) -> str:
 		"""Build wms url.
 
@@ -4441,7 +4436,6 @@ class GlobalImagery( Fetcher ):
 			throw_if( 'layer', layer )
 			throw_if( 'image_date', image_date )
 			throw_if( 'bbox', bbox )
-			
 			if len( bbox ) != 4:
 				raise ValueError( 'bbox must contain west, south, east, north.' )
 			
@@ -4465,7 +4459,7 @@ class GlobalImagery( Fetcher ):
 					'HEIGHT': height_value, 'TIME': str( image_date ).strip( ) }
 			
 			self.params = params
-			return f'{base_url}?{urllib.parse.urlencode( params )}'
+			return f'{base_url}?{urllib.parse.urlencode( self.params )}'
 		
 		except Exception as e:
 			exception = Error( e )
@@ -4475,11 +4469,10 @@ class GlobalImagery( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_wms_map( self, layer: str, image_date: str, bbox: Tuple[
-		float, float, float, float ], width: int=1200, height: int=600, projection: str =
-	'epsg4326', quality: str='best', image_format: str='image/png', transparent: bool=True,
-			output_dir: str='python-examples', output_name: str='', time: int=20 ) -> \
-	Dict[ str, Any ] | None:
+	def fetch_wms_map( self, layer: str, image_date: str, bbox: Tuple[ float, float, float, float ],
+			width: int=1200, height: int=600, projection: str='epsg4326', quality: str='best',
+			image_format: str='image/png', transparent: bool=True, output_dir: str='python-examples',
+			output_name: str='', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch wms map.
 
 		Purpose:
@@ -4519,7 +4512,6 @@ class GlobalImagery( Fetcher ):
 		try:
 			self.mode = 'wms_map'
 			self.timeout = int( time )
-			
 			request_url = self.build_wms_url( layer=layer, image_date=image_date, bbox=bbox,
 				width=width, height=height, projection=projection, quality=quality,
 				image_format=image_format, transparent=transparent )
@@ -4538,7 +4530,6 @@ class GlobalImagery( Fetcher ):
 			self.url = request_url
 			self.response = requests.get( request_url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
-			
 			content_type = self.response.headers.get( 'Content-Type', '' )
 			if 'image' not in content_type.lower( ):
 				message = ('NASA GIBS did not return an image. '
@@ -4559,7 +4550,6 @@ class GlobalImagery( Fetcher ):
 							'description': 'NASA GIBS WMS image written to disk.' } }
 			
 			return self.result
-		
 		except Error:
 			raise
 		
@@ -4589,10 +4579,9 @@ class GlobalImagery( Fetcher ):
 		try:
 			self.mode = 'fetch_map_services'
 			return self.fetch_wms_map( layer='MODIS_Terra_CorrectedReflectance_TrueColor',
-				image_date='2021-09-21', bbox=(
-					-180.0, -90.0, 180.0,
-					90.0), width=1200, height=600, projection='epsg4326', quality='best',
-				image_format='image/png', transparent=True, output_dir='python-examples',
+				image_date='2021-09-21', bbox=( -180.0, -90.0, 180.0, 90.0), width=1200,
+				height=600, projection='epsg4326', quality='best', image_format='image/png',
+				transparent=True, output_dir='python-examples',
 				output_name='MODIS_Terra_CorrectedReflectance_TrueColor.png', time=20 )
 		
 		except Exception as e:
