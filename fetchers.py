@@ -24089,6 +24089,8 @@ class Firms( Fetcher ):
 				raise ValueError( 'area_coordinates must be world or west,south,east,north.' )
 			
 			west, south, east, north = [ float( part ) for part in parts ]
+			if not all( math.isfinite( x ) for x in (west, south, east, north) ):
+				raise ValueError( 'area_coordinates must be finite.' )
 			
 			if west < -180.0 or west > 180.0:
 				raise ValueError( 'west longitude must be between -180 and 180.' )
@@ -24144,11 +24146,13 @@ class Firms( Fetcher ):
 				return [ ]
 			
 			reader = csv.DictReader( io.StringIO( text ) )
+			if not reader.fieldnames or len( reader.fieldnames ) < 2 or any( not name or not name.strip( ) for name in reader.fieldnames ):
+				raise ValueError( 'FIRMS response is not valid CSV data.' )
 			rows: List[ Dict[ str, Any ] ] = [ ]
 			
 			for record in reader:
-				if not isinstance( record, dict ):
-					continue
+				if not isinstance( record, dict ) or None in record:
+					raise ValueError( 'FIRMS response contains malformed rows.' )
 				
 				row: Dict[ str, Any ] = { }
 				
@@ -24233,7 +24237,7 @@ class Firms( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.result = { 'mode': self.mode, 'url': self.url, 'params': self.params,
+			self.result = { 'mode': self.mode, 'url': self.url.replace( f'/{self.map_key}/', '/[REDACTED]/' ), 'params': self.params,
 					'summary': self.summarize_rows( rows ), 'rows': rows, 'raw': self.payload }
 			
 			return self.result
@@ -24270,6 +24274,7 @@ class Firms( Fetcher ):
 			throw_if( 'time', time )
 			self.url = str( url ).strip( )
 			self.timeout = int( time )
+			throw_if( 'map_key', self.map_key )
 			if self.timeout < 1:
 				raise ValueError( 'time must be greater than or equal to 1.' )
 			
@@ -24277,7 +24282,7 @@ class Firms( Fetcher ):
 				timeout=self.timeout )
 			self.response.raise_for_status( )
 			self.payload = self.response.text or ''
-			self.result = { 'url': self.url, 'params': self.params, 'raw': self.payload }
+			self.result = { 'url': self.url.replace( f'/{self.map_key}/', '/[REDACTED]/' ), 'params': self.params, 'raw': self.payload }
 			
 			return self.result
 		
@@ -24799,7 +24804,8 @@ class OpenSky( Fetcher ):
 			throw_if( name, value )
 			
 			number = int( value )
-			
+			if isinstance( value, float ) and not value.is_integer( ):
+				raise ValueError( f'{name} must be an integer epoch.' )
 			if number < 0:
 				raise ValueError( f'{name} must be greater than or equal to 0.' )
 			
@@ -24837,8 +24843,8 @@ class OpenSky( Fetcher ):
 			start = self.validate_epoch( 'begin', begin )
 			stop = self.validate_epoch( 'end', end )
 			
-			if start > stop:
-				raise ValueError( 'begin must be less than or equal to end.' )
+			if start >= stop:
+				raise ValueError( 'begin must be less than end.' )
 			
 			return start, stop
 		
@@ -24876,7 +24882,7 @@ class OpenSky( Fetcher ):
 			
 			number = float( value )
 			
-			if number < -90.0 or number > 90.0:
+			if not math.isfinite( number ) or number < -90.0 or number > 90.0:
 				raise ValueError( f'{name} must be between -90 and 90.' )
 			
 			return number
@@ -24915,7 +24921,7 @@ class OpenSky( Fetcher ):
 			
 			number = float( value )
 			
-			if number < -180.0 or number > 180.0:
+			if not math.isfinite( number ) or number < -180.0 or number > 180.0:
 				raise ValueError( f'{name} must be between -180 and 180.' )
 			
 			return number
@@ -25046,8 +25052,12 @@ class OpenSky( Fetcher ):
 					'client_secret': self.client_secret, }, headers={ 'Accept': 'application/json',
 					'User-Agent': self.agents, }, timeout=self.timeout )
 			self.response.raise_for_status( )
-			token_payload = self.response.json( ) or { }
+			token_payload = self.response.json( )
+			if not isinstance( token_payload, dict ):
+				raise ValueError( 'OpenSky OAuth2 returned invalid JSON.' )
 			self.access_token = token_payload.get( 'access_token', None )
+			if not self.access_token:
+				raise ValueError( 'OpenSky OAuth2 response omitted access_token.' )
 			if self.access_token:
 				self.headers[ 'Authorization' ] = f'Bearer {self.access_token}'
 			
@@ -25091,6 +25101,10 @@ class OpenSky( Fetcher ):
 		"""
 		try:
 			self.endpoint = self.validate_endpoint( endpoint )
+			if params is not None and not isinstance( params, dict ):
+				raise ValueError( 'params must be a dictionary.' )
+			self.headers.pop( 'Authorization', None )
+			self.access_token = None
 			self.assign_credentials( client_id=client_id, client_secret=client_secret )
 			self.authenticate( )
 			self.url = f'{self.base_url}{self.endpoint}'
@@ -25108,6 +25122,14 @@ class OpenSky( Fetcher ):
 				timeout=self.timeout )
 			self.response.raise_for_status( )
 			self.payload = self.response.json( )
+			if isinstance( self.payload, dict ) and (self.payload.get( 'error' ) or self.payload.get( 'errors' )):
+				raise ValueError( 'OpenSky returned an API error.' )
+			if self.endpoint == '/states/all' and (not isinstance( self.payload, dict ) or not isinstance( self.payload.get( 'states' ), (list, type( None )) )):
+				raise ValueError( 'OpenSky states response is invalid.' )
+			if self.endpoint.startswith( '/flights/' ) and (not isinstance( self.payload, list ) or any( not isinstance( item, dict ) for item in self.payload )):
+				raise ValueError( 'OpenSky flights response is invalid.' )
+			if self.endpoint == '/tracks/all' and self.payload is not None and (not isinstance( self.payload, dict ) or not isinstance( self.payload.get( 'path', [] ), list )):
+				raise ValueError( 'OpenSky track response is invalid.' )
 			return self.payload
 		
 		except Error:
@@ -25421,6 +25443,8 @@ class OpenSky( Fetcher ):
 			self.mode = 'flights_aircraft'
 			self.icao24 = self.validate_icao24( icao24 )
 			self.begin, self.end = self.validate_time_range( begin, end )
+			if self.end - self.begin > 172800:
+				raise ValueError( 'Aircraft flights interval cannot exceed two days.' )
 			self.params = { 'icao24': self.icao24, 'begin': self.begin, 'end': self.end, }
 			self.payload = self.request( '/flights/aircraft', params=self.params,
 				client_id=client_id, client_secret=client_secret )
@@ -25469,6 +25493,8 @@ class OpenSky( Fetcher ):
 			self.mode = 'arrivals_airport'
 			self.airport = self.validate_airport( airport )
 			self.begin, self.end = self.validate_time_range( begin, end )
+			if self.end - self.begin > 172800:
+				raise ValueError( 'Airport arrival interval cannot exceed two days.' )
 			self.params = { 'airport': self.airport, 'begin': self.begin, 'end': self.end, }
 			self.payload = self.request( '/flights/arrival', params=self.params,
 				client_id=client_id, client_secret=client_secret )
