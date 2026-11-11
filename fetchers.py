@@ -58,6 +58,7 @@ import os
 import urllib.parse
 from pathlib import Path
 import pandas as pd
+import numpy as np
 from typing import Any, Dict, Optional, Pattern, List, Tuple
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
@@ -67,6 +68,7 @@ from astropy.coordinates import SkyCoord
 from astropy.table import Table
 from astropy import units as u
 from astroquery.simbad import Simbad
+from astroquery.vizier import Vizier
 from bs4 import BeautifulSoup
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import crawl4ai
@@ -5939,7 +5941,17 @@ class AstroCatalog( Fetcher ):
 		    value.
 		"""
 		super( ).__init__( )
-		self.base_url = 'https://api.astrocats.space'
+		self.base_url = 'https://simbad.cds.unistra.fr'
+		self.provider = 'simbad'
+		self.catalog = ''
+		self.route = ''
+		self.url = self.base_url
+		self.response = None
+		self.payload = None
+		self.result = { }
+		self.client = None
+		self.coordinates = None
+		self.search_radius = None
 		self.format = 'json'
 		self.name = None
 		self.right_ascension = None
@@ -5966,7 +5978,10 @@ class AstroCatalog( Fetcher ):
 		Returns:
 		    List[str]: Ordered public member names exposed by the instance.
 		"""
-		return [ 'base_url', 'timeout', 'headers', 'fetch_object', 'cone_search', 'fetch', ]
+		return [ 'base_url', 'timeout', 'headers', 'provider', 'catalog',
+				'route', 'format', 'name', 'right_ascension', 'declination', 'radius',
+				'params', 'result', 'serialize_table', 'request',
+				'fetch_object', 'cone_search', 'fetch' ]
 	
 	def normalize_attribute_path( self, quantity: str='', attributes: str='' ) -> str:
 		"""Normalize attribute path.
@@ -6025,51 +6040,140 @@ class AstroCatalog( Fetcher ):
 		
 		return params
 	
-	def request( self, route: str, params: Dict[ str, Any ] | None = None, time: int=20 ) -> Any:
-		"""Request.
+	def serialize_table( self, table: Table, catalog: str ) -> Dict[ str, Any ]:
+		"""Convert an Astropy table into JSON-compatible catalog rows.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Preserves column names, provider catalog provenance, and masked values while
+		    returning plain Python values for downstream model tools.
 
 		Args:
-		    route (str): Route supplied by the caller and interpreted according to the method
-		        contract.
-		    params (Dict[str, Any] | None): Params supplied by the caller and interpreted
-		        according to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    table: Astroquery result table.
+		    catalog: Source catalog identifier.
 
 		Returns:
-		    Any: Provider, loader, or normalized application value produced by the operation.
+		    Dict[str, Any]: Catalog name, columns, rows, and number of records.
+		"""
+		throw_if( 'table', table )
+		throw_if( 'catalog', catalog )
+		rows: List[ Dict[ str, Any ] ] = [ ]
+		for record in table:
+			item: Dict[ str, Any ] = { }
+			for column in table.colnames:
+				value = record[ column ]
+				if np.ma.is_masked( value ):
+					item[ column ] = None
+					continue
+				if isinstance( value, np.generic ):
+					value = value.item( )
+				if isinstance( value, bytes ):
+					value = value.decode( 'utf-8', errors='replace' )
+				if isinstance( value, (str, int, float, bool) ) or value is None:
+					item[ column ] = value
+				else:
+					item[ column ] = str( value )
+			rows.append( item )
+		return { 'catalog': catalog, 'columns': list( table.colnames ),
+			'rows': rows, 'count': len( rows ) }
+
+	def request( self, route: str, params: Dict[ str, Any ] | None=None,
+			time: int=20 ) -> Any:
+		"""Retrieve catalog data from SIMBAD or a named VizieR catalog.
+
+		Purpose:
+		    Replaces the retired Open Astronomy Catalog endpoint with Astroquery.
+		    'catalog' selects a region query; an object name selects an object lookup.
+		    The optional parameters 'provider', 'catalog', and 'row_limit' allow
+		    retrieval from published VizieR catalogs, including transient catalogs.
+
+		Args:
+		    route: Encoded object name or 'catalog' for a cone search.
+		    params: Provider selection and query arguments.
+		    time: Positive provider timeout in seconds.
+
+		Returns:
+		    Any: JSON-compatible catalog records or formatted CSV/TSV tables.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Wraps provider or response-processing errors.
 		"""
 		try:
+			throw_if( 'route', route )
 			self.timeout = int( time )
-			self.url = f'{self.base_url}/{route.lstrip( "/" )}'
-			self.params = params or { }
-			
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=self.timeout )
-			
-			self.response.raise_for_status( )
-			
-			content_type = (self.response.headers.get( 'Content-Type', '' ) or '').lower( )
-			if 'json' in content_type:
-				return self.response.json( )
-			
-			return self.response.text
-		
+			if self.timeout < 1:
+				raise ValueError( 'time must be a positive integer.' )
+			self.route = str( route ).strip( ).lstrip( '/' )
+			self.params = params if params is not None else { }
+			self.format = str( self.params.get( 'format', 'json' ) ).strip( ).lower( )
+			if self.format not in ('json', 'csv', 'tsv'):
+				raise ValueError( 'Unsupported AstroCatalog output format.' )
+			self.catalog = str( self.params.get( 'catalog', '' ) ).strip( )
+			self.provider = str( self.params.get( 'provider',
+				'vizier' if self.catalog else 'simbad' ) ).strip( ).lower( )
+			if self.provider == 'transient':
+				self.provider = 'vizier'
+			if self.provider not in ('simbad', 'vizier'):
+				raise ValueError( 'provider must be simbad, vizier, or transient.' )
+			if self.provider == 'vizier' and not self.catalog:
+				raise ValueError( 'A VizieR catalog identifier is required.' )
+			self.base_url = ('https://simbad.cds.unistra.fr'
+				if self.provider == 'simbad' else 'https://vizier.cds.unistra.fr')
+			self.url = self.base_url
+			self.response = None
+			is_region = self.route == 'catalog'
+			if is_region:
+				throw_if( 'ra', self.params.get( 'ra' ) )
+				throw_if( 'dec', self.params.get( 'dec' ) )
+				self.right_ascension = str( self.params[ 'ra' ] )
+				self.declination = str( self.params[ 'dec' ] )
+				self.radius = int( self.params.get( 'radius', 2 ) )
+				if self.radius < 1:
+					raise ValueError( 'radius must be positive.' )
+				self.coordinates = SkyCoord(
+					self.right_ascension, self.declination,
+					unit=(u.deg, u.deg), frame='icrs' )
+				self.search_radius = self.radius * u.arcmin
+			else:
+				self.name = urllib.parse.unquote( self.route )
+				throw_if( 'name', self.name )
+			if self.provider == 'simbad':
+				self.client = Simbad( )
+				self.client.timeout = self.timeout
+				self.payload = (self.client.query_region(
+					self.coordinates, radius=self.search_radius )
+					if is_region else self.client.query_object( self.name ))
+				raw_tables = ([ ('SIMBAD', self.payload) ]
+					if self.payload is not None else [ ])
+			else:
+				self.client = Vizier( row_limit=int( self.params.get( 'row_limit', 50 ) ) )
+				self.client.TIMEOUT = self.timeout
+				self.payload = (self.client.query_region(
+					self.coordinates, radius=self.search_radius, catalog=self.catalog )
+					if is_region else self.client.query_object(
+					self.name, catalog=self.catalog ))
+				raw_tables = [(str( key ), table)
+					for key, table in self.payload.items( )]
+			tables = [self.serialize_table( table, name )
+				for name, table in raw_tables]
+			self.result = { 'provider': self.provider, 'catalog': self.catalog,
+				'mode': 'cone_search' if is_region else 'object_query',
+				'tables': tables, 'count': sum( item[ 'count' ] for item in tables ) }
+			if self.format in ('csv', 'tsv'):
+				formatted: List[ Dict[ str, str ] ] = [ ]
+				for name, table in raw_tables:
+					output = io.StringIO( )
+					table.write( output, format='ascii.csv' if self.format == 'csv'
+						else 'ascii.tab', overwrite=True )
+					formatted.append( { 'catalog': name, 'data': output.getvalue( ) } )
+				self.result[ 'formatted_tables' ] = formatted
+			return self.result
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'AstroCatalog'
-			exception.method = 'request( self, **kwargs ) -> Any'
-			Logger( ).write( exception )
+			exception.method = "request( self, route: str, params: Dict[ str, Any ] | None=None, time: int=20 ) -> Any"
 			raise exception
-	
+
 	def fetch_object( self, name: str, quantity: str='', attributes: str='', arguments: str='',
 			data_format: str='json', time: int=20 ) -> Any:
 		"""Fetch object.
@@ -6098,21 +6202,22 @@ class AstroCatalog( Fetcher ):
 		"""
 		try:
 			throw_if( 'name', name )
-			self.name = name.strip( )
-			self.format = (data_format or 'json').strip( ).lower( )
-			route_parts = [ urllib.parse.quote( self.name ) ]
+			self.name = str( name ).strip( )
+			self.format = str( data_format or 'json' ).strip( ).lower( )
+			if self.format not in ('json', 'csv', 'tsv'):
+				raise ValueError( 'Unsupported AstroCatalog output format.' )
+			route_parts = [ urllib.parse.quote( self.name, safe='' ) ]
 			attr_path = self.normalize_attribute_path( quantity, attributes )
 			if attr_path:
-				route_parts.append( attr_path )
+				raise ValueError( 'Legacy quantity/attributes paths are not supported by SIMBAD; '
+					'use arguments="provider=vizier,catalog=<ID>" instead.' )
 			
-			route = '/'.join( route_parts )
-			params = self.parse_argument( arguments )
-			
+			self.route = '/'.join( route_parts )
+			self.params = self.parse_argument( arguments )
 			if self.format:
-				params[ 'format' ] = self.format
-			
-			return self.request( route=route, params=params, time=time )
-		
+				self.params[ 'format' ] = self.format
+			self.timeout = int( time )
+			return self.request( route=self.route, params=self.params, time=self.timeout )
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -6154,23 +6259,28 @@ class AstroCatalog( Fetcher ):
 		try:
 			throw_if( 'ra', ra )
 			throw_if( 'dec', dec )
-			self.right_ascension = ra.strip( )
-			self.declination = dec.strip( )
-			self.radius = max( 1, int( radius ) )
-			self.format = (data_format or 'json').strip( ).lower( )
-			route = 'catalog'
+			self.right_ascension = str( ra ).strip( )
+			self.declination = str( dec ).strip( )
+			self.radius = int( radius )
+			self.format = str( data_format or 'json' ).strip( ).lower( )
+			if self.radius < 1:
+				raise ValueError( 'radius must be positive.' )
+			if self.format not in ('json', 'csv', 'tsv'):
+				raise ValueError( 'Unsupported AstroCatalog output format.' )
+			self.route = 'catalog'
 			attr_path = self.normalize_attribute_path( quantity, attributes )
 			if attr_path:
-				route = f'{route}/{attr_path}'
+				raise ValueError( 'Legacy quantity/attributes paths are not supported by SIMBAD; '
+					'use arguments="provider=vizier,catalog=<ID>" instead.' )
 			
-			params = self.parse_argument( arguments )
-			params[ 'ra' ] = self.right_ascension
-			params[ 'dec' ] = self.declination
-			params[ 'radius' ] = str( self.radius )
+			self.params = self.parse_argument( arguments )
+			self.params[ 'ra' ] = self.right_ascension
+			self.params[ 'dec' ] = self.declination
+			self.params[ 'radius' ] = str( self.radius )
 			if self.format:
-				params[ 'format' ] = self.format
-			
-			return self.request( route=route, params=params, time=time )
+				self.params[ 'format' ] = self.format
+			self.timeout = int( time )
+			return self.request( route=self.route, params=self.params, time=self.timeout )
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
@@ -6213,16 +6323,28 @@ class AstroCatalog( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			active_mode = (mode or 'object_query').strip( ).lower( )
-			if active_mode == 'object_query':
-				return self.fetch_object( name=query, quantity=quantity, attributes=attributes,
-					arguments=arguments, data_format=data_format, time=time )
-			
-			if active_mode == 'cone_search':
-				return self.cone_search( ra=ra, dec=dec, radius=radius, quantity=quantity,
-					attributes=attributes, arguments=arguments, data_format=data_format,
-					time=time )
-			
+			self.mode = str( mode or 'object_query' ).strip( ).lower( )
+			self.quantity = quantity
+			self.attributes = attributes
+			self.arguments = arguments
+			self.format = data_format
+			self.timeout = int( time )
+			if self.mode == 'object_query':
+				throw_if( 'query', query )
+				self.name = str( query ).strip( )
+				return self.fetch_object( name=self.name, quantity=self.quantity,
+					attributes=self.attributes, arguments=self.arguments,
+					data_format=self.format, time=self.timeout )
+			if self.mode == 'cone_search':
+				throw_if( 'ra', ra )
+				throw_if( 'dec', dec )
+				self.right_ascension = str( ra ).strip( )
+				self.declination = str( dec ).strip( )
+				self.radius = int( radius )
+				return self.cone_search( ra=self.right_ascension,
+					dec=self.declination, radius=self.radius, quantity=self.quantity,
+					attributes=self.attributes, arguments=self.arguments,
+					data_format=self.format, time=self.timeout )
 			raise ValueError( "Unsupported mode. Use 'object_query' or 'cone_search'." )
 		
 		except Exception as exc:

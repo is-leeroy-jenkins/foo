@@ -1,0 +1,29 @@
+name: AstroCatalog provider regression
+
+on:
+  push:
+    branches:
+      - fix/fonky-astrocatalog-provider-parity-20261110
+  pull_request:
+    paths:
+      - fetchers.py
+      - tests/test_astrocatalog_provider.py
+      - .github/workflows/astrocatalog-provider.yml
+
+permissions:
+  contents: read
+
+jobs:
+  astro-provider-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile source and tests
+        run: python -m compileall -q fetchers.py tests/test_astrocatalog_provider.py
+      - name: Run isolated provider regression suite
+        run: python -m unittest discover -s tests -p 'test_astrocatalog_provider.py' -v
