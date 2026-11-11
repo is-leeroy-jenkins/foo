@@ -53,7 +53,6 @@ from __future__ import annotations
 import base64
 import datetime as dt
 import io
-import math
 import re
 import os
 import urllib.parse
@@ -4533,7 +4532,7 @@ class GlobalImagery( Fetcher ):
 			if len( bbox ) != 4:
 				raise ValueError( 'bbox must contain west, south, east, north.' )
 			self.bbox = tuple( float( value ) for value in bbox )
-			if not all( math.isfinite( value ) for value in self.bbox ):
+			if not all( float( '-inf' ) < value < float( 'inf' ) for value in self.bbox ):
 				raise ValueError( 'bbox coordinates must be finite.' )
 			west, south, east, north = self.bbox
 			if west >= east or south >= north:
