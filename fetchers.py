@@ -20275,7 +20275,12 @@ class TidesAndCurrents( Fetcher ):
 			if not re.fullmatch( r'\d{8}', end_value ):
 				raise ValueError( 'end_date must use YYYYMMDD format.' )
 			
-			if begin_value > end_value:
+			try:
+				begin_time = dt.datetime.strptime( begin_value, '%Y%m%d' )
+				end_time = dt.datetime.strptime( end_value, '%Y%m%d' )
+			except ValueError as exc:
+				raise ValueError( 'begin_date and end_date must be valid calendar dates.' ) from exc
+			if begin_time > end_time:
 				raise ValueError( 'begin_date must be on or before end_date.' )
 			
 			return begin_value, end_value
@@ -20457,8 +20462,8 @@ class TidesAndCurrents( Fetcher ):
 		try:
 			station = payload.get( 'stations', None ) if isinstance( payload, dict ) else None
 			
-			if isinstance( station, list ) and station:
-				station = station[ 0 ]
+			if isinstance( station, list ):
+				station = station[ 0 ] if station else { }
 			
 			if not isinstance( station, dict ):
 				station = payload if isinstance( payload, dict ) else { }
@@ -20645,6 +20650,9 @@ metadata, or generated schema content.
 			if self.timeout < 1:
 				raise ValueError( 'time must be greater than or equal to 1.' )
 			
+			if params is not None and not isinstance( params, dict ):
+				raise ValueError( 'params must be a dictionary.' )
+			
 			for key, value in (params or { }).items( ):
 				if value is None:
 					continue
@@ -20657,8 +20665,19 @@ metadata, or generated schema content.
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
-			self.payload = self.response.json( ) or { }
-			self.result = { 'url': self.response.url, 'params': self.params, 'raw': self.payload }
+			self.payload = self.response.json( )
+			if not isinstance( self.payload, dict ):
+				raise ValueError( 'NOAA returned an invalid JSON response.' )
+			if self.payload.get( 'error' ) or self.payload.get( 'errors' ):
+				raise ValueError( 'NOAA returned a provider error.' )
+			if self.url == self.data_url:
+				key = 'predictions' if self.mode == 'tide-predictions' else 'data'
+				if not isinstance( self.payload.get( key ), list ):
+					raise ValueError( 'NOAA returned an invalid data collection.' )
+			else:
+				if not isinstance( self.payload.get( 'stations', self.payload ), (dict, list) ):
+					raise ValueError( 'NOAA returned invalid station metadata.' )
+			self.result = { 'url': self.url, 'params': self.params, 'raw': self.payload }
 			
 			return self.result
 		
@@ -21004,7 +21023,7 @@ class UvIndex( Fetcher ):
 		    value.
 		"""
 		super( ).__init__( )
-		self.base_url = 'https://enviro.epa.gov/enviro/efservice'
+		self.base_url = 'https://data.epa.gov/dmapservice'
 		self.mode = 'daily-zip'
 		self.zip_code = ''
 		self.city = ''
@@ -21253,14 +21272,17 @@ class UvIndex( Fetcher ):
 				if not first_alert:
 					first_alert = str( row.get( 'Uv Alert', '' ) or row.get( 'Alert', '' ) or '' )
 				
-				uv_value = (
-						row.get( 'Uv Value', None ) or row.get( 'Index', None ) or row.get( 'Uv '
-						                                                                    'Index', None ))
+				uv_value = row.get( 'Uv Value' )
+				if uv_value is None:
+					uv_value = row.get( 'Index' )
+				if uv_value is None:
+					uv_value = row.get( 'Uv Index' )
 				
 				try:
 					if uv_value is not None and str( uv_value ).strip( ):
-						if max_uv is None or float( uv_value ) > float( max_uv ):
-							max_uv = float( uv_value )
+						value = float( uv_value )
+						if math.isfinite( value ) and (max_uv is None or value > max_uv):
+							max_uv = value
 				except Exception:
 					pass
 			
@@ -21336,6 +21358,8 @@ class UvIndex( Fetcher ):
 			throw_if( 'time', time )
 			
 			self.url = str( url ).strip( )
+			if not isinstance( params, dict ):
+				raise ValueError( 'params must be a dictionary.' )
 			self.params = params
 			self.timeout = int( time )
 			
@@ -21345,7 +21369,9 @@ class UvIndex( Fetcher ):
 			self.response = requests.get( url=self.url, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
-			self.payload = self.response.json( ) or [ ]
+			self.payload = self.response.json( )
+			if not isinstance( self.payload, list ) or any( not isinstance( item, dict ) for item in self.payload ):
+				raise ValueError( 'EPA returned an invalid UV Index forecast response.' )
 			self.result = { 'url': self.url, 'params': self.params, 'raw': self.payload }
 			
 			return self.result
