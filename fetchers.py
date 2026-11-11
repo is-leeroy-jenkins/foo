@@ -9762,14 +9762,23 @@ class OpenWeather( Fetcher ):
 		try:
 			throw_if( 'location', location )
 			self.location = location.strip( )
-			self.geocode_params = { 'name': self.location, 'count': int( count ) }
+			self.result_limit = int( count )
+			if self.result_limit < 1:
+				raise ValueError( 'count must be positive.' )
+			self.geocode_params = { 'name': self.location, 'count': self.result_limit }
 			
 			self.url = self.geocode_url
 			self.response = requests.get( self.url, params=self.geocode_params,
 				headers=self.headers, timeout=20 )
 			self.response.raise_for_status( )
 			
-			payload = self.response.json( ) or { }
+			payload = self.response.json( )
+			if not isinstance( payload, dict ):
+				raise ValueError( 'Open-Meteo geocoding response must be a JSON object.' )
+			if payload.get( 'error' ):
+				raise ValueError( str( payload.get( 'reason', 'Open-Meteo geocoding failed.' ) ) )
+			if not isinstance( payload.get( 'results', [ ] ), list ):
+				raise ValueError( 'Open-Meteo geocoding results must be a list.' )
 			results = payload.get( 'results', [ ] ) or [ ]
 			
 			if not results:
@@ -9820,10 +9829,11 @@ class OpenWeather( Fetcher ):
 		try:
 			throw_if( 'lat', lat )
 			throw_if( 'long', long )
-			throw_if( 'zone', zone )
 			self.mode = 'current'
 			self.latitude = float( lat )
 			self.longitude = float( long )
+			if not (-90.0 <= self.latitude <= 90.0) or not (-180.0 <= self.longitude <= 180.0) or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
+				raise ValueError( 'Invalid latitude or longitude.' )
 			self.timezone = str( zone or 'auto' ).strip( )
 			
 			self.params = { 'latitude': self.latitude, 'longitude': self.longitude,
@@ -9837,7 +9847,11 @@ class OpenWeather( Fetcher ):
 				timeout=30 )
 			self.response.raise_for_status( )
 			
-			payload = self.response.json( ) or { }
+			payload = self.response.json( )
+			if not isinstance( payload, dict ):
+				raise ValueError( 'Open-Meteo response must be a JSON object.' )
+			if payload.get( 'error' ):
+				raise ValueError( str( payload.get( 'reason', 'Open-Meteo request failed.' ) ) )
 			
 			return { 'mode': self.mode, 'location': self.location,
 					'latitude': payload.get( 'latitude', self.latitude ),
@@ -9883,10 +9897,11 @@ class OpenWeather( Fetcher ):
 		try:
 			throw_if( 'lat', lat )
 			throw_if( 'long', long )
-			throw_if( 'zone', zone )
 			self.mode = 'hourly'
 			self.latitude = float( lat )
 			self.longitude = float( long )
+			if not (-90.0 <= self.latitude <= 90.0) or not (-180.0 <= self.longitude <= 180.0) or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
+				raise ValueError( 'Invalid latitude or longitude.' )
 			self.timezone = str( zone or 'auto' ).strip( )
 			self.params = { 'latitude': self.latitude, 'longitude': self.longitude,
 					'hourly': self.hourly_metrics, 'timezone': self.timezone,
@@ -9899,7 +9914,11 @@ class OpenWeather( Fetcher ):
 			self.response = requests.get( self.url, params=self.params, headers=self.headers,
 				timeout=30 )
 			self.response.raise_for_status( )
-			payload = self.response.json( ) or { }
+			payload = self.response.json( )
+			if not isinstance( payload, dict ):
+				raise ValueError( 'Open-Meteo response must be a JSON object.' )
+			if payload.get( 'error' ):
+				raise ValueError( str( payload.get( 'reason', 'Open-Meteo request failed.' ) ) )
 			
 			return { 'mode': self.mode, 'location': self.location,
 					'latitude': payload.get( 'latitude', self.latitude ),
@@ -9945,10 +9964,11 @@ class OpenWeather( Fetcher ):
 		try:
 			throw_if( 'lat', lat )
 			throw_if( 'long', long )
-			throw_if( 'zone', zone )
 			self.mode = 'daily'
 			self.latitude = float( lat )
 			self.longitude = float( long )
+			if not (-90.0 <= self.latitude <= 90.0) or not (-180.0 <= self.longitude <= 180.0) or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
+				raise ValueError( 'Invalid latitude or longitude.' )
 			self.timezone = str( zone or 'auto' ).strip( )
 			self.params = { 'latitude': self.latitude, 'longitude': self.longitude,
 					'daily': self.daily_metrics, 'timezone': self.timezone,
@@ -9961,7 +9981,11 @@ class OpenWeather( Fetcher ):
 			self.response = requests.get( self.url, params=self.params, headers=self.headers,
 				timeout=30 )
 			self.response.raise_for_status( )
-			payload = self.response.json( ) or { }
+			payload = self.response.json( )
+			if not isinstance( payload, dict ):
+				raise ValueError( 'Open-Meteo response must be a JSON object.' )
+			if payload.get( 'error' ):
+				raise ValueError( str( payload.get( 'reason', 'Open-Meteo request failed.' ) ) )
 			return { 'mode': self.mode, 'location': self.location,
 					'latitude': payload.get( 'latitude', self.latitude ),
 					'longitude': payload.get( 'longitude', self.longitude ),
@@ -10009,7 +10033,6 @@ class OpenWeather( Fetcher ):
 		try:
 			throw_if( 'location', location )
 			throw_if( 'mode', mode )
-			throw_if( 'zone', zone )
 			selected = self.geocode_location( location=location, count=count )
 			if not selected:
 				return { 'location': location, 'mode': mode,
@@ -10236,13 +10259,22 @@ class HistoricalWeather( Fetcher ):
 		try:
 			throw_if( 'location', location )
 			self.location = location.strip( )
-			self.geocode_params = { 'name': self.location, 'count': int( count ) }
+			self.result_limit = int( count )
+			if self.result_limit < 1:
+				raise ValueError( 'count must be positive.' )
+			self.geocode_params = { 'name': self.location, 'count': self.result_limit }
 			
 			self.url = self.geocode_url
 			self.response = requests.get( self.url, params=self.geocode_params,
 				headers=self.headers, timeout=20 )
 			self.response.raise_for_status( )
-			payload = self.response.json( ) or { }
+			payload = self.response.json( )
+			if not isinstance( payload, dict ):
+				raise ValueError( 'Open-Meteo geocoding response must be a JSON object.' )
+			if payload.get( 'error' ):
+				raise ValueError( str( payload.get( 'reason', 'Open-Meteo geocoding failed.' ) ) )
+			if not isinstance( payload.get( 'results', [ ] ), list ):
+				raise ValueError( 'Open-Meteo geocoding results must be a list.' )
 			results = payload.get( 'results', [ ] ) or [ ]
 			if not results:
 				return None
@@ -10292,10 +10324,13 @@ class HistoricalWeather( Fetcher ):
 			throw_if( 'lat', lat )
 			throw_if( 'long', long )
 			throw_if( 'date', date )
-			throw_if( 'zone', zone )
 			
 			self.latitude = float( lat )
 			self.longitude = float( long )
+			if not (-90.0 <= self.latitude <= 90.0) or not (-180.0 <= self.longitude <= 180.0) or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
+				raise ValueError( 'Invalid latitude or longitude.' )
+			if not isinstance( date, dt.date ):
+				raise ValueError( 'date must be a datetime.date instance.' )
 			self.target_date = date
 			self.timezone = zone.strip( ) if zone else 'auto'
 			
@@ -10312,7 +10347,11 @@ class HistoricalWeather( Fetcher ):
 				timeout=30 )
 			self.response.raise_for_status( )
 			
-			payload = self.response.json( ) or { }
+			payload = self.response.json( )
+			if not isinstance( payload, dict ):
+				raise ValueError( 'Open-Meteo response must be a JSON object.' )
+			if payload.get( 'error' ):
+				raise ValueError( str( payload.get( 'reason', 'Open-Meteo request failed.' ) ) )
 			
 			return { 'location': self.location, 'latitude': self.latitude,
 					'longitude': self.longitude,
@@ -10358,7 +10397,6 @@ class HistoricalWeather( Fetcher ):
 		try:
 			throw_if( 'location', location )
 			throw_if( 'date', date )
-			throw_if( 'zone', zone )
 			
 			selected = self.geocode_location( location=location, count=count )
 			
