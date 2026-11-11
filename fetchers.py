@@ -10021,18 +10021,18 @@ class OpenWeather( Fetcher ):
 			
 			active_mode = mode.strip( ).lower( )
 			if active_mode == 'current':
-				result = self.fetch_current( lat=floatlat, long=floatlong, zone=( zone
+				result = self.fetch_current( lat=float( lat ), long=float( long ), zone=( zone
 				                                                                             or
 				                                                                             'auto' ).strip( ), past_days=past_days ) or { }
 			
 			elif active_mode == 'hourly':
-				result = self.fetch_hourly( lat=floatlat, long=floatlong, zone=( zone
+				result = self.fetch_hourly( lat=float( lat ), long=float( long ), zone=( zone
 				                                                                            or
 				                                                                            'auto'
 				).strip( ), forecast_days=forecast_days, past_days=past_days ) or { }
 			
 			elif active_mode == 'daily':
-				result = self.fetch_daily( lat=floatlat, long=floatlong, zone=( zone or
+				result = self.fetch_daily( lat=float( lat ), long=float( long ), zone=( zone or
 				                                                                           'auto'
 				).strip( ), forecast_days=forecast_days, past_days=past_days ) or { }
 			
