@@ -1,0 +1,28 @@
+name: USNO and Google Weather provider contracts
+
+on:
+  pull_request:
+    paths:
+      - fetchers.py
+      - tests/test_naval_googleweather_contracts.py
+      - .github/workflows/naval-googleweather-contracts.yml
+  push:
+    branches: [ main ]
+    paths:
+      - fetchers.py
+      - tests/test_naval_googleweather_contracts.py
+      - .github/workflows/naval-googleweather-contracts.yml
+  workflow_dispatch:
+
+jobs:
+  naval-googleweather:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Compile source and regression tests
+        run: python -m compileall -q fetchers.py tests/test_naval_googleweather_contracts.py
+      - name: Run isolated USNO and Google Weather tests
+        run: python -m unittest discover -s tests -p 'test_naval_googleweather_contracts.py' -v
