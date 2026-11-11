@@ -5955,46 +5955,67 @@ class SpaceWeather( Fetcher ):
 		"""
 		try:
 			throw_if( 'endpoint', endpoint )
-			throw_if( 'start_date', start_date )
-			throw_if( 'end_date', end_date )
-			
-			active_key = str( api_key or self.api_key or '' ).strip( )
-			if not active_key:
-				raise ValueError( 'NASA API key is required for DONKI requests.' )
-			
-			self.url = f'{self.base_url}/{endpoint}'
-			self.params = { 'startDate': str( start_date ).strip( ),
-					'endDate': str( end_date ).strip( ), 'api_key': active_key }
-			
-			if endpoint == 'IPS' and location.strip( ):
-				self.params[ 'location' ] = location.strip( )
-			
-			if endpoint == 'IPS' and catalog.strip( ):
-				self.params[ 'catalog' ] = catalog.strip( )
-			
-			if endpoint == 'CMEAnalysis':
+			self.timeout = int( time )
+			if self.timeout < 1:
+				raise ValueError( 'time must be a positive integer.' )
+			self.endpoint = str( endpoint ).strip( )
+			supported = { 'CME', 'CMEAnalysis', 'GST', 'IPS', 'FLR', 'SEP',
+				'MPC', 'RBE', 'HSS', 'WSAEnlilSimulations', 'notifications' }
+			if self.endpoint not in supported:
+				raise ValueError( 'Unsupported NASA DONKI endpoint.' )
+			self.start_date = str( start_date or '' ).strip( )
+			self.end_date = str( end_date or '' ).strip( )
+			if bool( self.start_date ) != bool( self.end_date ):
+				raise ValueError( 'start_date and end_date must be supplied together.' )
+			if self.start_date:
+				start = dt.datetime.strptime( self.start_date, '%Y-%m-%d' ).date( )
+				end = dt.datetime.strptime( self.end_date, '%Y-%m-%d' ).date( )
+				if start > end:
+					raise ValueError( 'start_date must precede or equal end_date.' )
+			# NASA documents DEMO_KEY for limited unauthenticated use.
+			self.active_key = str( api_key or self.api_key or 'DEMO_KEY' ).strip( )
+			self.url = f'{self.base_url}/{self.endpoint}'
+			self.params = { 'api_key': self.active_key }
+			if self.start_date:
+				self.params[ 'startDate' ] = self.start_date
+				self.params[ 'endDate' ] = self.end_date
+			self.location = str( location or '' ).strip( )
+			self.catalog = str( catalog or '' ).strip( )
+			self.notification_type = str( notification_type or '' ).strip( )
+			if self.endpoint == 'IPS':
+				if self.location:
+					self.params[ 'location' ] = self.location
+				if self.catalog:
+					self.params[ 'catalog' ] = self.catalog
+			if self.endpoint == 'CMEAnalysis':
+				self.speed = int( speed )
+				self.half_angle = int( half_angle )
+				if self.speed < 0 or not (0 <= self.half_angle <= 180):
+					raise ValueError( 'CME speed and half_angle must be nonnegative; half_angle <= 180.' )
 				self.params[ 'mostAccurateOnly' ] = str( bool( most_accurate_only ) ).lower( )
 				self.params[ 'completeEntryOnly' ] = str( bool( complete_entry_only ) ).lower( )
-				self.params[ 'speed' ] = int( speed )
-				self.params[ 'halfAngle' ] = int( half_angle )
-				
-				if catalog.strip( ):
-					self.params[ 'catalog' ] = catalog.strip( )
-				
-				if keyword.strip( ):
-					self.params[ 'keyword' ] = keyword.strip( )
-			
-			if endpoint == 'notifications' and notification_type.strip( ):
-				self.params[ 'type' ] = notification_type.strip( )
-			
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
+				self.params[ 'speed' ] = self.speed
+				self.params[ 'halfAngle' ] = self.half_angle
+				if self.catalog:
+					self.params[ 'catalog' ] = self.catalog
+				self.keyword = str( keyword or '' ).strip( )
+				if self.keyword:
+					self.params[ 'keyword' ] = self.keyword
+			if self.endpoint == 'notifications' and self.notification_type:
+				self.params[ 'type' ] = self.notification_type
+			self.response = requests.get( url=self.url, params=self.params,
+				headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
-			payload = self.response.json( )
-			
-			return { 'mode': self.mode, 'endpoint': endpoint, 'url': self.url,
-					'params': self.params, 'data': payload }
-		
+			self.payload = self.response.json( )
+			if not isinstance( self.payload, (list, dict) ):
+				raise ValueError( 'NASA DONKI response must be JSON array or object.' )
+			if isinstance( self.payload, dict ) and self.payload.get( 'error' ):
+				raise ValueError( 'NASA DONKI returned an API error.' )
+			self.result = { 'mode': self.mode, 'endpoint': self.endpoint,
+				'url': self.url,
+				'params': { key: value for key, value in self.params.items( )
+					if key != 'api_key' }, 'data': self.payload }
+			return self.result
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
