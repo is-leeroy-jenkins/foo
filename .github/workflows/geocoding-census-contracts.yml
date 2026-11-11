@@ -1,0 +1,28 @@
+name: Google Geocoding and Census provider contracts
+
+on:
+  pull_request:
+    paths:
+      - fetchers.py
+      - tests/test_geocoding_census_contracts.py
+      - .github/workflows/geocoding-census-contracts.yml
+  push:
+    branches: [ main ]
+    paths:
+      - fetchers.py
+      - tests/test_geocoding_census_contracts.py
+      - .github/workflows/geocoding-census-contracts.yml
+  workflow_dispatch:
+
+jobs:
+  geocoding-census:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Compile production source and regression tests
+        run: python -m compileall -q fetchers.py tests/test_geocoding_census_contracts.py
+      - name: Run provider-contract tests
+        run: python -m unittest discover -s tests -p 'test_geocoding_census_contracts.py' -v
