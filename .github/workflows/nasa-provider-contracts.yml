@@ -1,0 +1,29 @@
+name: NASA EONET and GIBS contracts
+
+on:
+  push:
+    branches:
+      - fix/fonky-eonet-gibs-functional-parity-20261110
+  pull_request:
+    paths:
+      - fetchers.py
+      - tests/test_nasa_eonet_gibs.py
+      - .github/workflows/nasa-provider-contracts.yml
+
+permissions:
+  contents: read
+
+jobs:
+  nasa-provider-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile source and tests
+        run: python -m compileall -q fetchers.py tests/test_nasa_eonet_gibs.py
+      - name: Run isolated NASA provider tests
+        run: python -m unittest discover -s tests -p 'test_nasa_eonet_gibs.py' -v
