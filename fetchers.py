@@ -2277,8 +2277,6 @@ class GoogleSearch( Fetcher ):
 			if cse_id:
 				self.cse_id = str( cse_id ).strip( )
 			
-			throw_if( 'api_key', self.api_key )
-			throw_if( 'cse_id', self.cse_id )
 			self.timeout = int( time )
 			self.keywords = str( keywords ).strip( )
 			self.results = int( results )
@@ -2509,7 +2507,6 @@ class GoogleMaps( Fetcher ):
 		"""
 		try:
 			throw_if( 'address', address )
-			throw_if( 'api_key', self.api_key )
 			self.mode = 'geocode_location'
 			self.address = str( address ).strip( )
 			self.url = 'https://maps.googleapis.com/maps/api/geocode/json'
@@ -2571,7 +2568,6 @@ class GoogleMaps( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'api_key', self.api_key )
 			throw_if( 'latitude', lat )
 			throw_if( 'longitude', long )
 			
@@ -2629,7 +2625,6 @@ class GoogleMaps( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'api_key', self.api_key )
 			throw_if( 'address', address )
 			if not isinstance( address, list ):
 				raise TypeError( 'address must be a list of address-line strings.' )
@@ -2688,7 +2683,6 @@ class GoogleMaps( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'api_key', self.api_key )
 			throw_if( 'origin', origin )
 			throw_if( 'destination', destination )
 			throw_if( 'mode', mode )
@@ -2950,7 +2944,6 @@ class GoogleWeather( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'api_key', self.api_key )
 			throw_if( 'path', path )
 			throw_if( 'params', params )
 			throw_if( 'time', time )
@@ -7219,7 +7212,6 @@ class GovData( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'api_key', self.api_key )
 			throw_if( 'query', query )
 			throw_if( 'offset_mark', offset_mark )
 			throw_if( 'time', time )
@@ -7277,7 +7269,6 @@ class GovData( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'api_key', self.api_key )
 			throw_if( 'package_id', package_id )
 			throw_if( 'time', time )
 			
@@ -7331,7 +7322,6 @@ class GovData( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'api_key', self.api_key )
 			throw_if( 'collection', collection )
 			throw_if( 'start_date', start_date )
 			throw_if( 'offset_mark', offset_mark )
@@ -8330,7 +8320,6 @@ class Congress( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'api_key', self.api_key )
 			
 			self.limit = self.validate_limit( limit )
 			self.offset = self.validate_offset( offset )
@@ -10425,7 +10414,6 @@ class GoogleGeocoding( Fetcher ):
 			if api_key:
 				self.api_key = str( api_key ).strip( )
 			
-			throw_if( 'api_key', self.api_key )
 			
 			self.timeout = int( time )
 			self.params = { }
@@ -16956,7 +16944,6 @@ class AirNow( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'api_key', self.api_key )
 			throw_if( 'endpoint', endpoint )
 			throw_if( 'time', time )
 			
@@ -21189,37 +21176,12 @@ class PurpleAir( Fetcher ):
 		return [ 'base_url', 'api_key', 'mode', 'endpoint', 'sensor_index', 'nwlng', 'nwlat',
 				'selng', 'selat', 'location_type', 'max_age', 'modified_since', 'fields', 'params',
 				'payload', 'result', 'response', 'url', 'timeout', 'agents', 'headers',
-				'validate_api_key', 'validate_mode', 'validate_endpoint', 'validate_sensor_index',
+				'validate_mode', 'validate_endpoint', 'validate_sensor_index',
 				'validate_longitude', 'validate_latitude', 'validate_bbox',
 				'validate_location_type', 'validate_non_negative_integer', 'normalize_fields',
 				'shape_sensor_list_rows', 'shape_sensor_detail_rows', 'summarize_rows',
 				'package_response', 'request', 'fetch_sensors', 'fetch_sensor', 'fetch',
 				'create_schema' ]
-	
-	def validate_api_key( self ) -> str:
-		"""Validate api key.
-
-		Purpose:
-		    Validates the api key against provider constraints and returns the accepted value.
-
-		Returns:
-		    str: Normalized text produced by the operation.
-
-		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
-		"""
-		try:
-			throw_if( 'api_key', self.api_key )
-			return str( self.api_key ).strip( )
-		
-		except Exception as e:
-			exception = Error( e )
-			exception.module = 'fetchers'
-			exception.cause = 'PurpleAir'
-			exception.method = 'validate_api_key( self ) -> str'
-			Logger( ).write( exception )
-			raise exception
 	
 	def validate_mode( self, mode: str ) -> str:
 		"""Validate mode.
@@ -21781,7 +21743,6 @@ class PurpleAir( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.validate_api_key( )
 			self.endpoint = self.validate_endpoint( endpoint )
 			throw_if( 'time', time )
 			
@@ -22156,7 +22117,7 @@ class OpenAQ( Fetcher ):
 		return [ 'base_url', 'api_key', 'mode', 'endpoint', 'location_id', 'parameter_id',
 				'country_id', 'coordinates', 'radius', 'providers_id', 'parameters_id', 'limit',
 				'page', 'params', 'payload', 'result', 'response', 'url', 'timeout', 'agents',
-				'headers', 'validate_api_key', 'validate_mode', 'validate_endpoint',
+				'headers', 'validate_mode', 'validate_endpoint',
 				'validate_positive_integer', 'validate_non_negative_integer',
 				'validate_coordinates', 'validate_radius', 'coalesce_results',
 				'shape_resource_rows', 'shape_location_rows', 'shape_latest_rows',
@@ -22164,31 +22125,6 @@ class OpenAQ( Fetcher ):
 				'package_response', 'request', 'fetch_countries', 'fetch_providers',
 				'fetch_parameters', 'fetch_parameter_latest', 'fetch_locations', 'fetch_latest',
 				'fetch', 'create_schema' ]
-	
-	def validate_api_key( self ) -> str:
-		"""Validate api key.
-
-		Purpose:
-		    Validates the api key against provider constraints and returns the accepted value.
-
-		Returns:
-		    str: Normalized text produced by the operation.
-
-		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
-		"""
-		try:
-			throw_if( 'api_key', self.api_key )
-			return str( self.api_key ).strip( )
-		
-		except Exception as e:
-			exception = Error( e )
-			exception.module = 'fetchers'
-			exception.cause = 'OpenAQ'
-			exception.method = 'validate_api_key( self ) -> str'
-			Logger( ).write( exception )
-			raise exception
 	
 	def validate_mode( self, mode: str ) -> str:
 		"""Validate mode.
@@ -22755,7 +22691,6 @@ class OpenAQ( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.validate_api_key( )
 			self.endpoint = self.validate_endpoint( endpoint )
 			throw_if( 'time', time )
 			
@@ -23284,34 +23219,10 @@ class Firms( Fetcher ):
 		"""
 		return [ 'base_url', 'map_key', 'mode', 'source', 'area_coordinates', 'day_range', 'date',
 				'sensor', 'params', 'payload', 'result', 'response', 'url', 'timeout', 'agents',
-				'headers', 'validate_map_key', 'validate_mode', 'validate_source',
+				'headers', 'validate_mode', 'validate_source',
 				'validate_sensor', 'validate_day_range', 'validate_date',
 				'validate_area_coordinates', 'csv_to_rows', 'summarize_rows', 'package_response',
 				'request_csv', 'fetch_area', 'fetch_data_availability', 'fetch', 'create_schema' ]
-	
-	def validate_map_key( self ) -> str:
-		"""Validate map key.
-
-		Purpose:
-		    Validates the map key against provider constraints and returns the accepted value.
-
-		Returns:
-		    str: Normalized text produced by the operation.
-
-		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
- to the application logger, and re-raises it.
-		"""
-		try:
-			throw_if( 'map_key', self.map_key )
-			return str( self.map_key ).strip( )
-		except Exception as e:
-			exception = Error( e )
-			exception.module = 'fetchers'
-			exception.cause = 'Firms'
-			exception.method = 'validate_map_key( self ) -> str'
-			Logger( ).write( exception )
-			raise exception
 	
 	def validate_mode( self, mode: str ) -> str:
 		"""Validate mode.
@@ -23686,7 +23597,6 @@ class Firms( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.validate_map_key( )
 			throw_if( 'url', url )
 			throw_if( 'time', time )
 			self.url = str( url ).strip( )
