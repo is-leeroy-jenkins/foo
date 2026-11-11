@@ -52,6 +52,7 @@ from __future__ import annotations
 
 import base64
 import datetime as dt
+import math
 import io
 import re
 import os
@@ -2943,7 +2944,8 @@ class GoogleWeather( Fetcher ):
 		try:
 			throw_if( 'path', path )
 			throw_if( 'params', params )
-			throw_if( 'time', time )
+			if not isinstance( params, dict ):
+				raise TypeError( 'params must be a dictionary.' )
 			self.path = str( path ).strip( ).lstrip( '/' )
 			self.timeout = int( time )
 			self.params = { }
@@ -2961,16 +2963,19 @@ class GoogleWeather( Fetcher ):
 			
 			self.params[ 'key' ] = self.api_key
 			request_url = f'{self.url}/{self.path}'
-			self.response = requests.get( url=request_url, params=self.params,
-				headers=self.headers, timeout=self.timeout )
+			self.response = requests.get( url=request_url, params=self.params, headers=self.headers,
+				timeout=self.timeout )
 			
 			self.response.raise_for_status( )
 			self.payload = self.response.json( )
-			self.result = { 'mode': self.mode, 'url': request_url, 'params': self.params,
-					'data': self.payload }
+			if not isinstance( self.payload, dict ):
+				raise ValueError( 'Google Weather response must be a JSON object.' )
+
+			self.result = { 'mode': self.mode, 'url': request_url,
+				'params': { key: value for key, value in self.params.items( )
+					if key != 'key' }, 'data': self.payload }
 			
 			return self.result
-		
 		except Error:
 			raise
 		
@@ -3003,11 +3008,11 @@ class GoogleWeather( Fetcher ):
 			
 			if 'data' not in self.result:
 				self.result = { 'mode': self.mode,
-						'url': f'{self.url}/{self.path}' if self.path else self.url,
-						'params': self.params, 'data': self.payload or { } }
+					'url': f'{self.url}/{self.path}' if self.path else self.url,
+					'params': { key: value for key, value in self.params.items( )
+						if key != 'key' }, 'data': self.payload or { } }
 			
 			return self.result
-		
 		except Error:
 			raise
 		
@@ -3393,9 +3398,11 @@ class NavalObservatory( Fetcher ):
 		        writes it to the application logger, and re-raises it.
 		"""
 		try:
+			throw_if( 'date_value', date_value )
 			value = str( date_value ).strip( )
-			throw_if( 'date_value', value )
-			dt.datetime.strptime( value, '%Y-%m-%d' )
+			calendar_date = dt.datetime.strptime( value, '%Y-%m-%d' )
+			if calendar_date.year < 1800 or calendar_date.year > 2050:
+				raise ValueError( 'Celestial navigation dates must be between 1800 and 2050.' )
 			return value
 		except Exception as e:
 			exception = Error( e )
@@ -3462,16 +3469,15 @@ class NavalObservatory( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
+			throw_if( 'latitude', latitude )
+			throw_if( 'longitude', longitude )
 			lat = float( latitude )
 			lon = float( longitude )
-			if lat < -90.0 or lat > 90.0:
-				raise ValueError( 'Latitude must be between -90 and 90.' )
-			
-			if lon < -180.0 or lon > 180.0:
-				raise ValueError( 'Longitude must be between -180 and 180.' )
-			
+			if not math.isfinite( lat ) or not (-90.0 <= lat <= 90.0):
+				raise ValueError( 'Latitude must be between -90 and 90 and finite.' )
+			if not math.isfinite( lon ) or not (-180.0 <= lon <= 180.0):
+				raise ValueError( 'Longitude must be between -180 and 180 and finite.' )
 			return lat, lon
-		
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -3507,6 +3513,14 @@ class NavalObservatory( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
+			throw_if( 'date_value', date_value )
+			throw_if( 'time_value', time_value )
+			throw_if( 'latitude', latitude )
+			throw_if( 'longitude', longitude )
+			self.timeout = int( time )
+			if self.timeout < 1:
+				raise ValueError( 'time must be greater than or equal to 1.' )
+
 			self.date_value = self.validate_date( date_value )
 			self.time_value = self.validate_time( time_value )
 			self.latitude, self.longitude = self.validate_coordinates( latitude=latitude,
@@ -3514,16 +3528,21 @@ class NavalObservatory( Fetcher ):
 			self.location_label = str( location_label or '' ).strip( )
 			self.url = f'{self.base_url}/celnav'
 			self.params = { 'date': self.date_value, 'time': self.time_value,
-					'coords': f'{self.latitude},{self.longitude}' }
+			                'coords': f'{self.latitude},{self.longitude}' }
 			
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
+			self.response = requests.get( url=self.url, params=self.params,
+				headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
-			payload = self.response.json( ) or { }
-			
-			return { 'mode': 'celnav', 'url': self.url, 'params': self.params,
-					'location_label': self.location_label, 'data': payload }
-		
+			self.payload = self.response.json( )
+			if not isinstance( self.payload, dict ):
+				raise ValueError( 'USNO celestial navigation response must be a JSON object.' )
+
+			if self.payload.get( 'error' ):
+				raise ValueError( f"USNO celestial navigation error: {self.payload[ 'error' ]}" )
+
+			self.result = { 'mode': 'celnav', 'url': self.url, 'params': self.params,
+				'location_label': self.location_label, 'data': self.payload }
+			return self.result
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
