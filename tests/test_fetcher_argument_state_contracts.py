@@ -50,7 +50,7 @@ def load_classes( ) -> dict[str, type]:
     tree = ast.parse( SOURCE.read_text( encoding='utf-8' ), filename=str( SOURCE ) )
     selected = [ copy.deepcopy( node ) for node in tree.body
         if isinstance( node, ast.ClassDef )
-        and node.name in ( 'PurpleAir', 'GlobalImagery' ) ]
+        and node.name in ( 'PurpleAir', 'GlobalImagery', 'OpenAQ', 'Firms', 'GoogleMaps' ) ]
 
     for node in selected:
         node.bases = [ ast.Name( id='Fetcher', ctx=ast.Load( ) ) ]
@@ -101,15 +101,16 @@ def load_classes( ) -> dict[str, type]:
         'Error': Error,
         'Logger': Logger,
         'cfg': SimpleNamespace( NASA_API_KEY='test-key',
-            PURPLEAIR_API_KEY='test-key', AGENTS='test-agent' ),
+            PURPLEAIR_API_KEY='test-key', OPENAQ_API_KEY='test-key',
+            FIRMS_MAP_KEY='test-key', GOOGLE_API_KEY='test-key', AGENTS='test-agent' ),
         'throw_if': throw_if,
-        'requests': SimpleNamespace( get=Mock( ) ),
+        'requests': SimpleNamespace( get=Mock( ), post=Mock( ) ),
         'urllib': urllib,
         're': re,
         'Path': Path,
     }
     exec( compile( module, str( SOURCE ), 'exec' ), space )
-    return { name: space[ name ] for name in ( 'PurpleAir', 'GlobalImagery' ) }
+    return { name: space[ name ] for name in ( 'PurpleAir', 'GlobalImagery', 'OpenAQ', 'Firms', 'GoogleMaps' ) }
 
 
 class FetcherStateContractTests( unittest.TestCase ):
@@ -230,6 +231,83 @@ class FetcherStateContractTests( unittest.TestCase ):
             self.assertEqual( imagery.mode, 'sentinel' )
             self.assertEqual( fetch.call_count, 2 )
 
+
+    def test_openaq_checks_endpoint_before_using_instance_member( self ) -> None:
+        """Validate OpenAQ endpoint and preserve provider request handling.
+
+        Purpose:
+            Confirm mandatory endpoint guards precede normalization and HTTP requests.
+
+        Returns:
+            None: Assertions protect both successful and invalid endpoint flows.
+        """
+        client = self.classes[ 'OpenAQ' ]( )
+        request = client.__class__.request.__globals__[ 'requests' ].get
+        request.reset_mock( )
+        response = Mock( )
+        response.url = 'https://api.openaq.org/v3/countries'
+        response.json.return_value = { 'meta': { }, 'results': [ ] }
+        request.return_value = response
+
+        result = client.request( endpoint='countries' )
+        self.assertEqual( client.endpoint, 'countries' )
+        self.assertEqual( result[ 'url' ], response.url )
+        self.assertEqual( request.call_args.kwargs[ 'url' ],
+            'https://api.openaq.org/v3/countries' )
+
+        request.reset_mock( )
+        with self.assertRaises( Exception ):
+            client.request( endpoint=None )
+        request.assert_not_called( )
+
+    def test_firms_checks_source_before_provider_delegation( self ) -> None:
+        """Validate mandatory FIRMS source before further processing.
+
+        Purpose:
+            Ensure invalid source values cannot reach the provider request.
+
+        Returns:
+            None: Assertions verify delegation and input guards.
+        """
+        client = self.classes[ 'Firms' ]( )
+        with patch.object( client, 'request_csv' ) as request:
+            with patch.object( client, 'csv_to_rows', return_value=[ ] ):
+                with patch.object( client, 'package_response', return_value={ } ):
+                    client.fetch_area( source='VIIRS_SNPP_NRT' )
+                    self.assertEqual( client.source, 'VIIRS_SNPP_NRT' )
+                    request.assert_called_once( )
+                    request.reset_mock( )
+                    with self.assertRaises( Exception ):
+                        client.fetch_area( source=None )
+                    request.assert_not_called( )
+
+    def test_google_maps_methods_do_not_assign_unused_mode( self ) -> None:
+        """Keep GoogleMaps mode unchanged when methods never consume that state.
+
+        Purpose:
+            Reject dead mode assignments in geocoding and address-validation methods.
+
+        Returns:
+            None: Assertions verify mode stability and successful request processing.
+        """
+        client = self.classes[ 'GoogleMaps' ]( )
+        client.mode = 'sentinel'
+        requests = client.__class__.geocode_location.__globals__[ 'requests' ]
+        response = Mock( )
+        response.json.return_value = { 'status': 'OK', 'results': [
+            { 'geometry': { 'location': { 'lat': 39, 'lng': -77 } },
+              'formatted_address': 'Test address' } ] }
+        requests.get.reset_mock( )
+        requests.get.return_value = response
+        client.geocode_location( address='Test address' )
+        self.assertEqual( client.mode, 'sentinel' )
+        client.geocode_coordinates( lat=39, long=-77 )
+        self.assertEqual( client.mode, 'sentinel' )
+        requests.post.reset_mock( )
+        requests.post.return_value = response
+        client.validate_address( address=[ 'Test address' ] )
+        self.assertEqual( client.mode, 'sentinel' )
+        self.assertEqual( requests.post.call_count, 1 )
 
 if __name__ == '__main__':
     unittest.main( )
