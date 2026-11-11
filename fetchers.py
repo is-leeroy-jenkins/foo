@@ -4874,9 +4874,93 @@ class NearbyObjects( Fetcher ):
 		return [ 'base_url', 'url', 'params', 'mode', 'start_date', 'end_date', 'query',
 				'dist_max',
 				'body', 'sort', 'limit', 'fetch_close_approaches', 'fetch_object_lookup',
-				'fetch_nhats_summary', 'fetch_nhats_object', 'fetch_fireballs', 'fetch',
+				'request', 'validate_nhats_options', 'fetch_nhats_summary', 'fetch_nhats_object', 'fetch_fireballs', 'fetch',
 				'create_schema' ]
 	
+	def request( self, time: int=20 ) -> Dict[ str, Any ]:
+		"""Issue a JPL SSD API request and retain validated response state.
+
+		Purpose:
+		    Centralizes positive timeout validation, HTTP response processing,
+		    JSON-object validation and provider error detection for all NEO modes.
+
+		Args:
+		    time (int): Request timeout in seconds.
+
+		Returns:
+		    Dict[str, Any]: Valid JSON response from the selected JPL service.
+
+		Raises:
+		    Error: If an invalid timeout, request failure or provider error occurs.
+		"""
+		try:
+			self.timeout = int( time )
+			if self.timeout < 1:
+				raise ValueError( 'time must be a positive integer.' )
+			self.response = requests.get( url=self.url, params=self.params,
+				headers=self.headers, timeout=self.timeout )
+			self.response.raise_for_status( )
+			self.payload = self.response.json( )
+			if not isinstance( self.payload, dict ):
+				raise ValueError( 'JPL SSD response must be a JSON object.' )
+			if self.payload.get( 'error' ):
+				raise ValueError( f"JPL SSD API error: {self.payload[ 'error' ]}" )
+			return self.payload
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'fetchers'
+			exception.cause = 'NearbyObjects'
+			exception.method = "request( self, time: int=20 ) -> Dict[ str, Any ]"
+			raise exception
+
+
+	def validate_nhats_options( self, dv: float, dur: int, stay: int,
+			launch: str ) -> None:
+		"""Validate the NASA NHATS mission constraint options.
+
+		Purpose:
+		    Checks the documented enumerated NHATS filters before a provider request.
+
+		Args:
+		    dv (float): Maximum total mission delta-V in km/s.
+		    dur (int): Maximum total mission duration in days.
+		    stay (int): Minimum stay duration in days.
+		    launch (str): Supported NHATS launch window.
+
+		Returns:
+		    None: Checked values are stored on the instance.
+
+		Raises:
+		    Error: If any NHATS mission constraint is unsupported.
+		"""
+		try:
+			throw_if( 'dv', dv )
+			throw_if( 'dur', dur )
+			throw_if( 'stay', stay )
+			throw_if( 'launch', launch )
+			self.dv = float( dv )
+			self.dur = int( dur )
+			self.stay = int( stay )
+			self.launch = str( launch ).strip( )
+			if self.dv not in range( 4, 13 ):
+				raise ValueError( 'NHATS dv must be an integer from 4 through 12.' )
+			if self.dur not in range( 60, 451, 30 ):
+				raise ValueError( 'NHATS dur must be between 60 and 450 in 30-day steps.' )
+			if self.stay not in (8, 16, 24, 32):
+				raise ValueError( 'NHATS stay must be 8, 16, 24, or 32 days.' )
+			if self.launch not in ('2020-2025', '2025-2030', '2030-2035',
+					'2035-2040', '2040-2045', '2020-2045'):
+				raise ValueError( 'Unsupported NHATS launch window.' )
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'fetchers'
+			exception.cause = 'NearbyObjects'
+			exception.method = (
+				'validate_nhats_options( self, dv: float, dur: int, '
+				'stay: int, launch: str ) -> None' )
+			raise exception
+
+
 	def fetch_close_approaches( self, start_date: str, end_date: str, dist_max: str='10LD',
 			body: str='Earth', sort: str='date', limit: int=20, time: int=20 ) -> \
 	Dict[ str, Any ]:
@@ -4916,20 +5000,27 @@ class NearbyObjects( Fetcher ):
 			self.body = str( body or 'Earth' ).strip( )
 			self.sort = str( sort or 'date' ).strip( )
 			self.limit = int( limit )
+			self.start = dt.datetime.strptime( self.start_date, '%Y-%m-%d' ).date( )
+			self.end = dt.datetime.strptime( self.end_date, '%Y-%m-%d' ).date( )
+			if self.start > self.end:
+				raise ValueError( 'start_date must be on or before end_date.' )
+			if self.limit < 1:
+				raise ValueError( 'limit must be positive.' )
+			if self.sort.lstrip( '-' ) not in ('date', 'dist', 'dist-min',
+					'v-inf', 'v-rel', 'h', 'object'):
+				raise ValueError( 'Unsupported JPL CAD sort field.' )
+			if not re.fullmatch( r'[0-9]+(?:\.[0-9]+)?(?:LD|au|AU|km|KM)',
+					self.dist_max ):
+				raise ValueError( 'dist_max must contain a supported distance unit.' )
 			self.url = f'{self.base_url}/cad.api'
 			self.params = { 'date-min': self.start_date, 'date-max': self.end_date,
-					'dist-max': self.dist_max, 'body': self.body, 'sort': self.sort,
-					'limit': self.limit }
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
-			self.response.raise_for_status( )
-			payload = self.response.json( ) or { }
-			
-			return { 'mode': self.mode, 'url': self.url, 'params': self.params,
-					'count': payload.get( 'count', 0 ), 'fields': payload.get( 'fields', [ ] ),
-					'data': payload.get( 'data', [ ] ),
-					'signature': payload.get( 'signature', { } ) }
-		
+				'dist-max': self.dist_max, 'body': self.body, 'sort': self.sort,
+				'limit': self.limit }
+			payload = self.request( time=time )
+			self.result = { 'mode': self.mode, 'url': self.url, 'params': self.params,
+				'count': payload.get( 'count', 0 ), 'fields': payload.get( 'fields', [ ] ),
+				'data': payload.get( 'data', [ ] ), 'signature': payload.get( 'signature', { } ) }
+			return self.result
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -4972,27 +5063,26 @@ class NearbyObjects( Fetcher ):
 		"""
 		try:
 			throw_if( 'query', query )
-			throw_if( 'query_type', query_type )
 			self.mode = 'object_lookup'
 			self.query = str( query ).strip( )
-			active_type = str( query_type ).strip( ).lower( )
-			if active_type not in [ 'sstr', 'spk', 'des' ]:
-				raise ValueError( "query_type must be 'sstr', 'spk', or 'des'." )
-			
+			self.query_type = str( query_type ).strip( ).lower( )
+			if self.query_type not in ('sstr', 'spk', 'des'):
+				raise ValueError( 'query_type must be sstr, spk, or des.' )
+			self.include_physical = include_physical
+			self.include_close_approaches = include_close_approaches
+			self.include_discovery = include_discovery
+			self.ca_body = str( ca_body or '' ).strip( )
 			self.url = f'{self.base_url}/sbdb.api'
-			self.params = { active_type: self.query,
-					'phys-par': '1' if bool( include_physical ) else '0',
-					'ca-data': '1' if bool( include_close_approaches ) else '0',
-					'discovery': '1' if bool( include_discovery ) else '0' }
-			
-			if include_close_approaches and str( ca_body or '' ).strip( ):
-				self.params[ 'ca-body' ] = str( ca_body ).strip( )
-			
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
-			self.response.raise_for_status( )
-			payload = self.response.json( ) or { }
-			return { 'mode': self.mode, 'url': self.url, 'params': self.params, 'data': payload }
+			self.params = { self.query_type: self.query,
+				'phys-par': '1' if self.include_physical else '0',
+				'ca-data': '1' if self.include_close_approaches else '0',
+				'discovery': '1' if self.include_discovery else '0' }
+			if self.include_close_approaches and self.ca_body:
+				self.params[ 'ca-body' ] = self.ca_body
+			payload = self.request( time=time )
+			self.result = { 'mode': self.mode, 'url': self.url,
+				'params': self.params, 'data': payload }
+			return self.result
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -5030,17 +5120,21 @@ class NearbyObjects( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			self.validate_nhats_options( dv=dv, dur=dur, stay=stay, launch=launch )
+			self.h = float( h )
+			self.occ = int( occ )
+			if self.h not in range( 16, 31 ):
+				raise ValueError( 'NHATS h must be an integer from 16 through 30.' )
+			if self.occ not in range( 9 ):
+				raise ValueError( 'NHATS occ must be between 0 and 8.' )
 			self.mode = 'nhats_summary'
 			self.url = f'{self.base_url}/nhats.api'
-			self.params = { 'dv': float( dv ), 'dur': int( dur ), 'stay': int( stay ),
-					'launch': str( launch ).strip( ), 'h': float( h ), 'occ': int( occ ) }
-			
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
-			self.response.raise_for_status( )
-			payload = self.response.json( ) or { }
-			return { 'mode': self.mode, 'url': self.url, 'params': self.params, 'data': payload }
-		
+			self.params = { 'dv': self.dv, 'dur': self.dur, 'stay': self.stay,
+				'launch': self.launch, 'h': self.h, 'occ': self.occ }
+			payload = self.request( time=time )
+			self.result = { 'mode': self.mode, 'url': self.url,
+				'params': self.params, 'data': payload }
+			return self.result
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -5079,19 +5173,16 @@ class NearbyObjects( Fetcher ):
 		"""
 		try:
 			throw_if( 'designation', designation )
+			self.validate_nhats_options( dv=dv, dur=dur, stay=stay, launch=launch )
 			self.mode = 'nhats_object'
 			self.query = str( designation ).strip( )
 			self.url = f'{self.base_url}/nhats.api'
-			self.params = { 'des': self.query, 'dv': float( dv ), 'dur': int( dur ),
-					'stay': int( stay ), 'launch': str( launch ).strip( ) }
-			
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
-			self.response.raise_for_status( )
-			payload = self.response.json( ) or { }
-			
-			return { 'mode': self.mode, 'url': self.url, 'params': self.params, 'data': payload }
-		
+			self.params = { 'des': self.query, 'dv': self.dv, 'dur': self.dur,
+				'stay': self.stay, 'launch': self.launch }
+			payload = self.request( time=time )
+			self.result = { 'mode': self.mode, 'url': self.url,
+				'params': self.params, 'data': payload }
+			return self.result
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -5124,23 +5215,22 @@ class NearbyObjects( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			self.limit = int( limit )
+			if self.limit < 1:
+				raise ValueError( 'limit must be positive.' )
+			self.start_date = str( date_min or '' ).strip( )
+			if self.start_date:
+				dt.datetime.strptime( self.start_date, '%Y-%m-%d' )
 			self.mode = 'fireballs'
 			self.url = f'{self.base_url}/fireball.api'
-			self.params = { 'limit': int( limit ) }
-			
-			if str( date_min or '' ).strip( ):
-				self.params[ 'date-min' ] = str( date_min ).strip( )
-			
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
-			self.response.raise_for_status( )
-			payload = self.response.json( ) or { }
-			
-			return { 'mode': self.mode, 'url': self.url, 'params': self.params,
-					'count': payload.get( 'count', 0 ), 'fields': payload.get( 'fields', [ ] ),
-					'data': payload.get( 'data', [ ] ),
-					'signature': payload.get( 'signature', { } ) }
-		
+			self.params = { 'limit': self.limit }
+			if self.start_date:
+				self.params[ 'date-min' ] = self.start_date
+			payload = self.request( time=time )
+			self.result = { 'mode': self.mode, 'url': self.url, 'params': self.params,
+				'count': payload.get( 'count', 0 ), 'fields': payload.get( 'fields', [ ] ),
+				'data': payload.get( 'data', [ ] ), 'signature': payload.get( 'signature', { } ) }
+			return self.result
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
