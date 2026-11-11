@@ -1,0 +1,26 @@
+name: PurpleAir and OpenAQ provider contracts
+
+on:
+  pull_request:
+    paths:
+      - fetchers.py
+      - tests/test_purpleair_openaq_contracts.py
+      - .github/workflows/purpleair-openaq-contracts.yml
+  push:
+    paths:
+      - fetchers.py
+      - tests/test_purpleair_openaq_contracts.py
+      - .github/workflows/purpleair-openaq-contracts.yml
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Compile production source
+        run: python -m py_compile fetchers.py
+      - name: Execute provider contract tests
+        run: python -m unittest discover -s tests -p 'test_purpleair_openaq_contracts.py' -v
