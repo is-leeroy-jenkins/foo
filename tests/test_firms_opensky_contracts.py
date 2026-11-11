@@ -118,7 +118,7 @@ class FirmsContractsTests( unittest.TestCase ):
         Returns:
             None: Assertions validate outputs.
         """
-        result = self.client.fetch_area( )
+        result = self.client.fetch_area( source='VIIRS_SNPP_NRT' )
         self.assertEqual( result[ 'mode' ], 'area' )
         self.assertEqual( result[ 'summary' ][ 'count' ], 1 )
         self.assertNotIn( 'secret-map-key', result[ 'url' ] )
@@ -143,7 +143,7 @@ class FirmsContractsTests( unittest.TestCase ):
             self.http.reset_mock( )
             with self.subTest( area=area ):
                 with self.assertRaises( Exception ):
-                    self.client.fetch_area( area_coordinates=area )
+                    self.client.fetch_area( source='VIIRS_SNPP_NRT', area_coordinates=area )
                 self.http.assert_not_called( )
 
     def test_invalid_csv_and_missing_key( self ) -> None:
@@ -160,11 +160,11 @@ class FirmsContractsTests( unittest.TestCase ):
             self.http.return_value.text = response
             with self.subTest( response=response ):
                 with self.assertRaises( Exception ):
-                    self.client.fetch_area( )
+                    self.client.fetch_area( source='VIIRS_SNPP_NRT' )
         self.client.map_key = ''
         self.http.reset_mock( )
         with self.assertRaises( Exception ):
-            self.client.fetch_area( )
+            self.client.fetch_area( source='VIIRS_SNPP_NRT' )
         self.http.assert_not_called( )
 
 
