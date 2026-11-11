@@ -241,7 +241,8 @@ class WaterDataContractsTests( unittest.TestCase ):
         for mode in ( 'monitoring-locations', 'time-series-metadata',
             'latest-continuous', 'latest-daily' ):
             with self.subTest( mode=mode ):
-                result = self.client.fetch( mode=mode )
+                result = self.client.fetch( mode=mode,
+                    monitoring_location_id='USGS-01646500' if mode != 'monitoring-locations' else '' )
                 self.assertEqual( result[ 'mode' ], mode )
                 self.assertIn( 'summary', result )
                 self.assertEqual( result[ 'rows' ], [ ] )

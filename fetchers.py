@@ -11442,7 +11442,7 @@ class CensusData( Fetcher ):
 			self.year = ( year ).strip( )
 			self.dataset = ( dataset ).strip( ).strip( '/' )
 			self.timeout = ( time )
-			if not re.fullmatch( r'\\d{4}', self.year ):
+			if not re.fullmatch( r'\d{4}', self.year ):
 				raise ValueError( 'year must be a four-digit Census vintage.' )
 			if not re.fullmatch( r'[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*', self.dataset ):
 				raise ValueError( 'dataset must contain valid Census dataset path segments.' )
@@ -11518,7 +11518,7 @@ class CensusData( Fetcher ):
 			self.geography_in = ( geography_in or '' ).strip( )
 			self.predicates = self.parse_predicates( predicates )
 			self.timeout = ( time )
-			if not re.fullmatch( r'\\d{4}', self.year ):
+			if not re.fullmatch( r'\d{4}', self.year ):
 				raise ValueError( 'year must be a four-digit Census vintage.' )
 			if not re.fullmatch( r'[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*', self.dataset ):
 				raise ValueError( 'dataset must contain valid Census dataset path segments.' )
