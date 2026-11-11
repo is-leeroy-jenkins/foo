@@ -109,7 +109,7 @@ def throw_if( name: str, value: object ) -> None:
 	"""
 	if value is None:
 		raise ValueError( f'Argument "{name}" cannot be empty!' )
-	if isinstance( value, str ) and (not value.strip( )):
+	if isinstance( value, str ) and not value.strip( ):
 		raise ValueError( f'Argument "{name}" cannot be empty!' )
 	if isinstance( value, (list, tuple, dict, set) ) and len( value ) == 0:
 		raise ValueError( f'Argument "{name}" cannot be empty!' )
@@ -531,7 +531,7 @@ class WebFetcher( Fetcher ):
 			self.left_host = urllib.parse.urlparse( self.left_url ).netloc.lower( )
 			self.right_host = urllib.parse.urlparse( self.right_url ).netloc.lower( )
 			
-			return ( self.left_host != '' ) and self.left_host == self.right_host
+			return self.left_host != '' and self.left_host == self.right_host
 		
 		except Exception:
 			return False
@@ -1682,7 +1682,7 @@ class GoogleDrive( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'GoogleDrive'
-			exception.method = ('fetch( self, *args, **kwargs ) -> List[ Document ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> List[ Document ] | None'
 			Logger( ).write( exception )
 			raise exception
 
@@ -2344,7 +2344,7 @@ class GoogleSearch( Fetcher ):
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'GoogleSearch'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 
@@ -2577,7 +2577,7 @@ class GoogleMaps( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'GoogleMaps'
-			exception.method = ('geocode_coordinates( self, *args, **kwargs ) -> str | None')
+			exception.method = 'geocode_coordinates( self, *args, **kwargs ) -> str | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -2890,7 +2890,7 @@ class GoogleWeather( Fetcher ):
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'GoogleWeather'
-			exception.method = ('resolve_coordinates( self, **kwargs ) -> Tuple[ float, float ]')
+			exception.method = 'resolve_coordinates( self, **kwargs ) -> Tuple[ float, float ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -3276,7 +3276,7 @@ class GoogleWeather( Fetcher ):
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'GoogleWeather'
-			exception.method = ('fetch_alerts( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_alerts( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 
@@ -3447,9 +3447,9 @@ class NavalObservatory( Fetcher ):
 			throw_if( 'longitude', longitude )
 			lat = latitude
 			lon = longitude
-			if not math.isfinite( lat ) or not (-90.0 <= lat <= 90.0):
+			if not math.isfinite( lat ) or not -90.0 <= lat <= 90.0:
 				raise ValueError( 'Latitude must be between -90 and 90 and finite.' )
-			if not math.isfinite( lon ) or not (-180.0 <= lon <= 180.0):
+			if not math.isfinite( lon ) or not -180.0 <= lon <= 180.0:
 				raise ValueError( 'Longitude must be between -180 and 180 and finite.' )
 			return lat, lon
 		except Exception as e:
@@ -6022,7 +6022,7 @@ class SpaceWeather( Fetcher ):
 			if self.endpoint == 'CMEAnalysis':
 				self.speed = speed
 				self.half_angle = half_angle
-				if self.speed < 0 or not (0 <= self.half_angle <= 180):
+				if self.speed < 0 or not 0 <= self.half_angle <= 180:
 					raise ValueError( 'CME speed and half_angle must be nonnegative; half_angle <= 180.' )
 				self.params[ 'mostAccurateOnly' ] = str( bool( most_accurate_only ) ).lower( )
 				self.params[ 'completeEntryOnly' ] = str( bool( complete_entry_only ) ).lower( )
@@ -7805,7 +7805,7 @@ method contract.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'GovData'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -8722,7 +8722,7 @@ class Congress( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'Congress'
-			exception.method = ('build_params( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'build_params( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -8775,7 +8775,7 @@ class Congress( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'Congress'
-			exception.method = ('request( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'request( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -8929,7 +8929,7 @@ class Congress( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'Congress'
-			exception.method = ('fetch_bill( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_bill( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -8981,7 +8981,7 @@ class Congress( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'Congress'
-			exception.method = ('fetch_laws( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_laws( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -9030,7 +9030,7 @@ class Congress( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'Congress'
-			exception.method = ('fetch_law( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_law( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -9135,7 +9135,7 @@ class Congress( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'Congress'
-			exception.method = ('fetch_report( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_report( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -9226,7 +9226,7 @@ class Congress( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'Congress'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -9806,7 +9806,7 @@ class OpenWeather( Fetcher ):
 			self.mode = 'current'
 			self.latitude = lat
 			self.longitude = long
-			if not (-90.0 <= self.latitude <= 90.0) or not (-180.0 <= self.longitude <= 180.0) or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
+			if not -90.0 <= self.latitude <= 90.0 or not -180.0 <= self.longitude <= 180.0 or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
 				raise ValueError( 'Invalid latitude or longitude.' )
 			self.timezone = ( zone or 'auto' ).strip( )
 			
@@ -9874,7 +9874,7 @@ class OpenWeather( Fetcher ):
 			self.mode = 'hourly'
 			self.latitude = lat
 			self.longitude = long
-			if not (-90.0 <= self.latitude <= 90.0) or not (-180.0 <= self.longitude <= 180.0) or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
+			if not -90.0 <= self.latitude <= 90.0 or not -180.0 <= self.longitude <= 180.0 or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
 				raise ValueError( 'Invalid latitude or longitude.' )
 			self.timezone = ( zone or 'auto' ).strip( )
 			self.params = { 'latitude': self.latitude, 'longitude': self.longitude,
@@ -9941,7 +9941,7 @@ class OpenWeather( Fetcher ):
 			self.mode = 'daily'
 			self.latitude = lat
 			self.longitude = long
-			if not (-90.0 <= self.latitude <= 90.0) or not (-180.0 <= self.longitude <= 180.0) or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
+			if not -90.0 <= self.latitude <= 90.0 or not -180.0 <= self.longitude <= 180.0 or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
 				raise ValueError( 'Invalid latitude or longitude.' )
 			self.timezone = ( zone or 'auto' ).strip( )
 			self.params = { 'latitude': self.latitude, 'longitude': self.longitude,
@@ -10301,7 +10301,7 @@ class HistoricalWeather( Fetcher ):
 			
 			self.latitude = lat
 			self.longitude = long
-			if not (-90.0 <= self.latitude <= 90.0) or not (-180.0 <= self.longitude <= 180.0) or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
+			if not -90.0 <= self.latitude <= 90.0 or not -180.0 <= self.longitude <= 180.0 or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
 				raise ValueError( 'Invalid latitude or longitude.' )
 			if not isinstance( date, dt.date ):
 				raise ValueError( 'date must be a datetime.date instance.' )
@@ -10889,7 +10889,7 @@ class GoogleGeocoding( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'GoogleGeocoding'
-			exception.method = ('request( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'request( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -10984,7 +10984,7 @@ class GoogleGeocoding( Fetcher ):
 			self.mode = 'reverse'
 			self.latitude = latitude
 			self.longitude = longitude
-			if not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ) or not (-90 <= self.latitude <= 90) or not (-180 <= self.longitude <= 180):
+			if not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ) or not -90 <= self.latitude <= 90 or not -180 <= self.longitude <= 180:
 				raise ValueError( 'Latitude or longitude is outside valid geographic bounds.' )
 			self.language = ( language or 'en' ).strip( )
 			self.result_type = ( result_type or '' ).strip( )
@@ -11367,7 +11367,7 @@ class CensusData( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'CensusData'
-			exception.method = ('parse_predicates( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'parse_predicates( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -11408,7 +11408,7 @@ class CensusData( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'CensusData'
-			exception.method = ('shape_table( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'shape_table( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -11551,7 +11551,7 @@ class CensusData( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'CensusData'
-			exception.method = ('fetch_data( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_data( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -11608,7 +11608,7 @@ class CensusData( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'CensusData'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -12049,7 +12049,7 @@ class Socrata( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'Socrata'
-			exception.method = ('fetch_rows( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_rows( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -12106,7 +12106,7 @@ class Socrata( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'Socrata'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -12548,7 +12548,7 @@ class HealthData( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'HealthData'
-			exception.method = ('fetch_rows( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_rows( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -12605,7 +12605,7 @@ class HealthData( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'HealthData'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -12903,7 +12903,7 @@ method contract.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'GlobalHealthData'
-			exception.method = ('fetch_athena( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_athena( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -12949,7 +12949,7 @@ method contract.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'GlobalHealthData'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -13268,7 +13268,7 @@ class UnitedNations( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'UnitedNations'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -14044,7 +14044,7 @@ class Wonder( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'Wonder'
-			exception.method = ('submit_query( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'submit_query( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -14091,7 +14091,7 @@ class Wonder( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'Wonder'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -14668,7 +14668,7 @@ class USGSEarthquakes( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'USGSEarthquakes'
-			exception.method = ('summarize_features( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'summarize_features( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -14757,7 +14757,7 @@ class USGSEarthquakes( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'USGSEarthquakes'
-			exception.method = ('fetch_feed( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_feed( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -14871,7 +14871,7 @@ class USGSEarthquakes( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'USGSEarthquakes'
-			exception.method = ('fetch_search( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_search( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -14936,7 +14936,7 @@ class USGSEarthquakes( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'USGSEarthquakes'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -15480,7 +15480,7 @@ value.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'USGSWaterData'
-			exception.method = ('summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -15512,7 +15512,7 @@ value.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'USGSWaterData'
-			exception.method = ('package_response( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'package_response( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -15586,7 +15586,7 @@ value.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'USGSWaterData'
-			exception.method = ('request( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'request( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -15871,7 +15871,7 @@ value.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'USGSWaterData'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -16365,7 +16365,7 @@ class USGSTheNationalMap( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'USGSTheNationalMap'
-			exception.method = ('summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -16397,7 +16397,7 @@ class USGSTheNationalMap( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'USGSTheNationalMap'
-			exception.method = ('package_response( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'package_response( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -16466,7 +16466,7 @@ class USGSTheNationalMap( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'USGSTheNationalMap'
-			exception.method = ('request( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'request( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -16965,7 +16965,7 @@ class USGSScienceBase( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'USGSScienceBase'
-			exception.method = ('shape_single_item( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'shape_single_item( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -17044,7 +17044,7 @@ class USGSScienceBase( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'USGSScienceBase'
-			exception.method = ('summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -17076,7 +17076,7 @@ class USGSScienceBase( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'USGSScienceBase'
-			exception.method = ('package_response( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'package_response( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -19016,7 +19016,7 @@ related operations.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'EoNet'
-			exception.method = ('validate_date_pair( self, *args, **kwargs ) -> Tuple[ str, str ]')
+			exception.method = 'validate_date_pair( self, *args, **kwargs ) -> Tuple[ str, str ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -19164,7 +19164,7 @@ related operations.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'EoNet'
-			exception.method = ('summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -19196,7 +19196,7 @@ related operations.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'EoNet'
-			exception.method = ('package_response( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'package_response( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -19265,7 +19265,7 @@ related operations.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'EoNet'
-			exception.method = ('request( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'request( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -19334,7 +19334,7 @@ related operations.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'EoNet'
-			exception.method = ('fetch_events( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_events( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -19433,7 +19433,7 @@ related operations.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'EoNet'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -19736,7 +19736,7 @@ to the application logger, and re-raises it.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'EnviroFacts'
-			exception.method = ('resolve_table_path( self, *args, **kwargs ) -> str')
+			exception.method = 'resolve_table_path( self, *args, **kwargs ) -> str'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -19780,7 +19780,7 @@ to the application logger, and re-raises it.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'EnviroFacts'
-			exception.method = ('shape_rows( self, *args, **kwargs ) -> List[ Dict[ str, Any ] ]')
+			exception.method = 'shape_rows( self, *args, **kwargs ) -> List[ Dict[ str, Any ] ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -19822,7 +19822,7 @@ to the application logger, and re-raises it.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'EnviroFacts'
-			exception.method = ('summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -19855,7 +19855,7 @@ to the application logger, and re-raises it.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'EnviroFacts'
-			exception.method = ('package_response( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'package_response( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -19902,7 +19902,7 @@ to the application logger, and re-raises it.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'EnviroFacts'
-			exception.method = ('request( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'request( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -19953,7 +19953,7 @@ to the application logger, and re-raises it.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'EnviroFacts'
-			exception.method = ('fetch_table( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_table( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -19991,7 +19991,7 @@ to the application logger, and re-raises it.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'EnviroFacts'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -20554,7 +20554,7 @@ class TidesAndCurrents( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'TidesAndCurrents'
-			exception.method = ('summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -20587,7 +20587,7 @@ class TidesAndCurrents( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'TidesAndCurrents'
-			exception.method = ('package_response( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'package_response( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -20659,7 +20659,7 @@ metadata, or generated schema content.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'TidesAndCurrents'
-			exception.method = ('request( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'request( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -20889,7 +20889,7 @@ metadata, or generated schema content.
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'TidesAndCurrents'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -21210,7 +21210,7 @@ class UvIndex( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'UvIndex'
-			exception.method = ('shape_rows( self, *args, **kwargs ) -> List[ Dict[ str, Any ] ]')
+			exception.method = 'shape_rows( self, *args, **kwargs ) -> List[ Dict[ str, Any ] ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -21267,7 +21267,7 @@ class UvIndex( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'UvIndex'
-			exception.method = ('summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -21299,7 +21299,7 @@ class UvIndex( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'UvIndex'
-			exception.method = ('package_response( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'package_response( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -21354,7 +21354,7 @@ class UvIndex( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'UvIndex'
-			exception.method = ('request( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'request( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -21608,7 +21608,7 @@ class UvIndex( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'UvIndex'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -22077,7 +22077,7 @@ class PurpleAir( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'PurpleAir'
-			exception.method = ('validate_non_negative_integer( self, *args, **kwargs ) -> int')
+			exception.method = 'validate_non_negative_integer( self, *args, **kwargs ) -> int'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -22279,7 +22279,7 @@ class PurpleAir( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'PurpleAir'
-			exception.method = ('summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -22314,7 +22314,7 @@ class PurpleAir( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'PurpleAir'
-			exception.method = ('package_response( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'package_response( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -22505,7 +22505,7 @@ class PurpleAir( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'PurpleAir'
-			exception.method = ('fetch_sensor( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_sensor( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -22585,7 +22585,7 @@ class PurpleAir( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'PurpleAir'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -22874,7 +22874,7 @@ class OpenAQ( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'OpenAQ'
-			exception.method = ('validate_positive_integer( self, *args, **kwargs ) -> int')
+			exception.method = 'validate_positive_integer( self, *args, **kwargs ) -> int'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -22913,7 +22913,7 @@ class OpenAQ( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'OpenAQ'
-			exception.method = ('validate_non_negative_integer( self, *args, **kwargs ) -> int')
+			exception.method = 'validate_non_negative_integer( self, *args, **kwargs ) -> int'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -23261,7 +23261,7 @@ class OpenAQ( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'OpenAQ'
-			exception.method = ('summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'summarize_rows( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -23297,7 +23297,7 @@ class OpenAQ( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'OpenAQ'
-			exception.method = ('package_response( self, *args, **kwargs ) -> Dict[ str, Any ]')
+			exception.method = 'package_response( self, *args, **kwargs ) -> Dict[ str, Any ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -23366,7 +23366,7 @@ class OpenAQ( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'OpenAQ'
-			exception.method = ('request( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'request( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -23649,7 +23649,7 @@ class OpenAQ( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'OpenAQ'
-			exception.method = ('fetch_latest( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch_latest( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -23718,7 +23718,7 @@ class OpenAQ( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'OpenAQ'
-			exception.method = ('fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None')
+			exception.method = 'fetch( self, *args, **kwargs ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -24114,7 +24114,7 @@ class Firms( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			text = ( csv_text or '' )
+			text = csv_text or ''
 			
 			if not text.strip( ):
 				return [ ]
