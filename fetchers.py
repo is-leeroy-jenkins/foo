@@ -2510,7 +2510,6 @@ class GoogleMaps( Fetcher ):
 		"""
 		try:
 			throw_if( 'address', address )
-			self.mode = 'geocode_location'
 			self.address = str( address ).strip( )
 			self.url = 'https://maps.googleapis.com/maps/api/geocode/json'
 			self.params = { 'address': self.address, 'key': self.api_key }
@@ -2574,7 +2573,6 @@ class GoogleMaps( Fetcher ):
 			throw_if( 'latitude', lat )
 			throw_if( 'longitude', long )
 			
-			self.mode = 'geocode_coordinates'
 			self.latitude = float( lat )
 			self.longitude = float( long )
 			self.coordinates = (self.latitude, self.longitude)
@@ -2632,7 +2630,6 @@ class GoogleMaps( Fetcher ):
 			if not isinstance( address, list ):
 				raise TypeError( 'address must be a list of address-line strings.' )
 			
-			self.mode = 'validate_address'
 			self.url = 'https://addressvalidation.googleapis.com/v1:validateAddress'
 			self.address_lines = [ str( line ).strip( ) for line in address if
 					line is not None and str( line ).strip( ) ]
@@ -22165,12 +22162,30 @@ class PurpleAir( Fetcher ):
 			self.mode = self.validate_mode( mode )
 			
 			if self.mode == 'sensors':
-				return self.fetch_sensors( nwlng=nwlng, nwlat=nwlat, selng=selng, selat=selat,
-					location_type=location_type, max_age=max_age, modified_since=modified_since,
-					fields=fields, time=time )
-			
+				throw_if( 'nwlng', nwlng )
+				throw_if( 'nwlat', nwlat )
+				throw_if( 'selng', selng )
+				throw_if( 'selat', selat )
+				self.nwlng = float( nwlng )
+				self.nwlat = float( nwlat )
+				self.selng = float( selng )
+				self.selat = float( selat )
+				self.location_type = location_type
+				self.max_age = max_age
+				self.modified_since = modified_since
+				self.fields = fields
+				self.timeout = time
+				return self.fetch_sensors( nwlng=self.nwlng, nwlat=self.nwlat,
+					selng=self.selng, selat=self.selat, location_type=self.location_type,
+					max_age=self.max_age, modified_since=self.modified_since,
+					fields=self.fields, time=self.timeout )
 			if self.mode == 'sensor':
-				return self.fetch_sensor( sensor_index=sensor_index, fields=fields, time=time )
+				throw_if( 'sensor_index', sensor_index )
+				self.sensor_index = int( sensor_index )
+				self.fields = fields
+				self.timeout = time
+				return self.fetch_sensor( sensor_index=self.sensor_index,
+					fields=self.fields, time=self.timeout )
 			
 			raise ValueError( "Unsupported PurpleAir mode. Use 'sensors' or 'sensor'." )
 		
@@ -22914,7 +22929,9 @@ class OpenAQ( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.endpoint = self.validate_endpoint( endpoint )
+			throw_if( 'endpoint', endpoint )
+			self.endpoint = str( endpoint ).strip( ).strip( '/' )
+			self.endpoint = self.validate_endpoint( self.endpoint )
 			throw_if( 'time', time )
 			
 			self.timeout = int( time )
@@ -23872,7 +23889,9 @@ class Firms( Fetcher ):
 		"""
 		try:
 			self.mode = 'area'
-			self.source = self.validate_source( source )
+			throw_if( 'source', source )
+			self.source = source
+			self.source = self.validate_source( self.source )
 			self.area_coordinates = self.validate_area_coordinates( area_coordinates )
 			self.day_range = self.validate_day_range( day_range )
 			self.date = self.validate_date( date )
