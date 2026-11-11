@@ -17479,6 +17479,11 @@ class AirNow( Fetcher ):
 			
 			self.endpoint = str( endpoint ).strip( )
 			self.timeout = int( time )
+			if self.timeout < 1:
+				raise ValueError( 'time must be greater than zero.' )
+			if params is not None and not isinstance( params, dict ):
+				raise ValueError( 'params must be a dictionary.' )
+			throw_if( 'api_key', self.api_key )
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
 			
@@ -17499,7 +17504,9 @@ class AirNow( Fetcher ):
 			
 			self.response.raise_for_status( )
 			self.payload = self.response.json( )
-			self.result = { 'url': self.url, 'params': self.params, 'raw': self.payload }
+			if not isinstance( self.payload, list ) or any( not isinstance( item, dict ) for item in self.payload ):
+				raise ValueError( 'AirNow returned an invalid observation or forecast payload.' )
+			self.result = { 'url': self.url, 'params': { key: value for key, value in self.params.items( ) if key != 'API_KEY' }, 'raw': self.payload }
 			
 			return self.result
 		
@@ -17635,7 +17642,8 @@ class AirNow( Fetcher ):
 			records = records or [ ]
 			rows = self.shape_rows( records )
 			
-			self.result = { 'mode': self.mode, 'url': self.url, 'params': self.params,
+			self.result = { 'mode': self.mode, 'url': self.url,
+					'params': { key: value for key, value in self.params.items( ) if key != 'API_KEY' },
 					'summary': self.summarize_rows( rows ), 'rows': rows, 'raw': records }
 			
 			return self.result
@@ -17679,7 +17687,11 @@ class AirNow( Fetcher ):
 			
 			self.mode = 'current-zip'
 			self.zip_code = str( zip_code ).strip( )
+			if not re.fullmatch( r'\d{5}', self.zip_code ):
+				raise ValueError( 'zip_code must contain exactly five digits.' )
 			self.distance = int( distance )
+			if self.distance < 1:
+				raise ValueError( 'distance must be greater than zero.' )
 			self.timeout = int( time )
 			
 			self.request( endpoint='observation/zipCode/current/', params={
@@ -17729,7 +17741,13 @@ class AirNow( Fetcher ):
 			self.mode = 'current-latlon'
 			self.latitude = float( latitude )
 			self.longitude = float( longitude )
+			if not (math.isfinite( self.latitude ) and -90 <= self.latitude <= 90):
+				raise ValueError( 'latitude must be finite and between -90 and 90.' )
+			if not (math.isfinite( self.longitude ) and -180 <= self.longitude <= 180):
+				raise ValueError( 'longitude must be finite and between -180 and 180.' )
 			self.distance = int( distance )
+			if self.distance < 1:
+				raise ValueError( 'distance must be greater than zero.' )
 			self.timeout = int( time )
 			
 			self.request( endpoint='observation/latLong/current/', params={
@@ -17779,8 +17797,12 @@ class AirNow( Fetcher ):
 			
 			self.mode = 'forecast-zip'
 			self.zip_code = str( zip_code ).strip( )
+			if not re.fullmatch( r'\d{5}', self.zip_code ):
+				raise ValueError( 'zip_code must contain exactly five digits.' )
 			self.date = str( date ).strip( )
 			self.distance = int( distance )
+			if self.distance < 1:
+				raise ValueError( 'distance must be greater than zero.' )
 			self.timeout = int( time )
 			
 			self.request( endpoint='forecast/zipCode/', params={ 'zipCode': self.zip_code,
@@ -17834,8 +17856,14 @@ class AirNow( Fetcher ):
 			self.mode = 'forecast-latlon'
 			self.latitude = float( latitude )
 			self.longitude = float( longitude )
+			if not (math.isfinite( self.latitude ) and -90 <= self.latitude <= 90):
+				raise ValueError( 'latitude must be finite and between -90 and 90.' )
+			if not (math.isfinite( self.longitude ) and -180 <= self.longitude <= 180):
+				raise ValueError( 'longitude must be finite and between -180 and 180.' )
 			self.date = str( date ).strip( )
 			self.distance = int( distance )
+			if self.distance < 1:
+				raise ValueError( 'distance must be greater than zero.' )
 			self.timeout = int( time )
 			
 			self.request( endpoint='forecast/latLong/', params={ 'latitude': self.latitude,
@@ -19677,7 +19705,7 @@ to the application logger, and re-raises it.
 				if self.table_name == 'EF_W_EMISSIONS_SOURCE_GHG':
 					segments.extend( [ 'STATE', self.state_code ] )
 				else:
-					segments.extend( [ 'ST', self.state_code ] )
+					segments.extend( [ 'STATE_ABBR', self.state_code ] )
 			
 			if self.facility_name:
 				if self.table_name == 'EF_W_EMISSIONS_SOURCE_GHG':
@@ -19685,7 +19713,7 @@ to the application logger, and re-raises it.
 				else:
 					segments.extend( [ 'FACILITY_NAME', self.facility_name ] )
 			
-			segments.extend( [ 'ROWS', str( self.limit ), 'JSON' ] )
+			segments.extend( [ 'ROWS', f'0:{self.limit - 1}', 'JSON' ] )
 			
 			self.path = '/'.join( [ urllib.parse.quote( str( segment ), safe='' ) for segment in
 					segments ] )
@@ -19852,6 +19880,8 @@ to the application logger, and re-raises it.
 				timeout=self.timeout )
 			self.response.raise_for_status( )
 			self.payload = self.response.json( )
+			if not isinstance( self.payload, list ) or any( not isinstance( row, dict ) for row in self.payload ):
+				raise ValueError( 'Envirofacts returned an invalid table response.' )
 			self.result = { 'url': self.url, 'params': self.params, 'raw': self.payload }
 			
 			return self.result
