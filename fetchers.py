@@ -21939,7 +21939,7 @@ class PurpleAir( Fetcher ):
 			throw_if( name, value )
 			
 			number = float( value )
-			if number < -180.0 or number > 180.0:
+			if not math.isfinite( number ) or number < -180.0 or number > 180.0:
 				raise ValueError( f'{name} must be between -180 and 180.' )
 			
 			return number
@@ -21974,7 +21974,7 @@ class PurpleAir( Fetcher ):
 			throw_if( name, value )
 			
 			number = float( value )
-			if number < -90.0 or number > 90.0:
+			if not math.isfinite( number ) or number < -90.0 or number > 90.0:
 				raise ValueError( f'{name} must be between -90 and 90.' )
 			
 			return number
@@ -22293,8 +22293,9 @@ class PurpleAir( Fetcher ):
 				
 				try:
 					if pm25_value is not None and str( pm25_value ).strip( ):
-						if max_pm25 is None or float( pm25_value ) > float( max_pm25 ):
-							max_pm25 = float( pm25_value )
+						value = float( pm25_value )
+						if math.isfinite( value ) and (max_pm25 is None or value > max_pm25):
+							max_pm25 = value
 				except Exception:
 					pass
 			
@@ -22369,6 +22370,9 @@ class PurpleAir( Fetcher ):
 		try:
 			self.endpoint = self.validate_endpoint( endpoint )
 			throw_if( 'time', time )
+			throw_if( 'api_key', self.api_key )
+			if params is not None and not isinstance( params, dict ):
+				raise ValueError( 'params must be a dictionary.' )
 			
 			self.timeout = int( time )
 			self.url = f'{self.base_url}/{self.endpoint}'
@@ -22390,8 +22394,18 @@ class PurpleAir( Fetcher ):
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
-			self.payload = self.response.json( ) or { }
-			self.result = { 'url': self.response.url, 'params': self.params, 'raw': self.payload }
+			self.payload = self.response.json( )
+			if not isinstance( self.payload, dict ) or self.payload.get( 'error' ) or self.payload.get( 'errors' ):
+				raise ValueError( 'PurpleAir returned an invalid or error response.' )
+			if self.endpoint == 'sensors':
+				if not isinstance( self.payload.get( 'fields' ), list ) or not isinstance( self.payload.get( 'data' ), list ):
+					raise ValueError( 'PurpleAir sensor list must contain fields and data arrays.' )
+				if any( not isinstance( row, list ) for row in self.payload[ 'data' ] ):
+					raise ValueError( 'PurpleAir sensor rows must be arrays.' )
+			else:
+				if not isinstance( self.payload.get( 'sensor' ), dict ):
+					raise ValueError( 'PurpleAir sensor detail must contain a sensor object.' )
+			self.result = { 'url': self.url, 'params': self.params, 'raw': self.payload }
 			
 			return self.result
 		
@@ -22959,6 +22973,8 @@ class OpenAQ( Fetcher ):
 			
 			latitude = float( parts[ 0 ] )
 			longitude = float( parts[ 1 ] )
+			if not math.isfinite( latitude ) or not math.isfinite( longitude ):
+				raise ValueError( 'coordinates must contain finite values.' )
 			
 			if latitude < -90.0 or latitude > 90.0:
 				raise ValueError( 'coordinates latitude must be between -90 and 90.' )
@@ -23196,7 +23212,8 @@ class OpenAQ( Fetcher ):
 				datetime_value = item.get( 'datetime', { } ) or item.get( 'date', { } ) or { }
 				
 				rows.append( { 'Location Id': (
-						location.get( 'id', '' ) if isinstance( location, dict ) else ''),
+						location.get( 'id', item.get( 'locationsId', '' ) ) if isinstance( location, dict ) else item.get( 'locationsId', '' )),
+					'Sensor Id': item.get( 'sensorsId', '' ),
 						'Name': (
 						location.get( 'name', '' ) if isinstance( location, dict ) else ''),
 						'Parameter': (
@@ -23205,7 +23222,8 @@ class OpenAQ( Fetcher ):
 						'Parameter Id': (
 								parameter.get( 'id', '' ) if isinstance( parameter, dict ) else
 								''),
-						'Value': item.get( 'value', '' ), 'Unit': item.get( 'unit', '' ),
+						'Value': item.get( 'value', '' ), 'Unit': (
+						item.get( 'unit', '' ) or (parameter.get( 'units', '' ) if isinstance( parameter, dict ) else '')),
 						'Datetime': (
 								datetime_value.get( 'utc', '' ) if isinstance( datetime_value,
 									dict ) else datetime_value),
@@ -23337,6 +23355,9 @@ class OpenAQ( Fetcher ):
 			self.endpoint = str( endpoint ).strip( ).strip( '/' )
 			self.endpoint = self.validate_endpoint( self.endpoint )
 			throw_if( 'time', time )
+			throw_if( 'api_key', self.api_key )
+			if params is not None and not isinstance( params, dict ):
+				raise ValueError( 'params must be a dictionary.' )
 			
 			self.timeout = int( time )
 			self.url = f'{self.base_url}/{self.endpoint}'
@@ -23358,8 +23379,12 @@ class OpenAQ( Fetcher ):
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
-			self.payload = self.response.json( ) or { }
-			self.result = { 'url': self.response.url, 'params': self.params, 'raw': self.payload }
+			self.payload = self.response.json( )
+			if not isinstance( self.payload, dict ) or self.payload.get( 'error' ) or self.payload.get( 'errors' ):
+				raise ValueError( 'OpenAQ returned an invalid or error response.' )
+			if not isinstance( self.payload.get( 'results' ), list ) or any( not isinstance( item, dict ) for item in self.payload[ 'results' ] ):
+				raise ValueError( 'OpenAQ results must be an array of objects.' )
+			self.result = { 'url': self.url, 'params': self.params, 'raw': self.payload }
 			
 			return self.result
 		
