@@ -3914,6 +3914,10 @@ class EarthObservatory( Fetcher ):
 		self.headers = { }
 		self.base_url = 'https://eonet.gsfc.nasa.gov/api/v3'
 		self.url = None
+		self.timeout = 20
+		self.response = None
+		self.payload = { }
+		self.result = { }
 		self.params = { }
 		self.mode = 'events'
 		self.status = 'open'
@@ -3939,8 +3943,45 @@ class EarthObservatory( Fetcher ):
 		    List[str]: Ordered public member names exposed by the instance.
 		"""
 		return [ 'base_url', 'url', 'params', 'mode', 'status', 'category', 'source', 'days',
-				'limit', 'start_date', 'end_date', 'fetch_events', 'fetch_categories',
+				'limit', 'start_date', 'end_date', 'request', 'fetch_events', 'fetch_categories',
 				'fetch_sources', 'fetch_layers', 'fetch', 'create_schema' ]
+	
+	def request( self, time: int=20 ) -> Dict[ str, Any ]:
+		"""Retrieve and validate the configured NASA EONET JSON response.
+
+		Purpose:
+		    Uses the endpoint and parameters already stored by the calling method and
+		    rejects malformed or provider-reported error responses.
+
+		Args:
+		    time (int): Maximum request duration in seconds.
+
+		Returns:
+		    Dict[str, Any]: Validated EONET response object.
+
+		Raises:
+		    Error: Reports request and response validation failures.
+		"""
+		try:
+			self.timeout = int( time )
+			if self.timeout < 1:
+				raise ValueError( 'time must be greater than or equal to 1.' )
+			self.response = requests.get( url=self.url, params=self.params,
+				headers=self.headers, timeout=self.timeout )
+			self.response.raise_for_status( )
+			self.payload = self.response.json( )
+			if not isinstance( self.payload, dict ):
+				raise ValueError( 'NASA EONET response must be a JSON object.' )
+			if self.payload.get( 'error' ):
+				raise ValueError( f"NASA EONET error: {self.payload[ 'error' ]}" )
+			return self.payload
+		except Exception as exc:
+			exception = Error( exc )
+			exception.module = 'fetchers'
+			exception.cause = 'EarthObservatory'
+			exception.method = 'request( self, time: int=20 ) -> Dict[ str, Any ]'
+			Logger( ).write( exception )
+			raise exception
 	
 	def fetch_events( self, status: str='open', category: str='', source: str='', limit: int=20,
 			days: int=30, start_date: str='', end_date: str='', time: int=20 ) -> Dict[ str, Any ]:
@@ -3973,43 +4014,44 @@ class EarthObservatory( Fetcher ):
 		"""
 		try:
 			self.mode = 'events'
-			self.status = str( status or 'open' ).strip( ).lower( )
+			self.status = str( status ).strip( ).lower( )
 			self.category = str( category or '' ).strip( )
 			self.source = str( source or '' ).strip( )
 			self.limit = int( limit )
 			self.days = int( days )
 			self.start_date = str( start_date or '' ).strip( )
 			self.end_date = str( end_date or '' ).strip( )
+			if self.status not in ( 'open', 'closed', 'all' ):
+				raise ValueError( 'status must be open, closed, or all.' )
+			if self.limit < 1 or self.days < 1:
+				raise ValueError( 'limit and days must be positive integers.' )
+			if bool( self.start_date ) != bool( self.end_date ):
+				raise ValueError( 'start_date and end_date must be supplied together.' )
+			if self.start_date:
+				start = dt.datetime.strptime( self.start_date, '%Y-%m-%d' ).date( )
+				end = dt.datetime.strptime( self.end_date, '%Y-%m-%d' ).date( )
+				if start > end:
+					raise ValueError( 'start_date must be on or before end_date.' )
 			self.url = f'{self.base_url}/events'
-			self.params = { }
-			
-			if self.status:
-				self.params[ 'status' ] = self.status
-			
+			self.params = { 'status': self.status, 'limit': self.limit }
 			if self.category:
 				self.params[ 'category' ] = self.category
-			
 			if self.source:
 				self.params[ 'source' ] = self.source
-			
-			if self.limit > 0:
-				self.params[ 'limit' ] = self.limit
-			
-			if self.start_date and self.end_date:
+			if self.start_date:
 				self.params[ 'start' ] = self.start_date
 				self.params[ 'end' ] = self.end_date
-			elif self.days > 0:
+			else:
 				self.params[ 'days' ] = self.days
-			
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
-			self.response.raise_for_status( )
-			payload = self.response.json( ) or { }
-			
-			return { 'mode': self.mode, 'url': self.url, 'params': self.params,
-					'events': payload.get( 'events', [ ] ), 'title': payload.get( 'title', '' ),
-					'description': payload.get( 'description', '' ) }
-		
+			self.payload = self.request( time=time )
+			if not isinstance( self.payload.get( 'events', [ ] ), list ):
+				raise ValueError( 'NASA EONET events must be a list.' )
+			self.result = { 'mode': self.mode, 'url': self.url, 'params': self.params,
+				'events': self.payload.get( 'events', [ ] ),
+				'title': self.payload.get( 'title', '' ),
+				'description': self.payload.get( 'description', '' ) }
+			return self.result
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -4039,14 +4081,15 @@ class EarthObservatory( Fetcher ):
 			self.mode = 'categories'
 			self.url = f'{self.base_url}/categories'
 			self.params = { }
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
-			self.response.raise_for_status( )
-			payload = self.response.json( ) or { }
-			return { 'mode': self.mode, 'url': self.url, 'params': self.params,
-					'categories': payload.get( 'categories', [ ] ),
-					'title': payload.get( 'title', '' ),
-					'description': payload.get( 'description', '' ) }
+			self.payload = self.request( time=time )
+			if not isinstance( self.payload.get( 'categories', [ ] ), list ):
+				raise ValueError( 'NASA EONET categories must be a list.' )
+			self.result = { 'mode': self.mode, 'url': self.url, 'params': self.params,
+				'categories': self.payload.get( 'categories', [ ] ),
+				'title': self.payload.get( 'title', '' ),
+				'description': self.payload.get( 'description', '' ) }
+			return self.result
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -4076,13 +4119,15 @@ class EarthObservatory( Fetcher ):
 			self.mode = 'sources'
 			self.url = f'{self.base_url}/sources'
 			self.params = { }
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
-			self.response.raise_for_status( )
-			payload = self.response.json( ) or { }
-			return { 'mode': self.mode, 'url': self.url, 'params': self.params,
-					'sources': payload.get( 'sources', [ ] ), 'title': payload.get( 'title', '' ),
-					'description': payload.get( 'description', '' ) }
+			self.payload = self.request( time=time )
+			if not isinstance( self.payload.get( 'sources', [ ] ), list ):
+				raise ValueError( 'NASA EONET sources must be a list.' )
+			self.result = { 'mode': self.mode, 'url': self.url, 'params': self.params,
+				'sources': self.payload.get( 'sources', [ ] ),
+				'title': self.payload.get( 'title', '' ),
+				'description': self.payload.get( 'description', '' ) }
+			return self.result
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -4113,20 +4158,31 @@ class EarthObservatory( Fetcher ):
 		try:
 			self.mode = 'layers'
 			self.category = str( category or '' ).strip( )
+			if self.category and not re.fullmatch( r'[A-Za-z0-9_-]+', self.category ):
+				raise ValueError( 'category must be a valid EONET category identifier.' )
+			self.url = f'{self.base_url}/layers'
 			if self.category:
-				self.url = f'{self.base_url}/layers/{self.category}'
-			else:
-				self.url = f'{self.base_url}/layers'
-			
+				self.url = f'{self.url}/{self.category}'
 			self.params = { }
-			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=int( time ) )
-			self.response.raise_for_status( )
-			payload = self.response.json( ) or { }
-			return { 'mode': self.mode, 'url': self.url, 'params': self.params,
-					'category': self.category, 'layers': payload.get( 'layers', [ ] ),
-					'title': payload.get( 'title', '' ),
-					'description': payload.get( 'description', '' ) }
+			self.payload = self.request( time=time )
+			categories = self.payload.get( 'categories', [ ] )
+			if not isinstance( categories, list ):
+				raise ValueError( 'NASA EONET layer categories must be a list.' )
+			layers = [ ]
+			for item in categories:
+				if not isinstance( item, dict ) or not isinstance( item.get( 'layers', [ ] ), list ):
+					raise ValueError( 'NASA EONET layer category is malformed.' )
+				layers.extend( item.get( 'layers', [ ] ) )
+			if not categories:
+				layers = self.payload.get( 'layers', [ ] )
+			if not isinstance( layers, list ):
+				raise ValueError( 'NASA EONET layers must be a list.' )
+			self.result = { 'mode': self.mode, 'url': self.url, 'params': self.params,
+				'category': self.category, 'layers': layers,
+				'title': self.payload.get( 'title', '' ),
+				'description': self.payload.get( 'description', '' ) }
+			return self.result
+
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -4168,21 +4224,28 @@ class EarthObservatory( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			active_mode = (mode or 'events').strip( ).lower( )
-			if active_mode == 'events':
-				return self.fetch_events( status=status, category=category, source=source,
-					limit=limit, days=days, start_date=start_date, end_date=end_date, time=time )
-			
-			if active_mode == 'categories':
-				return self.fetch_categories( time=time )
-			
-			if active_mode == 'sources':
-				return self.fetch_sources( time=time )
-			
-			if active_mode == 'layers':
-				return self.fetch_layers( category=category, time=time )
-			
+			self.mode = str( mode or 'events' ).strip( ).lower( )
+			self.timeout = int( time )
+			if self.mode == 'events':
+				self.status = status
+				self.category = category
+				self.source = source
+				self.limit = limit
+				self.days = days
+				self.start_date = start_date
+				self.end_date = end_date
+				return self.fetch_events( status=self.status, category=self.category,
+					source=self.source, limit=self.limit, days=self.days,
+					start_date=self.start_date, end_date=self.end_date, time=self.timeout )
+			if self.mode == 'categories':
+				return self.fetch_categories( time=self.timeout )
+			if self.mode == 'sources':
+				return self.fetch_sources( time=self.timeout )
+			if self.mode == 'layers':
+				self.category = category
+				return self.fetch_layers( category=self.category, time=self.timeout )
 			raise ValueError( "Use 'events', 'categories', 'sources', or 'layers'." )
+
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
