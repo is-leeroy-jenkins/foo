@@ -231,11 +231,7 @@ class WebExtractor( Extractor ):
 		"""
 		try:
 			throw_if( 'url', url )
-			if not ( isinstance( url, str ) ):
-				raise ValueError( 'Invalid url argument.' )
 			throw_if( 'time', time )
-			if not ( type( time ) is int and time > 0 ):
-				raise ValueError( 'Invalid time argument.' )
 			self.url = url
 			self.timeout = time
 			self.response = requests.get( url=self.url, headers=self.headers,
@@ -273,8 +269,6 @@ class WebExtractor( Extractor ):
 		"""
 		try:
 			throw_if( 'html', html )
-			if not ( isinstance( html, str ) ):
-				raise ValueError( 'Invalid html argument.' )
 			self.html = html
 			self.raw_html = self.html
 			self.html = re.sub( r'<script[\s\S]*?</script>', ' ', self.html,
@@ -312,8 +306,6 @@ class WebExtractor( Extractor ):
 		"""
 		try:
 			throw_if( 'uri', uri )
-			if not ( isinstance( uri, str ) ):
-				raise ValueError( 'Invalid uri argument.' )
 			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers,
 				timeout=self.timeout )
@@ -349,8 +341,6 @@ class WebExtractor( Extractor ):
 		"""
 		try:
 			throw_if( 'uri', uri )
-			if not ( isinstance( uri, str ) ):
-				raise ValueError( 'Invalid uri argument.' )
 			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers,
 				timeout=self.timeout )
@@ -386,8 +376,6 @@ class WebExtractor( Extractor ):
 		"""
 		try:
 			throw_if( 'uri', uri )
-			if not ( isinstance( uri, str ) ):
-				raise ValueError( 'Invalid uri argument.' )
 			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -428,8 +416,6 @@ class WebExtractor( Extractor ):
 		"""
 		try:
 			throw_if( 'uri', uri )
-			if not ( isinstance( uri, str ) ):
-				raise ValueError( 'Invalid uri argument.' )
 			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -465,8 +451,6 @@ class WebExtractor( Extractor ):
 		"""
 		try:
 			throw_if( 'uri', uri )
-			if not ( isinstance( uri, str ) ):
-				raise ValueError( 'Invalid uri argument.' )
 			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers,
 				timeout=self.timeout )
@@ -504,8 +488,6 @@ class WebExtractor( Extractor ):
 		"""
 		try:
 			throw_if( 'uri', uri )
-			if not ( isinstance( uri, str ) ):
-				raise ValueError( 'Invalid uri argument.' )
 			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -541,8 +523,6 @@ class WebExtractor( Extractor ):
 		"""
 		try:
 			throw_if( 'uri', uri )
-			if not ( isinstance( uri, str ) ):
-				raise ValueError( 'Invalid uri argument.' )
 			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -578,8 +558,6 @@ class WebExtractor( Extractor ):
 		"""
 		try:
 			throw_if( 'uri', uri )
-			if not ( isinstance( uri, str ) ):
-				raise ValueError( 'Invalid uri argument.' )
 			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -616,8 +594,6 @@ class WebExtractor( Extractor ):
 		"""
 		try:
 			throw_if( 'uri', uri )
-			if not ( isinstance( uri, str ) ):
-				raise ValueError( 'Invalid uri argument.' )
 			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -654,8 +630,6 @@ class WebExtractor( Extractor ):
 		"""
 		try:
 			throw_if( 'uri', uri )
-			if not ( isinstance( uri, str ) ):
-				raise ValueError( 'Invalid uri argument.' )
 			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -696,20 +670,9 @@ class WebExtractor( Extractor ):
 		"""
 		try:
 			throw_if( 'function', function )
-			if not ( isinstance( function, str ) ):
-				raise ValueError( 'Invalid function argument.' )
 			throw_if( 'tool', tool )
-			if not ( isinstance( tool, str ) ):
-				raise ValueError( 'Invalid tool argument.' )
 			throw_if( 'description', description )
-			if not ( isinstance( description, str ) ):
-				raise ValueError( 'Invalid description argument.' )
 			throw_if( 'parameters', parameters )
-			if not ( isinstance( parameters, dict ) ):
-				raise ValueError( 'Invalid parameters argument.' )
-			if required is not None:
-				if not ( isinstance( required, list ) and all( isinstance( name, str ) and name in parameters for name in required ) and len( required ) == len( set( required ) ) ):
-					raise ValueError( 'Invalid required argument.' )
 			self.function = function
 			self.tool = tool
 			self.description = description
