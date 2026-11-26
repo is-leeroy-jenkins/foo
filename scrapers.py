@@ -137,7 +137,7 @@ class WebExtractor( Extractor ):
 
 	Attributes:
 		agents (Optional[str]): User-agent value sent with HTTP requests.
-		url (Optional[str]): Normalized URL used by the current request.
+		url (Optional[str]): Validated URL used by the current request.
 		html (Optional[str]): HTML currently being transformed or parsed.
 		timeout (Optional[int]): Maximum request duration in seconds.
 		headers (Optional[Dict[str, str]]): HTTP headers supplied to the wrapped requests client.
@@ -192,8 +192,7 @@ class WebExtractor( Extractor ):
 		self.description = None
 		self.parameters = None
 		self.required = None
-		if 'User-Agent' not in self.headers:
-			self.headers[ 'User-Agent' ] = self.agents
+		self.headers[ 'User-Agent' ] = self.agents
 	
 	def __dir__( self ) -> List[ str ]:
 		"""Return visible member names.
@@ -231,10 +230,10 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'url', url )
-			throw_if( 'time', time )
-			self.url = str( url ).strip( )
-			self.timeout = int( time )
+			throw_if( 'url', url if isinstance( url, str ) else None )
+			throw_if( 'time', time if type( time ) is int and time > 0 else None )
+			self.url = url
+			self.timeout = time
 			self.response = requests.get( url=self.url, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -269,8 +268,8 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'html', html )
-			self.html = str( html )
+			throw_if( 'html', html if isinstance( html, str ) else None )
+			self.html = html
 			self.raw_html = self.html
 			self.html = re.sub( r'<script[\s\S]*?</script>', ' ', self.html,
 				flags=re.IGNORECASE )
@@ -306,8 +305,8 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = str( uri ).strip( )
+			throw_if( 'uri', uri if isinstance( uri, str ) else None )
+			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -341,8 +340,8 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = str( uri ).strip( )
+			throw_if( 'uri', uri if isinstance( uri, str ) else None )
+			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -376,8 +375,8 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = str( uri ).strip( )
+			throw_if( 'uri', uri if isinstance( uri, str ) else None )
+			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
 			self.html = self.response.text or ''
@@ -416,8 +415,8 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = str( uri ).strip( )
+			throw_if( 'uri', uri if isinstance( uri, str ) else None )
+			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
 			self.html = self.response.text or ''
@@ -451,8 +450,8 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = str( uri ).strip( )
+			throw_if( 'uri', uri if isinstance( uri, str ) else None )
+			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers,
 				timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -488,8 +487,8 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = str( uri ).strip( )
+			throw_if( 'uri', uri if isinstance( uri, str ) else None )
+			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
 			self.html = self.response.text or ''
@@ -523,8 +522,8 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = str( uri ).strip( )
+			throw_if( 'uri', uri if isinstance( uri, str ) else None )
+			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
 			self.html = self.response.text or ''
@@ -558,8 +557,8 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = str( uri ).strip( )
+			throw_if( 'uri', uri if isinstance( uri, str ) else None )
+			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
 			self.html = self.response.text or ''
@@ -594,8 +593,8 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = str( uri ).strip( )
+			throw_if( 'uri', uri if isinstance( uri, str ) else None )
+			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
 			self.html = self.response.text or ''
@@ -630,8 +629,8 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = str( uri ).strip( )
+			throw_if( 'uri', uri if isinstance( uri, str ) else None )
+			self.url = uri
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
 			self.html = self.response.text or ''
@@ -671,13 +670,13 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'function', function )
-			throw_if( 'tool', tool )
-			throw_if( 'description', description )
+			throw_if( 'function', function if isinstance( function, str ) else None )
+			throw_if( 'tool', tool if isinstance( tool, str ) else None )
+			throw_if( 'description', description if isinstance( description, str ) else None )
 			throw_if( 'parameters', parameters )
-			self.function = str( function ).strip( )
-			self.tool = str( tool ).strip( )
-			self.description = str( description ).strip( )
+			self.function = function
+			self.tool = tool
+			self.description = description
 			self.parameters = parameters
 			self.required = required
 			if not isinstance( self.parameters, dict ):
