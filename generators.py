@@ -743,19 +743,26 @@ class Grok( Generator ):
 		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'query', query )
-			throw_if( 'model', model )
-			self.query = str( query )
-			self.model = str( model ).strip( )
-			self.temperature = float( temperature )
-			self.max_tokens = int( max_tokens )
-			self.top_p = float( top_p )
+			throw_if( 'query', query if isinstance( query, str ) else None )
+			throw_if( 'model', model if isinstance( model, str ) else None )
+			throw_if( 'temperature', temperature if type( temperature ) in ( int, float ) and temperature >= 0 else None )
+			throw_if( 'max_tokens', max_tokens if type( max_tokens ) is int and max_tokens > 0 else None )
+			throw_if( 'top_p', top_p if type( top_p ) in ( int, float ) and 0 <= top_p <= 1 else None )
+			throw_if( 'stream', stream if type( stream ) is bool else None )
+			throw_if( 'store', store if type( store ) is bool else None )
+			throw_if( 'web_search', web_search if type( web_search ) is bool else None )
+			throw_if( 'parallel_tool_calls', parallel_tool_calls if type( parallel_tool_calls ) is bool else None )
+			self.query = query
+			self.model = model
+			self.temperature = temperature
+			self.max_tokens = max_tokens
+			self.top_p = top_p
 			self.reasoning_effort = reasoning_effort if reasoning_effort else None
-			self.stream = bool( stream )
-			self.store = bool( store )
-			self.web_search = bool( web_search )
+			self.stream = stream
+			self.store = store
+			self.web_search = web_search
 			self.search_domains = self.normalize_domains( search_domains )
-			self.parallel_tool_calls = bool( parallel_tool_calls )
+			self.parallel_tool_calls = parallel_tool_calls
 			self.tool_choice = tool_choice or 'auto'
 			self.system_instructions = self.build_instructions( system=system,
 				response_format=response_format )
@@ -1509,28 +1516,39 @@ class Gemini( Generator ):
 		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'prompt', prompt )
-			throw_if( 'model', model )
+			throw_if( 'prompt', prompt if isinstance( prompt, str ) else None )
+			throw_if( 'model', model if isinstance( model, str ) else None )
 			
-			self.query = str( prompt )
-			self.model = str( model ).strip( )
-			self.temperature = float( temperature )
-			self.max_tokens = int( max_tokens )
-			self.top_p = float( top_p )
-			self.top_k = int( top_k ) if top_k is not None else None
-			self.candidate_count = int( candidate_count )
-			self.seed = int( seed ) if seed is not None else None
+			throw_if( 'temperature', temperature if type( temperature ) in ( int, float ) and temperature >= 0 else None )
+			throw_if( 'max_tokens', max_tokens if type( max_tokens ) is int and max_tokens > 0 else None )
+			throw_if( 'top_p', top_p if type( top_p ) in ( int, float ) and 0 <= top_p <= 1 else None )
+			if top_k is not None:
+				throw_if( 'top_k', top_k if type( top_k ) is int and top_k > 0 else None )
+			throw_if( 'candidate_count', candidate_count if type( candidate_count ) is int and candidate_count > 0 else None )
+			if seed is not None:
+				throw_if( 'seed', seed if type( seed ) is int else None )
+			throw_if( 'grounding', grounding if type( grounding ) is bool else None )
+			throw_if( 'reasoning', reasoning if type( reasoning ) is bool else None )
+			throw_if( 'include_thoughts', include_thoughts if type( include_thoughts ) is bool else None )
+			self.query = prompt
+			self.model = model
+			self.temperature = temperature
+			self.max_tokens = max_tokens
+			self.top_p = top_p
+			self.top_k = top_k
+			self.candidate_count = candidate_count
+			self.seed = seed
 			self.system_instructions = (str( system ).strip( )
 			                            if system and str( system ).strip( )
 			                            else None)
 			self.response_format = response_format
 			self.stop_sequences = self.normalize_stop_sequences( stop_sequences )
-			self.grounding = bool( grounding )
+			self.grounding = grounding
 			self.search_domains = self.normalize_domains( search_domains )
-			self.reasoning = bool( reasoning )
+			self.reasoning = reasoning
 			self.thinking_level = thinking_level
 			self.thinking_budget = thinking_budget
-			self.include_thoughts = bool( include_thoughts )
+			self.include_thoughts = include_thoughts
 			self.config = self.build_config( model=self.model, temperature=self.temperature,
 				max_tokens=self.max_tokens, top_p=self.top_p, top_k=self.top_k,
 				candidate_count=self.candidate_count, seed=self.seed,
@@ -1908,19 +1926,27 @@ class Claude( Generator ):
 		"""
 		try:
 			throw_if( 'query', query )
-			throw_if( 'model', model )
+			throw_if( 'model', model if isinstance( model, str ) else None )
+			throw_if( 'temperature', temperature if type( temperature ) in ( int, float ) and temperature >= 0 else None )
+			throw_if( 'max_tokens', max_tokens if type( max_tokens ) is int and max_tokens > 0 else None )
+			throw_if( 'top_p', top_p if type( top_p ) in ( int, float ) and 0 <= top_p <= 1 else None )
+			if top_k is not None:
+				throw_if( 'top_k', top_k if type( top_k ) is int and top_k > 0 else None )
+			throw_if( 'web_search', web_search if type( web_search ) is bool else None )
+			if thinking_budget is not None:
+				throw_if( 'thinking_budget', thinking_budget if type( thinking_budget ) is int else None )
 			self.query = query
-			self.model = str( model ).strip( )
-			self.temperature = float( temperature )
-			self.max_tokens = int( max_tokens )
-			self.top_p = float( top_p )
-			self.top_k = int( top_k ) if top_k is not None else None
+			self.model = model
+			self.temperature = temperature
+			self.max_tokens = max_tokens
+			self.top_p = top_p
+			self.top_k = top_k
 			self.system_instructions = system if system and str( system ).strip( ) else None
-			self.web_search = bool( web_search )
+			self.web_search = web_search
 			self.client = Claude( api_key=self.api_key )
 			self.search_domains = self.normalize_domains( search_domains )
 			self.blocked_domains = self.normalize_domains( blocked_domains )
-			self.thinking_budget = int( thinking_budget ) if thinking_budget is not None else None
+			self.thinking_budget = thinking_budget
 			self.messages = [ { 'role': 'user', 'content': self.query } ]
 			self.params = \
 				{
@@ -2235,15 +2261,21 @@ class Mistral( Generator ):
 		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'query', query )
-			throw_if( 'model', model )
-			self.query = str( query ).strip( )
-			self.model = str( model ).strip( )
-			self.temperature = float( temperature )
-			self.max_tokens = int( max_tokens )
-			self.top_p = float( top_p )
-			self.seed = int( seed ) if seed is not None else None
-			self.safe_prompt = bool( safe_mode )
+			throw_if( 'query', query if isinstance( query, str ) else None )
+			throw_if( 'model', model if isinstance( model, str ) else None )
+			throw_if( 'temperature', temperature if type( temperature ) in ( int, float ) and temperature >= 0 else None )
+			throw_if( 'max_tokens', max_tokens if type( max_tokens ) is int and max_tokens > 0 else None )
+			throw_if( 'top_p', top_p if type( top_p ) in ( int, float ) and 0 <= top_p <= 1 else None )
+			if seed is not None:
+				throw_if( 'seed', seed if type( seed ) is int else None )
+			throw_if( 'safe_mode', safe_mode if type( safe_mode ) is bool else None )
+			self.query = query
+			self.model = model
+			self.temperature = temperature
+			self.max_tokens = max_tokens
+			self.top_p = top_p
+			self.seed = seed
+			self.safe_prompt = safe_mode
 			self.system_instructions = system if system and str( system ).strip( ) else None
 			self.client = MistralAI( api_key=self.api_key )
 			self.messages = [ ]
@@ -2840,17 +2872,24 @@ class Chat( Generator ):
 		"""
 		try:
 			throw_if( 'prompt', prompt )
-			throw_if( 'model', model )
+			throw_if( 'model', model if isinstance( model, str ) else None )
+			throw_if( 'temperature', temperature if type( temperature ) in ( int, float ) and temperature >= 0 else None )
+			throw_if( 'max_tokens', max_tokens if type( max_tokens ) is int and max_tokens > 0 else None )
+			throw_if( 'top_p', top_p if type( top_p ) in ( int, float ) and 0 <= top_p <= 1 else None )
+			throw_if( 'store', store if type( store ) is bool else None )
+			throw_if( 'stream', stream if type( stream ) is bool else None )
+			throw_if( 'web_search', web_search if type( web_search ) is bool else None )
+			throw_if( 'parallel_tool_calls', parallel_tool_calls if type( parallel_tool_calls ) is bool else None )
 			self.query = prompt
-			self.model = str( model ).strip( )
-			self.temperature = float( temperature )
-			self.max_completion_tokens = int( max_tokens )
-			self.top_percent = float( top_p )
-			self.store = bool( store )
-			self.stream = bool( stream )
-			self.web_search = bool( web_search )
+			self.model = model
+			self.temperature = temperature
+			self.max_completion_tokens = max_tokens
+			self.top_percent = top_p
+			self.store = store
+			self.stream = stream
+			self.web_search = web_search
 			self.search_domains = self.normalize_domains( search_domains )
-			self.parallel_tool_calls = bool( parallel_tool_calls )
+			self.parallel_tool_calls = parallel_tool_calls
 			self.tool_choice = tool_choice or 'auto'
 			self.response_format = (
 				str( response_format ).strip( ).lower( ) if isinstance( response_format,
