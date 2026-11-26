@@ -21931,7 +21931,7 @@ class PurpleAir( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'location_type', location_type if location_type == 0 else location_type )
+			throw_if( 'location_type', location_type )
 			
 			value = location_type
 			if value not in (0, 1):
