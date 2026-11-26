@@ -157,12 +157,8 @@ class LocalGGUFEmbeddings( Embeddings ):
         """
         try:
             throw_if( 'texts', texts )
-            if not ( isinstance( texts, list ) ):
-                raise ValueError( 'Invalid texts argument.' )
             for text in texts:
                 throw_if( 'text', text )
-                if not ( isinstance( text, str ) ):
-                    raise ValueError( 'Invalid text argument.' )
             self.texts = texts
 
             self.load( )
@@ -254,44 +250,32 @@ class EmbeddingFactory( ):
         """
         try:
             throw_if( 'provider', provider )
-            if not ( isinstance( provider, str ) ):
-                raise ValueError( 'Invalid provider argument.' )
             self.provider = provider
             self.model = model
             self.model_path = model_path
 
             if self.provider == 'OpenAI':
                 throw_if( 'model', model )
-                if not ( isinstance( model, str ) ):
-                    raise ValueError( 'Invalid model argument.' )
                 from langchain_openai import OpenAIEmbeddings
                 return OpenAIEmbeddings( model=self.model, api_key=self.openai_api_key )
 
             if self.provider == 'Google Generative AI':
                 throw_if( 'model', model )
-                if not ( isinstance( model, str ) ):
-                    raise ValueError( 'Invalid model argument.' )
                 from langchain_google_genai import GoogleGenerativeAIEmbeddings
                 return GoogleGenerativeAIEmbeddings( model=self.model, google_api_key=self.google_api_key )
 
             if self.provider == 'Mistral AI':
                 throw_if( 'model', model )
-                if not ( isinstance( model, str ) ):
-                    raise ValueError( 'Invalid model argument.' )
                 from langchain_mistralai import MistralAIEmbeddings
                 return MistralAIEmbeddings( model=self.model, api_key=self.mistral_api_key )
 
             if self.provider == 'Hugging Face':
                 throw_if( 'model', model )
-                if not ( isinstance( model, str ) ):
-                    raise ValueError( 'Invalid model argument.' )
                 from langchain_huggingface import HuggingFaceEmbeddings
                 return HuggingFaceEmbeddings( model_name=self.model )
 
             if self.provider == 'Local GGUF':
                 throw_if( 'model_path', model_path )
-                if not ( isinstance( model_path, str ) ):
-                    raise ValueError( 'Invalid model_path argument.' )
                 return LocalGGUFEmbeddings( model_path=self.model_path )
 
             raise ValueError( f'Unsupported embedding provider: {self.provider}' )
