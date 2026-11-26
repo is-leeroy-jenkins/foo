@@ -57,7 +57,8 @@ from core import Result
 import config as cfg
 from google import genai
 from google.genai import types
-from openai import OpenAI
+from openai import OpenAI, Stream
+from openai.types.responses import Response as OpenAIResponse
 from pathlib import Path
 from typing import Any, Dict, Optional, Pattern, List, Tuple
 from requests import Response
@@ -554,79 +555,23 @@ class Grok( Generator ):
 		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
 		"""
 		try:
-			if response is None:
-				return ''
-			
-			if hasattr( response, 'output_text' ) and response.output_text:
-				return str( response.output_text )
-			
-			if hasattr( response, 'text' ) and response.text:
-				return str( response.text )
-			
-			if isinstance( response, dict ):
-				if response.get( 'output_text' ):
-					return str( response.get( 'output_text' ) )
-				
-				if response.get( 'text' ):
-					return str( response.get( 'text' ) )
-				
-				output = response.get( 'output', [ ] )
-				if isinstance( output, list ):
-					parts: List[ str ] = [ ]
-					
-					for item in output:
-						if not isinstance( item, dict ):
-							continue
-						
-						content = item.get( 'content', [ ] )
-						if isinstance( content, list ):
-							for block in content:
-								if isinstance( block, dict ) and block.get( 'text' ):
-									parts.append( str( block.get( 'text' ) ) )
-					
-					if parts:
-						return '\n'.join( parts ).strip( )
-			
-			if hasattr( response, '__iter__' ) and not isinstance( response, (str, bytes, dict) ):
+			if isinstance( response, OpenAIResponse ):
+				return response.output_text
+			if isinstance( response, Stream ):
 				parts: List[ str ] = [ ]
-				
 				for event in response:
-					event_type = getattr( event, 'type', '' )
-					
-					if event_type == 'response.output_text.delta':
-						delta = getattr( event, 'delta', '' )
-						if delta:
-							parts.append( str( delta ) )
-					
-					elif event_type == 'response.completed':
-						final_response = getattr( event, 'response', None )
-						if final_response is not None:
-							text = self.extract_output_text( final_response )
-							if text:
-								return text
-				
-				if parts:
-					return ''.join( parts )
-			
-			output = getattr( response, 'output', None )
-			if output:
-				parts: List[ str ] = [ ]
-				
-				for item in output:
-					content = getattr( item, 'content', None )
-					
-					if content:
-						for block in content:
-							text = getattr( block, 'text', None )
-							
-							if text:
-								parts.append( str( text ) )
-				
-				if parts:
-					return '\n'.join( parts ).strip( )
-			
-			return str( response )
-		
+					if event.type == 'response.output_text.delta':
+						parts.append( event.delta )
+					elif event.type == 'response.completed':
+						return event.response.output_text
+				return ''.join( parts )
+			if isinstance( response, dict ):
+				text = response.get( 'output_text' ) or response.get( 'text' )
+				if text:
+					return text
+				return '\n'.join( block[ 'text' ] for item in response.get( 'output', [ ] )
+					for block in item.get( 'content', [ ] ) if block.get( 'text' ) )
+			return ''
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'generators'
@@ -1384,36 +1329,9 @@ class Gemini( Generator ):
 		try:
 			if response is None:
 				return ''
-			
-			if hasattr( response, 'text' ) and response.text:
-				return str( response.text )
-			
 			if isinstance( response, dict ):
-				if response.get( 'text' ):
-					return str( response.get( 'text' ) )
-			
-			candidates = getattr( response, 'candidates', None )
-			if candidates:
-				parts: List[ str ] = [ ]
-				
-				for candidate in candidates:
-					content = getattr( candidate, 'content', None )
-					candidate_parts = getattr( content, 'parts', None ) if content else None
-					
-					if not candidate_parts:
-						continue
-					
-					for part in candidate_parts:
-						text = getattr( part, 'text', None )
-						
-						if text:
-							parts.append( str( text ) )
-				
-				if parts:
-					return '\n'.join( parts ).strip( )
-			
-			return str( response )
-		
+				return response.get( 'text' ) or ''
+			return response.text or ''
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'generators'
@@ -1819,19 +1737,8 @@ class Claude( Generator ):
 		try:
 			if response is None:
 				return ''
-			
-			if hasattr( response, 'content' ) and response.content:
-				_parts = [ ]
-				for _block in response.content:
-					_type = getattr( _block, 'type', None )
-					if _type == 'text':
-						_text = getattr( _block, 'text', '' )
-						if _text:
-							_parts.append( _text )
-				if _parts:
-					return '\n'.join( _parts ).strip( )
-			
-			return str( response )
+			return '\n'.join( block.text for block in response.content
+				if block.type == 'text' )
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'generators'
@@ -2143,36 +2050,14 @@ class Mistral( Generator ):
 		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
 		"""
 		try:
-			if response is None:
+			if response is None or not response.choices:
 				return ''
-			
-			if hasattr( response, 'choices' ) and response.choices:
-				choice = response.choices[ 0 ]
-				
-				if hasattr( choice, 'message' ) and choice.message is not None:
-					message = choice.message
-					
-					if hasattr( message, 'content' ):
-						content = message.content
-						
-						if isinstance( content, str ):
-							return content.strip( )
-						
-						if isinstance( content, list ):
-							parts: List[ str ] = [ ]
-							for item in content:
-								if isinstance( item, str ) and item.strip( ):
-									parts.append( item.strip( ) )
-								elif hasattr( item, 'text' ):
-									text_value = getattr( item, 'text', '' )
-									if text_value:
-										parts.append( str( text_value ).strip( ) )
-							
-							if parts:
-								return '\n'.join( parts ).strip( )
-						
-						return str( content ).strip( )
-			return str( response )
+			content = response.choices[ 0 ].message.content
+			if isinstance( content, str ):
+				return content
+			if isinstance( content, list ):
+				return '\n'.join( item.text for item in content if item.type == 'text' )
+			return ''
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'generators'
@@ -2718,55 +2603,23 @@ class Chat( Generator ):
 		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
 		"""
 		try:
-			if response is None:
-				return ''
-			
-			if hasattr( response, 'output_text' ) and response.output_text:
-				return str( response.output_text )
-			
-			if isinstance( response, dict ):
-				if response.get( 'output_text' ):
-					return str( response.get( 'output_text' ) )
-				if response.get( 'text' ):
-					return str( response.get( 'text' ) )
-			
-			if hasattr( response, '__iter__' ) and not isinstance( response, (str, bytes, dict) ):
+			if isinstance( response, OpenAIResponse ):
+				return response.output_text
+			if isinstance( response, Stream ):
 				parts: List[ str ] = [ ]
-				
 				for event in response:
-					event_type = getattr( event, 'type', '' )
-					
-					if event_type == 'response.output_text.delta':
-						delta = getattr( event, 'delta', '' )
-						if delta:
-							parts.append( str( delta ) )
-					
-					elif event_type == 'response.completed':
-						final_response = getattr( event, 'response', None )
-						if final_response is not None and hasattr( final_response, 'output_text' ):
-							text = str( final_response.output_text or '' )
-							if text:
-								return text
-				
-				if parts:
-					return ''.join( parts )
-			
-			output = getattr( response, 'output', None )
-			if output:
-				parts: List[ str ] = [ ]
-				for item in output:
-					content = getattr( item, 'content', None )
-					if content:
-						for block in content:
-							text = getattr( block, 'text', None )
-							if text:
-								parts.append( str( text ) )
-				
-				if parts:
-					return '\n'.join( parts ).strip( )
-			
-			return str( response )
-		
+					if event.type == 'response.output_text.delta':
+						parts.append( event.delta )
+					elif event.type == 'response.completed':
+						return event.response.output_text
+				return ''.join( parts )
+			if isinstance( response, dict ):
+				text = response.get( 'output_text' ) or response.get( 'text' )
+				if text:
+					return text
+				return '\n'.join( block[ 'text' ] for item in response.get( 'output', [ ] )
+					for block in item.get( 'content', [ ] ) if block.get( 'text' ) )
+			return ''
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'generators'
@@ -3239,10 +3092,8 @@ class Chat( Generator ):
 		Returns:
 		    List[str]: Ordered values or records produced by the operation.
 		"""
-		if hasattr( cfg, 'GPT_MODELS' ) and cfg.GPT_MODELS:
-			return list( cfg.GPT_MODELS )
-		
-		return [ 'gpt-5.4', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-5.1', 'gpt-5.2', 'gpt-4.1' ]
+		return cfg.GPT_MODELS
+
 	
 	def get_effort_options( self ) -> List[ str ]:
 		"""Get effort options.
