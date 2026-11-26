@@ -182,7 +182,7 @@ class Loader( ):
 			return self.file_path
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'Loader'
 			exception.method = '_ensure_existing_file( self, path: str ) -> str'
 			Logger( ).write( exception )
@@ -219,7 +219,7 @@ class Loader( ):
 			return sorted( set( self.resolved ) )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'Loader'
 			exception.method = 'resolve_paths( self, pattern: str ) -> List[ str ]'
 			Logger( ).write( exception )
@@ -255,7 +255,7 @@ class Loader( ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'CSV'
 			exception.method = 'loader( )'
 			Logger( ).write( exception )
@@ -289,7 +289,7 @@ class Loader( ):
 			return self.splitter.split_documents( documents=self.documents )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'Loader'
 			exception.method = ('split_documents( self, **kwargs ) -> List[ Document ]')
 			Logger( ).write( exception )
@@ -382,7 +382,7 @@ class TextLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'TextLoader'
 			exception.method = 'load( self, filepath: str ) -> List[ Document ] | None'
 			Logger( ).write( exception )
@@ -408,6 +408,8 @@ class TextLoader( Loader ):
 			if not isinstance( self.raw_text, str ) or not self.raw_text:
 				raise ValueError( 'No text loaded!' )
 			
+			throw_if( 'size', size if type( size ) is int and size > 0 else None )
+			throw_if( 'amount', amount if type( amount ) is int and 0 <= amount < size else None )
 			self.chunk_size = size
 			self.overlap_amount = amount
 			self.splitter = CharacterTextSplitter.from_tiktoken_encoder(
@@ -416,9 +418,6 @@ class TextLoader( Loader ):
 			
 			self.documents = self.splitter.create_documents( texts=[ self.raw_text ] )
 			for document in self.documents:
-				if not isinstance( getattr( document, 'metadata', None ), dict ):
-					document.metadata = { }
-				
 				document.metadata.setdefault( 'source',
 					os.path.basename( self.file_path ) if self.file_path else '' )
 				document.metadata[ 'loader' ] = 'TextLoader'
@@ -428,7 +427,7 @@ class TextLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'TextLoader'
 			exception.method = ('split_tokens( self, size: int=1000, amount: int=200 ) -> List[ '
 			                    'Document ] | None')
@@ -456,6 +455,8 @@ class TextLoader( Loader ):
 			if not isinstance( self.raw_text, str ) or not self.raw_text:
 				raise ValueError( 'No text loaded!' )
 			
+			throw_if( 'size', size if type( size ) is int and size > 0 else None )
+			throw_if( 'amount', amount if type( amount ) is int and 0 <= amount < size else None )
 			self.chunk_size = size
 			self.overlap_amount = amount
 			self.separator = seps
@@ -465,9 +466,6 @@ class TextLoader( Loader ):
 			
 			self.documents = self.splitter.create_documents( texts=[ self.raw_text ] )
 			for document in self.documents:
-				if not isinstance( getattr( document, 'metadata', None ), dict ):
-					document.metadata = { }
-				
 				document.metadata.setdefault( 'source',
 					os.path.basename( self.file_path ) if self.file_path else '' )
 				document.metadata[ 'loader' ] = 'TextLoader'
@@ -476,7 +474,7 @@ class TextLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'TextLoader'
 			exception.method = 'split_chars( self, **kwargs ) -> List[ Document ] | None'
 			Logger( ).write( exception )
@@ -579,7 +577,7 @@ class CsvLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'CsvLoader'
 			exception.method = ('load( self, filepath: str, columns: Optional[ List[ str ] '
 			                    ']=None, '
@@ -608,6 +606,8 @@ class CsvLoader( Loader ):
 			if self.documents is None:
 				raise ValueError( 'No documents loaded!' )
 			
+			throw_if( 'size', size if type( size ) is int and size > 0 else None )
+			throw_if( 'amount', amount if type( amount ) is int and 0 <= amount < size else None )
 			self.chunk_size = size
 			self.overlap_amount = amount
 			self.documents = self.split_documents( self.documents, chunk=self.chunk_size,
@@ -617,7 +617,7 @@ class CsvLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'CsvLoader'
 			exception.method = ('split( self, **args ) ->  List[ Document ] | None')
 			Logger( ).write( exception )
@@ -707,7 +707,7 @@ class XmlLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'XmlLoader'
 			exception.method = 'load(self, filepath: str)'
 			Logger( ).write( exception )
@@ -732,6 +732,8 @@ class XmlLoader( Loader ):
 		try:
 			if self.documents is None:
 				raise ValueError( 'No documents loaded via load().' )
+			throw_if( 'size', size if type( size ) is int and size > 0 else None )
+			throw_if( 'amount', amount if type( amount ) is int and 0 <= amount < size else None )
 			self.chunk_size = size
 			self.overlap_amount = amount
 			split_docs = self.split_documents( docs=self.documents, chunk=self.chunk_size,
@@ -740,7 +742,7 @@ class XmlLoader( Loader ):
 			return split_docs
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'XmlLoader'
 			exception.method = 'split(self, size: int=1000, amount: int=200)'
 			Logger( ).write( exception )
@@ -773,7 +775,7 @@ class XmlLoader( Loader ):
 			return self.xml_tree
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'XmlLoader'
 			exception.method = 'load_tree(self, filepath: str)'
 			Logger( ).write( exception )
@@ -801,7 +803,7 @@ class XmlLoader( Loader ):
 			return list( elements )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'XmlLoader'
 			exception.method = 'get_elements(self, xpath: str)'
 			Logger( ).write( exception )
@@ -917,7 +919,7 @@ class WebLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'WebLoader'
 			exception.method = 'load( self, **kwargs ) -> List[ Document ] | None'
 			Logger( ).write( exception )
@@ -957,7 +959,7 @@ class WebLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'WebLoader'
 			exception.method = 'load_pages( self, **kwargs ) -> List[ Document ] | None'
 			Logger( ).write( exception )
@@ -999,7 +1001,7 @@ class WebLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'WebLoader'
 			exception.method = 'load_recursive( self, **kwargs ) -> List[ Document ] | None'
 			Logger( ).write( exception )
@@ -1032,7 +1034,7 @@ class WebLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'WebLoader'
 			exception.method = 'split( self, **kwargs ) -> List[ Document ] | None'
 			Logger( ).write( exception )
@@ -1087,7 +1089,8 @@ class PdfLoader( Loader ):
 		"""
 		super( ).__init__( )
 		self.enable_tables = has_tables
-		self.include_images = include
+		throw_if( 'include', include if type( include ) is bool else None )
+			self.include_images = include
 		self.file_path = None
 		self.documents = [ ]
 		self.pattern = None
@@ -1151,71 +1154,9 @@ class PdfLoader( Loader ):
 		"""
 		return [ 'html-img', 'markdown-img', 'text-img' ]
 	
-	def _normalize_mode( self, mode: str ) -> str:
-		"""Normalize mode.
 
-		Purpose:
-		    Normalizes mode into the canonical representation expected by the surrounding workflow.
 
-		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
 
-		Returns:
-		    str: Normalized text produced by the operation.
-		"""
-		value = mode.strip( ).lower( ) if isinstance( mode, str ) else 'single'
-		
-		if value == 'elements':
-			return 'page'
-		
-		if value not in self.mode_options:
-			return 'single'
-		
-		return value
-	
-	def _normalize_extraction( self, extract: str ) -> str:
-		"""Normalize extraction.
-
-		Purpose:
-		    Normalizes extraction into the canonical representation expected by the surrounding workflow.
-
-		Args:
-		    extract (str): PDF text-extraction strategy selected by the caller.
-
-		Returns:
-		    str: Normalized text produced by the operation.
-		"""
-		value = extract.strip( ).lower( ) if isinstance( extract, str ) else 'plain'
-		
-		if value == 'ocr':
-			return 'layout'
-		
-		if value not in self.extraction_options:
-			return 'plain'
-		
-		return value
-	
-	def _normalize_image_format( self, format: str ) -> str:
-		"""Normalize image format.
-
-		Purpose:
-		    Normalizes image format into the canonical representation expected by the surrounding workflow.
-
-		Args:
-		    format (str): Output or embedded-content format selected by the caller.
-
-		Returns:
-		    str: Normalized text produced by the operation.
-		"""
-		value = format.strip( ).lower( ) if isinstance( format, str ) else 'markdown-img'
-		if value == 'text':
-			return 'markdown-img'
-		
-		if value not in self.image_options:
-			return 'markdown-img'
-		
-		return value
-	
 	def load( self, filepath: str, mode: str='single', extract: str='plain',
 		include: bool=False, format: str='markdown-img' ) -> List[ Document ]:
 		"""Load.
@@ -1239,10 +1180,13 @@ class PdfLoader( Loader ):
 		try:
 			throw_if( 'path', filepath )
 			self.file_path = self.verify_exists( filepath )
-			self.mode = self._normalize_mode( mode )
-			self.extraction = self._normalize_extraction( extract )
+			throw_if( 'mode', mode if isinstance( mode, str ) and mode in self.mode_options else None )
+			self.mode = mode
+			throw_if( 'extract', extract if isinstance( extract, str ) and extract in self.extraction_options else None )
+			self.extraction = extract
 			self.include_images = include
-			self.image_format = self._normalize_image_format( format )
+			throw_if( 'format', format if isinstance( format, str ) and format in self.image_options else None )
+			self.image_format = format
 			if self.include_images:
 				self.image_parser = RapidOCRBlobParser( )
 				self.loader = PyPDFLoader( file_path=self.file_path, mode=self.mode,
@@ -1257,7 +1201,7 @@ class PdfLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'PdfLoader'
 			exception.method = 'load( self, **kwars ) -> List[ Document ]'
 			Logger( ).write( exception )
@@ -1291,7 +1235,7 @@ class PdfLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'PdfLoader'
 			exception.method = ('split( self, **kwargs ) -> List[ Document ] | None')
 			Logger( ).write( exception )
@@ -1361,27 +1305,7 @@ class ExcelLoader( Loader ):
 		"""
 		return [ 'single', 'elements' ]
 	
-	def _normalize_mode( self, mode: str ) -> str:
-		"""Normalize mode.
 
-		Purpose:
-		    Normalizes mode into the canonical representation expected by the surrounding workflow.
-
-		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-
-		Returns:
-		    str: Normalized text produced by the operation.
-		"""
-		value = mode.strip( ).lower( ) if isinstance( mode, str ) else 'single'
-		if value in [ 'page', 'paged' ]:
-			return 'elements'
-		
-		if value not in self.mode_options:
-			return 'single'
-		
-		return value
-	
 	def load( self, path: str, mode: str='single', has_headers: bool=True ) -> List[ Document ]:
 		"""Load.
 
@@ -1402,7 +1326,9 @@ class ExcelLoader( Loader ):
 		try:
 			throw_if( 'path', path )
 			self.file_path = self.verify_exists( path )
-			self.mode = self._normalize_mode( mode )
+			throw_if( 'mode', mode if isinstance( mode, str ) and mode in self.mode_options else None )
+			self.mode = mode
+			throw_if( 'has_headers', has_headers if type( has_headers ) is bool else None )
 			self.has_headers = has_headers
 			self.loader = UnstructuredExcelLoader( file_path=self.file_path, mode=self.mode )
 			self.documents = self.loader.load( )
@@ -1410,7 +1336,7 @@ class ExcelLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'ExcelLoader'
 			exception.method = 'load( self, , **kwars  ) -> List[ Document ] | None'
 			Logger( ).write( exception )
@@ -1445,7 +1371,7 @@ class ExcelLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'ExcelLoader'
 			exception.method = 'split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ]'
 			Logger( ).write( exception )
@@ -1522,7 +1448,7 @@ class WordLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'WordLoader'
 			exception.method = 'load( self, path: str ) -> List[ Document ]'
 			Logger( ).write( exception )
@@ -1554,7 +1480,7 @@ class WordLoader( Loader ):
 			return _splits
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'WordLoader'
 			exception.method = 'split( self, **kwars  ) -> List[ Document ]'
 			Logger( ).write( exception )
@@ -1623,28 +1549,7 @@ class MarkdownLoader( Loader ):
 		"""
 		return [ 'single', 'elements' ]
 	
-	def _normalize_mode( self, mode: str ) -> str:
-		"""Normalize mode.
 
-		Purpose:
-		    Normalizes mode into the canonical representation expected by the surrounding workflow.
-
-		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-
-		Returns:
-		    str: Normalized text produced by the operation.
-		"""
-		value = mode.strip( ).lower( ) if isinstance( mode, str ) else 'single'
-		
-		if value in [ 'page', 'paged' ]:
-			return 'elements'
-		
-		if value not in self.mode_options:
-			return 'single'
-		
-		return value
-	
 	def load( self, path: str, mode: str='single' ) -> List[ Document ] | None:
 		"""Load.
 
@@ -1664,14 +1569,15 @@ class MarkdownLoader( Loader ):
 		try:
 			throw_if( 'path', path )
 			self.file_path = self.verify_exists( path )
-			self.mode = self._normalize_mode( mode )
+			throw_if( 'mode', mode if isinstance( mode, str ) and mode in self.mode_options else None )
+			self.mode = mode
 			self.loader = UnstructuredMarkdownLoader( file_path=self.file_path, mode=self.mode )
 			self.documents = self.loader.load( )
 			return self.documents
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'MarkdownLoader'
 			exception.method = ('load( self, path: str, mode: str="single" ) -> '
 			                    'List[ Document ] | None')
@@ -1706,7 +1612,7 @@ class MarkdownLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'MarkdownLoader'
 			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> '
 			                    'List[ Document ] | None')
@@ -1784,7 +1690,7 @@ class HtmlLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'HTML'
 			exception.method = 'load( self, path: str ) -> List[ Document ]'
 			Logger( ).write( exception )
@@ -1816,7 +1722,7 @@ class HtmlLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'HtmlLoader'
 			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> List[ '
 			                    'Document ]')
@@ -1928,7 +1834,7 @@ class JsonLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'JsonLoader'
 			exception.method = 'load( self, **args ) -> List[ Document ] | None'
 			Logger( ).write( exception )
@@ -1962,7 +1868,7 @@ class JsonLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'JsonLoader'
 			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> '
 			                    'List[ Document ] | None')
@@ -2054,7 +1960,7 @@ class ArXivLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'ArxivLoader'
 			exception.method = 'load( self, path: str ) -> List[ Document ]'
 			Logger( ).write( exception )
@@ -2086,7 +1992,7 @@ class ArXivLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'ArxivLoader'
 			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> List[ '
 			                    'Document ]')
@@ -2188,7 +2094,7 @@ class WikiLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'WikiLoader'
 			exception.method = ('load( self, query: str, max_docs: int=25, max_chars: int=4000, '
 			                    'include_all: bool=False ) -> List[ Document ] | None')
@@ -2224,7 +2130,7 @@ class WikiLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'WikiLoader'
 			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> '
 			                    'List[ Document ] | None')
@@ -2342,7 +2248,7 @@ class GithubLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'GithubLoader'
 			exception.method = ('load( self, url: str, repo: str, branch: str, '
 			                    'filetype: str=".md", access_token: Optional[ str ]=None ) '
@@ -2378,7 +2284,7 @@ class GithubLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'GithubLoader'
 			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> '
 			                    'List[ Document ] | None')
@@ -2438,28 +2344,7 @@ class PowerPointLoader( Loader ):
 			'verify_exists', 'resolve_paths', 'split_documents', 'load', 'load_multiple',
 			'split', ]
 	
-	def _normalize_mode( self, mode: str ) -> str:
-		"""Normalize mode.
 
-		Purpose:
-		    Normalizes mode into the canonical representation expected by the surrounding workflow.
-
-		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-
-		Returns:
-		    str: Normalized text produced by the operation.
-		"""
-		value = mode.strip( ).lower( ) if isinstance( mode, str ) else 'single'
-		
-		if value == 'multiple':
-			return 'elements'
-		
-		if value not in [ 'single', 'elements' ]:
-			return 'single'
-		
-		return value
-	
 	def load( self, path: str, mode: str='single' ) -> List[ Document ] | None:
 		"""Load.
 
@@ -2480,14 +2365,15 @@ class PowerPointLoader( Loader ):
 			throw_if( 'path', path )
 			
 			self.file_path = self.verify_exists( path )
-			self.mode = self._normalize_mode( mode )
+			throw_if( 'mode', mode if isinstance( mode, str ) and mode in ( 'single', 'elements' ) else None )
+			self.mode = mode
 			self.loader = UnstructuredPowerPointLoader( file_path=self.file_path, mode=self.mode )
 			self.documents = self.loader.load( )
 			return self.documents
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'PowerPointLoader'
 			exception.method = ('load( self, path: str, mode: str="single" ) -> '
 			                    'List[ Document ] | None')
@@ -2514,7 +2400,7 @@ class PowerPointLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'PowerPointLoader'
 			exception.method = 'load_multiple( self, path: str ) -> List[ Document ] | None'
 			Logger( ).write( exception )
@@ -2548,7 +2434,7 @@ class PowerPointLoader( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'PowerPointLoader'
 			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> '
 			                    'List[ Document ] | None')
@@ -2635,7 +2521,7 @@ class OutlookLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'OutlookLoader'
 			exception.method = 'load( self, path: str ) -> List[ Document ]'
 			Logger( ).write( exception )
@@ -2666,7 +2552,7 @@ class OutlookLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'OutlookLoader'
 			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> List[ '
 			                    'Document ]')
@@ -2788,7 +2674,7 @@ class WebCrawler( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'WebCrawler'
 			exception.method = 'load( self, **args ) -> List[ Document ] | None'
 			Logger( ).write( exception )
@@ -2830,7 +2716,7 @@ class WebCrawler( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'WebCrawler'
 			exception.method = ('load_pages( self, urls: str | List[ str ], timeout: int=10, '
 			                    'ignore: bool=True, progress: bool=True ) -> '
@@ -2876,7 +2762,7 @@ class WebCrawler( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'WebCrawler'
 			exception.method = 'load_recursive( self, **args ) -> List[ Document ] | None'
 			Logger( ).write( exception )
@@ -2909,7 +2795,7 @@ class WebCrawler( Loader ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'WebCrawler'
 			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> '
 			                    'List[ Document ] | None')
@@ -3009,7 +2895,7 @@ class SpfxLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'SpfxLoader'
 			exception.method = 'load( self, path: str ) -> List[ Document ]'
 			Logger( ).write( exception )
@@ -3042,7 +2928,7 @@ class SpfxLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'SpfxLoader'
 			exception.method = 'load( self, path: str ) -> List[ Document ]'
 			Logger( ).write( exception )
@@ -3073,7 +2959,7 @@ class SpfxLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'SpfxLoader'
 			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> List[ '
 			                    'Document ]')
@@ -3217,7 +3103,7 @@ class OneDriveDocLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'WikiLoader'
 			exception.method = 'load( self, path: str ) -> List[ Document ]'
 			Logger( ).write( exception )
@@ -3248,7 +3134,7 @@ class OneDriveDocLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'WikiLoader'
 			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> List[ '
 			                    'Document ]')
@@ -3354,7 +3240,7 @@ class GoogleLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'GoogleDriveLoader'
 			exception.method = 'load_File( self, file_id: str ) -> List[ Document ]'
 			Logger( ).write( exception )
@@ -3386,7 +3272,7 @@ class GoogleLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'GoogleDriveLoader'
 			exception.method = 'load_folder( self, path: str ) -> List[ Document ]'
 			Logger( ).write( exception )
@@ -3417,7 +3303,7 @@ class GoogleLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'GoogleDriveLoader'
 			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> List[ '
 			                    'Document ]')
@@ -3506,7 +3392,7 @@ class EmailLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'EmailLoader'
 			exception.method = ('load( self, path: str, mode: str=elements, '
 			                    'include_headers: bool=True ) -> List[ Document ]')
@@ -3537,7 +3423,7 @@ class EmailLoader( Loader ):
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'chonky'
+			exception.module = 'loaders'
 			exception.cause = 'EmailLoader'
 			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> List[ '
 			                    'Document ]')
