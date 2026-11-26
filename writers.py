@@ -157,14 +157,8 @@ class Writer( ):
 		"""
 		try:
 			throw_if( 'text', text )
-			if not ( isinstance( text, str ) ):
-				raise ValueError( 'Invalid text argument.' )
 			throw_if( 'filename', filename )
-			if not ( isinstance( filename, str ) ):
-				raise ValueError( 'Invalid filename argument.' )
 			throw_if( 'directory', directory )
-			if not ( isinstance( directory, str ) ):
-				raise ValueError( 'Invalid directory argument.' )
 			self.text = text
 			self.filename = filename
 			self.directory = directory
@@ -251,11 +245,7 @@ class MarkdownWriter( Writer ):
 		"""
 		try:
 			throw_if( 'result', result )
-			if not ( isinstance( result, Result ) ):
-				raise ValueError( 'Invalid result argument.' )
 			throw_if( 'path', path )
-			if not ( isinstance( path, str ) ):
-				raise ValueError( 'Invalid path argument.' )
 			self.result = result
 			self.path = path
 			self.file_path = Path( self.path ).resolve( )
