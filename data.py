@@ -107,7 +107,7 @@ class DB( ):
 	path: Optional[ str ]
 	driver: Optional[ str ]
 	
-	def __init__( self ):
+	def __init__( self ) -> None:
 		"""Initialize database configuration state.
 		
 		Purpose:
@@ -164,8 +164,6 @@ class DB( ):
 			elif self.provider.name == 'SqlServer':
 				self.driver = cfg.SQLSERVER_DRIVER
 				return self.driver
-			elif self.provider.name == 'SqlServer':
-				return self.sqlserver_driver
 			else:
 				return cfg.BASEDIR
 		except Exception as e:
@@ -263,7 +261,7 @@ class SQLite( DB ):
 		where (Optional[str]): Current SQL WHERE clause fragment.
 		file_name (Optional[str]): Current source file name.
 		table_name (Optional[str]): Current table name.
-		placeholders (Optional[List[str]]): Placeholder state used by insert operations.
+		placeholders (Optional[str]): Placeholder state used by insert operations.
 		column_names (Optional[List[str]]): Active column names.
 		params (Optional[Tuple]): SQL parameter tuple.
 		tables (Optional[List]): Cached table list.
@@ -275,12 +273,12 @@ class SQLite( DB ):
 	where: Optional[ str ]
 	file_name: Optional[ str ]
 	table_name: Optional[ str ]
-	placeholders: Optional[ List[ str ] ]
+	placeholders: Optional[ str ]
 	column_names: Optional[ List[ str ] ]
 	params: Optional[ Tuple ]
 	tables: Optional[ List ]
 	
-	def __init__( self ):
+	def __init__( self ) -> None:
 		"""Initialize SQLite connection state.
 		
 		Purpose:
@@ -297,12 +295,12 @@ class SQLite( DB ):
 		self.sql = None
 		self.file_name = None
 		self.table_name = None
-		self.placeholders = [ str ]
+		self.placeholders = ''
 		self.params = ( )
-		self.column_names = [ str ]
+		self.column_names = [ ]
 		self.tables = [ ]
 	
-	def __dir__( self ):
+	def __dir__( self ) -> list[ str ]:
 		"""Return visible SQLite members.
 		
 		Purpose:
@@ -446,7 +444,7 @@ class SQLite( DB ):
 		"""
 		try:
 			throw_if( 'source_file', source_file )
-			throw_if( 'chuncks', chunks )
+			throw_if( 'chunks', chunks )
 			throw_if( 'vectors', vectors )
 			records = [ (source_file, i, chunks[ i ], json.dumps( vectors[ i ].tolist( ) ))
 			            for i in range( len( chunks ) ) ]
@@ -518,6 +516,7 @@ class SQLite( DB ):
 			throw_if( 'table', table )
 			self.table_name = table
 			self.where = where
+			self.params = params
 			self.sql = f'SELECT * FROM {self.table_name} WHERE {self.where} LIMIT 1'
 			self.cursor.execute( self.sql, self.params )
 			return self.cursor.fetchone( )
@@ -555,7 +554,7 @@ class SQLite( DB ):
 			self.where = where
 			self.params = params
 			self.sql = f'UPDATE {self.table_name} SET {pairs} WHERE {self.where}'
-			self.cursor.execute( self.sql, params )
+			self.cursor.execute( self.sql, self.params )
 			self.connection.commit( )
 		except Exception as e:
 			exception = Error( e )
