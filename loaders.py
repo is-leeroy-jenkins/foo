@@ -408,8 +408,12 @@ class TextLoader( Loader ):
 			if not isinstance( self.raw_text, str ) or not self.raw_text:
 				raise ValueError( 'No text loaded!' )
 			
-			throw_if( 'size', size if type( size ) is int and size > 0 else None )
-			throw_if( 'amount', amount if type( amount ) is int and 0 <= amount < size else None )
+			throw_if( 'size', size )
+			if not ( type( size ) is int and size > 0 ):
+				raise ValueError( 'Invalid size argument.' )
+			throw_if( 'amount', amount )
+			if not ( type( amount ) is int and 0 <= amount < size ):
+				raise ValueError( 'Invalid amount argument.' )
 			self.chunk_size = size
 			self.overlap_amount = amount
 			self.splitter = CharacterTextSplitter.from_tiktoken_encoder(
@@ -455,8 +459,12 @@ class TextLoader( Loader ):
 			if not isinstance( self.raw_text, str ) or not self.raw_text:
 				raise ValueError( 'No text loaded!' )
 			
-			throw_if( 'size', size if type( size ) is int and size > 0 else None )
-			throw_if( 'amount', amount if type( amount ) is int and 0 <= amount < size else None )
+			throw_if( 'size', size )
+			if not ( type( size ) is int and size > 0 ):
+				raise ValueError( 'Invalid size argument.' )
+			throw_if( 'amount', amount )
+			if not ( type( amount ) is int and 0 <= amount < size ):
+				raise ValueError( 'Invalid amount argument.' )
 			self.chunk_size = size
 			self.overlap_amount = amount
 			self.separator = seps
@@ -606,8 +614,12 @@ class CsvLoader( Loader ):
 			if self.documents is None:
 				raise ValueError( 'No documents loaded!' )
 			
-			throw_if( 'size', size if type( size ) is int and size > 0 else None )
-			throw_if( 'amount', amount if type( amount ) is int and 0 <= amount < size else None )
+			throw_if( 'size', size )
+			if not ( type( size ) is int and size > 0 ):
+				raise ValueError( 'Invalid size argument.' )
+			throw_if( 'amount', amount )
+			if not ( type( amount ) is int and 0 <= amount < size ):
+				raise ValueError( 'Invalid amount argument.' )
 			self.chunk_size = size
 			self.overlap_amount = amount
 			self.documents = self.split_documents( self.documents, chunk=self.chunk_size,
@@ -732,8 +744,12 @@ class XmlLoader( Loader ):
 		try:
 			if self.documents is None:
 				raise ValueError( 'No documents loaded via load().' )
-			throw_if( 'size', size if type( size ) is int and size > 0 else None )
-			throw_if( 'amount', amount if type( amount ) is int and 0 <= amount < size else None )
+			throw_if( 'size', size )
+			if not ( type( size ) is int and size > 0 ):
+				raise ValueError( 'Invalid size argument.' )
+			throw_if( 'amount', amount )
+			if not ( type( amount ) is int and 0 <= amount < size ):
+				raise ValueError( 'Invalid amount argument.' )
 			self.chunk_size = size
 			self.overlap_amount = amount
 			split_docs = self.split_documents( docs=self.documents, chunk=self.chunk_size,
@@ -1089,7 +1105,9 @@ class PdfLoader( Loader ):
 		"""
 		super( ).__init__( )
 		self.enable_tables = has_tables
-		throw_if( 'include', include if type( include ) is bool else None )
+		throw_if( 'include', include )
+		if not ( type( include ) is bool ):
+			raise ValueError( 'Invalid include argument.' )
 			self.include_images = include
 		self.file_path = None
 		self.documents = [ ]
@@ -1180,12 +1198,18 @@ class PdfLoader( Loader ):
 		try:
 			throw_if( 'path', filepath )
 			self.file_path = self.verify_exists( filepath )
-			throw_if( 'mode', mode if isinstance( mode, str ) and mode in self.mode_options else None )
+			throw_if( 'mode', mode )
+			if not ( isinstance( mode, str ) and mode in self.mode_options ):
+				raise ValueError( 'Invalid mode argument.' )
 			self.mode = mode
-			throw_if( 'extract', extract if isinstance( extract, str ) and extract in self.extraction_options else None )
+			throw_if( 'extract', extract )
+			if not ( isinstance( extract, str ) and extract in self.extraction_options ):
+				raise ValueError( 'Invalid extract argument.' )
 			self.extraction = extract
 			self.include_images = include
-			throw_if( 'format', format if isinstance( format, str ) and format in self.image_options else None )
+			throw_if( 'format', format )
+			if not ( isinstance( format, str ) and format in self.image_options ):
+				raise ValueError( 'Invalid format argument.' )
 			self.image_format = format
 			if self.include_images:
 				self.image_parser = RapidOCRBlobParser( )
@@ -1326,9 +1350,13 @@ class ExcelLoader( Loader ):
 		try:
 			throw_if( 'path', path )
 			self.file_path = self.verify_exists( path )
-			throw_if( 'mode', mode if isinstance( mode, str ) and mode in self.mode_options else None )
+			throw_if( 'mode', mode )
+			if not ( isinstance( mode, str ) and mode in self.mode_options ):
+				raise ValueError( 'Invalid mode argument.' )
 			self.mode = mode
-			throw_if( 'has_headers', has_headers if type( has_headers ) is bool else None )
+			throw_if( 'has_headers', has_headers )
+			if not ( type( has_headers ) is bool ):
+				raise ValueError( 'Invalid has_headers argument.' )
 			self.has_headers = has_headers
 			self.loader = UnstructuredExcelLoader( file_path=self.file_path, mode=self.mode )
 			self.documents = self.loader.load( )
@@ -1569,7 +1597,9 @@ class MarkdownLoader( Loader ):
 		try:
 			throw_if( 'path', path )
 			self.file_path = self.verify_exists( path )
-			throw_if( 'mode', mode if isinstance( mode, str ) and mode in self.mode_options else None )
+			throw_if( 'mode', mode )
+			if not ( isinstance( mode, str ) and mode in self.mode_options ):
+				raise ValueError( 'Invalid mode argument.' )
 			self.mode = mode
 			self.loader = UnstructuredMarkdownLoader( file_path=self.file_path, mode=self.mode )
 			self.documents = self.loader.load( )
@@ -1813,11 +1843,19 @@ class JsonLoader( Loader ):
 		try:
 			throw_if( 'filepath', filepath )
 			self.file_path = self.verify_exists( filepath )
-			throw_if( 'jq_schema', jq_schema if isinstance( jq_schema, str ) else None )
-			throw_if( 'is_text', is_text if isinstance( is_text, bool ) else None )
-			throw_if( 'is_lines', is_lines if isinstance( is_lines, bool ) else None )
+			throw_if( 'jq_schema', jq_schema )
+			if not ( isinstance( jq_schema, str ) ):
+				raise ValueError( 'Invalid jq_schema argument.' )
+			throw_if( 'is_text', is_text )
+			if not ( isinstance( is_text, bool ) ):
+				raise ValueError( 'Invalid is_text argument.' )
+			throw_if( 'is_lines', is_lines )
+			if not ( isinstance( is_lines, bool ) ):
+				raise ValueError( 'Invalid is_lines argument.' )
 			if content_key is not None:
-				throw_if( 'content_key', content_key if isinstance( content_key, str ) else None )
+				throw_if( 'content_key', content_key )
+				if not ( isinstance( content_key, str ) ):
+					raise ValueError( 'Invalid content_key argument.' )
 			self.jq_schema = jq_schema
 			self.content_key = content_key
 			self.text_content = is_text
@@ -2365,7 +2403,9 @@ class PowerPointLoader( Loader ):
 			throw_if( 'path', path )
 			
 			self.file_path = self.verify_exists( path )
-			throw_if( 'mode', mode if isinstance( mode, str ) and mode in ( 'single', 'elements' ) else None )
+			throw_if( 'mode', mode )
+			if not ( isinstance( mode, str ) and mode in ( 'single', 'elements' ) ):
+				raise ValueError( 'Invalid mode argument.' )
 			self.mode = mode
 			self.loader = UnstructuredPowerPointLoader( file_path=self.file_path, mode=self.mode )
 			self.documents = self.loader.load( )
