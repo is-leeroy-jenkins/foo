@@ -50,12 +50,11 @@
 '''
 from __future__ import annotations
 
-from anthropic import Anthropic as Claude
+from anthropic import Anthropic
 import base64
 from boogr import Error, Logger
 from core import Result
 import config as cfg
-from google import genai
 from google import genai
 from google.genai import types
 from openai import OpenAI
@@ -1687,7 +1686,7 @@ class Claude( Generator ):
 	    Wraps Anthropic Claude message generation and optional web-search tooling behind a consistent Foo interface.
 
 	Attributes:
-	    client (Optional[Claude]): Initialized provider SDK client used to execute API requests.
+	    client (Optional[Anthropic]): Initialized provider SDK client used to execute API requests.
 	    model (Optional[str]): Provider model identifier used for generation requests.
 	    response (Optional[Any]): Most recent raw response returned by the provider client.
 	    api_key (Optional[str]): Provider credential loaded from application configuration.
@@ -1708,7 +1707,7 @@ class Claude( Generator ):
 	    content (Any): Current content retained by the Claude workflow between related operations.
 	    agents (Any): Configured user-agent string sent with web requests.
 	"""
-	client: Optional[ Claude ]
+	client: Optional[ Anthropic ]
 	model: Optional[ str ]
 	response: Optional[ Any ]
 	api_key: Optional[ str ]
@@ -1821,7 +1820,7 @@ class Claude( Generator ):
 			return _values
 		except Exception as exc:
 			exception = Error( exc )
-			exception.module = 'fetchers'
+			exception.module = 'generators'
 			exception.cause = 'Claude'
 			exception.method = '_normalize_domains( self, domains: Any ) -> List[ str ]'
 			Logger( ).write( exception )
@@ -1848,7 +1847,7 @@ class Claude( Generator ):
 			return _name.startswith( 'claude-' )
 		except Exception as exc:
 			exception = Error( exc )
-			exception.module = 'fetchers'
+			exception.module = 'generators'
 			exception.cause = 'Claude'
 			exception.method = '_supports_thinking( self, model: str ) -> bool'
 			Logger( ).write( exception )
@@ -1887,9 +1886,9 @@ class Claude( Generator ):
 			return str( response )
 		except Exception as exc:
 			exception = Error( exc )
-			exception.module = 'fetchers'
+			exception.module = 'generators'
 			exception.cause = 'Claude'
-			exception.method = '_extract_text( self, response: Any ) -> str'
+			exception.method = 'extract_text( self, response: Any ) -> str'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -1925,7 +1924,7 @@ class Claude( Generator ):
 		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'query', query )
+			throw_if( 'query', query if isinstance( query, str ) else None )
 			throw_if( 'model', model if isinstance( model, str ) else None )
 			throw_if( 'temperature', temperature if type( temperature ) in ( int, float ) and temperature >= 0 else None )
 			throw_if( 'max_tokens', max_tokens if type( max_tokens ) is int and max_tokens > 0 else None )
@@ -1943,7 +1942,7 @@ class Claude( Generator ):
 			self.top_k = top_k
 			self.system_instructions = system if system and str( system ).strip( ) else None
 			self.web_search = web_search
-			self.client = Claude( api_key=self.api_key )
+			self.client = Anthropic( api_key=self.api_key )
 			self.search_domains = self.normalize_domains( search_domains )
 			self.blocked_domains = self.normalize_domains( blocked_domains )
 			self.thinking_budget = thinking_budget
@@ -1963,8 +1962,7 @@ class Claude( Generator ):
 			
 			if thinking and self.supports_thinking( self.model ):
 				_budget = self.thinking_budget if self.thinking_budget is not None else 1024
-				if _budget < 1024:
-					_budget = 1024
+				throw_if( 'thinking_budget', _budget if _budget >= 1024 else None )
 				if _budget >= self.max_tokens:
 					raise ValueError( 'Thinking Budget must be less than Max Tokens.' )
 				
@@ -1975,7 +1973,8 @@ class Claude( Generator ):
 					}
 				
 				if self.top_p is not None:
-					self.params[ 'top_p' ] = min( 1.0, max( 0.95, self.top_p ) )
+					throw_if( 'top_p', self.top_p if 0.95 <= self.top_p <= 1.0 else None )
+					self.params[ 'top_p' ] = self.top_p
 			else:
 				self.params[ 'temperature' ] = self.temperature
 				self.params[ 'top_p' ] = self.top_p
@@ -2004,7 +2003,7 @@ class Claude( Generator ):
 			return self.extract_text( self.response )
 		except Exception as exc:
 			exception = Error( exc )
-			exception.module = 'fetchers'
+			exception.module = 'generators'
 			exception.cause = 'Claude'
 			exception.method = 'fetch( self, **args ) -> str | None'
 			Logger( ).write( exception )
@@ -2049,7 +2048,7 @@ class Claude( Generator ):
 				blocked_domains=blocked_domains, )
 		except Exception as exc:
 			exception = Error( exc )
-			exception.module = 'fetchers'
+			exception.module = 'generators'
 			exception.cause = 'Claude'
 			exception.method = 'generate_text( self, query: str, ... ) -> str | None'
 			Logger( ).write( exception )
@@ -2092,7 +2091,7 @@ class Claude( Generator ):
 				web_search=True, search_domains=search_domains, blocked_domains=blocked_domains, )
 		except Exception as exc:
 			exception = Error( exc )
-			exception.module = 'fetchers'
+			exception.module = 'generators'
 			exception.cause = 'Claude'
 			exception.method = 'search_web( self, query: str, ... ) -> str | None'
 			Logger( ).write( exception )
@@ -2180,9 +2179,9 @@ class Mistral( Generator ):
 		"""
 		return [ 'content', 'client', 'timeout', 'headers', 'fetch', 'api_key', 'response',
 			'params', 'agents', 'model', 'temperature', 'max_tokens', 'top_p', 'messages',
-			'system_instructions', 'seed', 'safe_prompt', '_extract_text', 'create_schema', ]
+			'system_instructions', 'seed', 'safe_prompt', 'extract_text', 'create_schema', ]
 	
-	def _extract_text( self, response: Any ) -> str:
+	def extract_text( self, response: Any ) -> str:
 		"""Extract text.
 
 		Purpose:
@@ -2230,9 +2229,9 @@ class Mistral( Generator ):
 			return str( response )
 		except Exception as exc:
 			exception = Error( exc )
-			exception.module = 'fetchers'
+			exception.module = 'generators'
 			exception.cause = 'Mistral'
-			exception.method = '_extract_text( self, response: Any ) -> str'
+			exception.method = 'extract_text( self, response: Any ) -> str'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -2304,10 +2303,10 @@ class Mistral( Generator ):
 				self.params[ 'random_seed' ] = self.seed
 			
 			self.response = self.client.chat.complete( **self.params )
-			return self._extract_text( self.response )
+			return self.extract_text( self.response )
 		except Exception as exc:
 			exception = Error( exc )
-			exception.module = 'fetchers'
+			exception.module = 'generators'
 			exception.cause = 'Mistral'
 			exception.method = 'fetch( self, *args ) -> str | None'
 			Logger( ).write( exception )
@@ -2360,7 +2359,7 @@ class Mistral( Generator ):
 			return _schema
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'fetchers'
+			exception.module = 'generators'
 			exception.cause = 'Mistral'
 			exception.method = ('create_schema( self, function: str, tool: str, description: str, '
 			                    'parameters: dict, required: list[ str ] ) -> Dict[ str, str ]')
@@ -2871,7 +2870,7 @@ class Chat( Generator ):
 		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'prompt', prompt )
+			throw_if( 'prompt', prompt if isinstance( prompt, str ) else None )
 			throw_if( 'model', model if isinstance( model, str ) else None )
 			throw_if( 'temperature', temperature if type( temperature ) in ( int, float ) and temperature >= 0 else None )
 			throw_if( 'max_tokens', max_tokens if type( max_tokens ) is int and max_tokens > 0 else None )
@@ -3013,7 +3012,7 @@ class Chat( Generator ):
 		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'prompt', prompt )
+			throw_if( 'prompt', prompt if isinstance( prompt, str ) else None )
 			self.input_text = prompt
 			self.response = self.client.images.generate( model='gpt-image-1',
 				prompt=self.input_text, size='1024x1024' )
@@ -3051,7 +3050,7 @@ class Chat( Generator ):
 		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'prompt', prompt )
+			throw_if( 'prompt', prompt if isinstance( prompt, str ) else None )
 			throw_if( 'url', url )
 			self.input_text = prompt
 			self.image_url = url
@@ -3098,7 +3097,7 @@ class Chat( Generator ):
 		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'prompt', prompt )
+			throw_if( 'prompt', prompt if isinstance( prompt, str ) else None )
 			throw_if( 'path', path )
 			file_path = Path( path )
 			
@@ -3200,7 +3199,7 @@ class Chat( Generator ):
 		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'prompt', prompt )
+			throw_if( 'prompt', prompt if isinstance( prompt, str ) else None )
 			self.query = prompt
 			self.tools = self.build_tools( web_search=False, file_search=True,
 				vector_store_ids=self.vector_store_ids, max_file_results=20 )
