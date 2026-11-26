@@ -49,7 +49,7 @@
 '''
 from typing import Any, Optional, List, Pattern, Dict
 from bs4 import BeautifulSoup
-from requests import Response, HTTPError
+from requests import Response
 from boogr import Error, Logger
 import config as cfg
 import re
@@ -65,10 +65,10 @@ def throw_if( name: str, value: object ) -> None:
 
 	Args:
 	    name (str): Argument name included in validation error messages.
-	    value (object): Candidate value to validate or normalize.
+	    value (object): Candidate value to validate.
 
 	Returns:
-	    None: This method updates instance state or validates input and does not return a value.
+	    None: Returns after successful validation.
 
 	Raises:
 	    ValueError: Raised when the method cannot satisfy its documented value requirement.
@@ -647,8 +647,7 @@ class WebExtractor( Extractor ):
 			Logger( ).write( exception )
 			raise exception
 
-	def create_schema( self, function: str, tool: str, description: str,
-			parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: Optional[ List[ str ] ] ) -> Dict[ str, Any ] | None:
 		"""Create a JSON-compatible tool schema.
 
 		Purpose:
@@ -661,10 +660,10 @@ class WebExtractor( Extractor ):
 			tool (str): Service or system used by the generated function.
 			description (str): Human-readable explanation of the function behavior.
 			parameters (dict): Mapping of parameter names to JSON Schema fragments.
-			required (list[str]): Required parameter names. When ``None``, all properties are required.
+			required (Optional[List[str]]): Required property names. An empty list declares no required properties; ``None`` declares all properties required.
 
 		Returns:
-			Dict[str, str] | None: JSON-compatible function schema.
+			Dict[str, Any] | None: JSON-compatible function schema.
 
 		Raises:
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
@@ -673,14 +672,14 @@ class WebExtractor( Extractor ):
 			throw_if( 'function', function if isinstance( function, str ) else None )
 			throw_if( 'tool', tool if isinstance( tool, str ) else None )
 			throw_if( 'description', description if isinstance( description, str ) else None )
-			throw_if( 'parameters', parameters )
+			throw_if( 'parameters', parameters if isinstance( parameters, dict ) else None )
+			if required is not None:
+				throw_if( 'required', True if isinstance( required, list ) and all( isinstance( name, str ) and name in parameters for name in required ) and len( required ) == len( set( required ) ) else None )
 			self.function = function
 			self.tool = tool
 			self.description = description
 			self.parameters = parameters
 			self.required = required
-			if not isinstance( self.parameters, dict ):
-				raise ValueError( 'parameters must be a dict of param_name → schema definitions.' )
 
 			if self.required is None:
 				self.required = list( self.parameters.keys( ) )
@@ -700,6 +699,6 @@ class WebExtractor( Extractor ):
 			exception = Error( exc )
 			exception.module = 'scrapers'
 			exception.cause = 'WebExtractor'
-			exception.method = 'create_schema( self, **args ) -> Dict[ str, str ] | None'
+			exception.method = 'create_schema( self, function, tool, description, parameters, required ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
