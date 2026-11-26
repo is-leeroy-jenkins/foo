@@ -118,6 +118,7 @@ class DB( ):
 		self.provider = None
 		self.source = None
 		self.table_name = None
+		self.column_names = [ ]
 		self.path = None
 		self.driver = None
 	
@@ -413,10 +414,13 @@ class SQLite( DB ):
 			throw_if( 'table', table )
 			throw_if( 'columns', columns )
 			throw_if( 'values', values )
-			self.placeholders = ', '.join( '?' for _ in values )
-			col_names = ', '.join( columns )
-			self.sql = f'INSERT INTO {table} ({col_names}) VALUES ({self.placeholders})'
-			self.cursor.execute( self.sql, values )
+			self.table_name = table
+			self.column_names = columns
+			self.params = values
+			self.placeholders = ', '.join( '?' for _ in self.params )
+			col_names = ', '.join( self.column_names )
+			self.sql = f'INSERT INTO {self.table_name} ({col_names}) VALUES ({self.placeholders})'
+			self.cursor.execute( self.sql, self.params )
 			self.connection.commit( )
 		except Exception as e:
 			exception = Error( e )
@@ -445,11 +449,11 @@ class SQLite( DB ):
 		try:
 			throw_if( 'source_file', source_file )
 			throw_if( 'chunks', chunks )
-			throw_if( 'vectors', vectors )
+			throw_if( 'vectors', vectors if isinstance( vectors, np.ndarray ) and vectors.ndim == 2 and len( vectors ) == len( chunks ) else None )
 			records = [ (source_file, i, chunks[ i ], json.dumps( vectors[ i ].tolist( ) ))
 			            for i in range( len( chunks ) ) ]
 			
-			self.sql = f''' INSERT INTO {self.table_name} ({self.file_name}, chunk_index,
+			self.sql = f''' INSERT INTO {self.table_name or 'embeddings'} (source_file, chunk_index,
 					chunk_text, embedding) VALUES (?, ?, ?, ?) '''
 			self.cursor.executemany( self.sql, records )
 			self.connection.commit( )
@@ -678,8 +682,8 @@ class Chroma:
 			path (str): Directory used by ChromaDB for persistent storage.
 			collection (str): Name of the ChromaDB collection to retrieve or create.
 		"""
-		self.client = chromadb.Client(
-			Settings( persist_directory=path, anonymized_telemetry=False ) )
+		self.client = chromadb.PersistentClient( path=path,
+			settings=Settings( anonymized_telemetry=False ) )
 		self.collection = self.client.get_or_create_collection( name=collection )
 	
 	def add( self, ids: List[ str ], texts: List[ str ], embeddings: List[ List[ float ] ],
@@ -732,8 +736,9 @@ class Chroma:
 			Error: Re-raised after the exception is wrapped and written to the application logger.
 		"""
 		try:
-			result = self.collection.query( query_texts=text, n_results=num, where=where or { } )
-			return result.get( 'documents', [ ] )[ 0 ]
+			result = self.collection.query( query_texts=text, n_results=num, where=where )
+			documents = result[ 'documents' ]
+			return documents[ 0 ] if documents else [ ]
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'Foo'
@@ -793,14 +798,16 @@ class Chroma:
 		
 		Purpose:
 			Deletes all documents from the configured ChromaDB collection using the existing
-			collection-wide delete behavior. This supports resetting local vector-store state
+			record identifiers. This supports resetting local vector-store state
 			for rebuild or testing workflows.
 		
 		Raises:
 			Error: Re-raised after the exception is wrapped and written to the application logger.
 		"""
 		try:
-			self.collection.delete( where={ } )
+			ids = self.collection.get( include=[ ] )[ 'ids' ]
+			if ids:
+				self.collection.delete( ids=ids )
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'Foo'
@@ -813,14 +820,14 @@ class Chroma:
 		"""Persist vector-store state.
 		
 		Purpose:
-			Calls the ChromaDB client persistence operation to save the current collection
-			state to disk. This preserves vector-store changes for later application runs.
+			Preserves the public interface for callers. The persistent client writes changes
+			automatically; no explicit persistence operation is required.
 		
 		Raises:
 			Error: Re-raised after the exception is wrapped and written to the application logger.
 		"""
 		try:
-			self.client.persist( )
+			return None
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'Foo'
