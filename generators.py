@@ -702,32 +702,14 @@ class Grok( Generator ):
 		"""
 		try:
 			throw_if( 'query', query )
-			if not ( isinstance( query, str ) ):
-				raise ValueError( 'Invalid query argument.' )
 			throw_if( 'model', model )
-			if not ( isinstance( model, str ) ):
-				raise ValueError( 'Invalid model argument.' )
 			throw_if( 'temperature', temperature )
-			if not ( type( temperature ) in ( int, float ) and temperature >= 0 ):
-				raise ValueError( 'Invalid temperature argument.' )
 			throw_if( 'max_tokens', max_tokens )
-			if not ( type( max_tokens ) is int and max_tokens > 0 ):
-				raise ValueError( 'Invalid max_tokens argument.' )
 			throw_if( 'top_p', top_p )
-			if not ( type( top_p ) in ( int, float ) and 0 <= top_p <= 1 ):
-				raise ValueError( 'Invalid top_p argument.' )
 			throw_if( 'stream', stream )
-			if not ( type( stream ) is bool ):
-				raise ValueError( 'Invalid stream argument.' )
 			throw_if( 'store', store )
-			if not ( type( store ) is bool ):
-				raise ValueError( 'Invalid store argument.' )
 			throw_if( 'web_search', web_search )
-			if not ( type( web_search ) is bool ):
-				raise ValueError( 'Invalid web_search argument.' )
 			throw_if( 'parallel_tool_calls', parallel_tool_calls )
-			if not ( type( parallel_tool_calls ) is bool ):
-				raise ValueError( 'Invalid parallel_tool_calls argument.' )
 			self.query = query
 			self.model = model
 			self.temperature = temperature
@@ -1482,41 +1464,19 @@ class Gemini( Generator ):
 		"""
 		try:
 			throw_if( 'prompt', prompt )
-			if not ( isinstance( prompt, str ) ):
-				raise ValueError( 'Invalid prompt argument.' )
 			throw_if( 'model', model )
-			if not ( isinstance( model, str ) ):
-				raise ValueError( 'Invalid model argument.' )
 			
 			throw_if( 'temperature', temperature )
-			if not ( type( temperature ) in ( int, float ) and temperature >= 0 ):
-				raise ValueError( 'Invalid temperature argument.' )
 			throw_if( 'max_tokens', max_tokens )
-			if not ( type( max_tokens ) is int and max_tokens > 0 ):
-				raise ValueError( 'Invalid max_tokens argument.' )
 			throw_if( 'top_p', top_p )
-			if not ( type( top_p ) in ( int, float ) and 0 <= top_p <= 1 ):
-				raise ValueError( 'Invalid top_p argument.' )
 			if top_k is not None:
 				throw_if( 'top_k', top_k )
-				if not ( type( top_k ) is int and top_k > 0 ):
-					raise ValueError( 'Invalid top_k argument.' )
 			throw_if( 'candidate_count', candidate_count )
-			if not ( type( candidate_count ) is int and candidate_count > 0 ):
-				raise ValueError( 'Invalid candidate_count argument.' )
 			if seed is not None:
 				throw_if( 'seed', seed )
-				if not ( type( seed ) is int ):
-					raise ValueError( 'Invalid seed argument.' )
 			throw_if( 'grounding', grounding )
-			if not ( type( grounding ) is bool ):
-				raise ValueError( 'Invalid grounding argument.' )
 			throw_if( 'reasoning', reasoning )
-			if not ( type( reasoning ) is bool ):
-				raise ValueError( 'Invalid reasoning argument.' )
 			throw_if( 'include_thoughts', include_thoughts )
-			if not ( type( include_thoughts ) is bool ):
-				raise ValueError( 'Invalid include_thoughts argument.' )
 			self.query = prompt
 			self.model = model
 			self.temperature = temperature
@@ -1913,31 +1873,15 @@ class Claude( Generator ):
 		"""
 		try:
 			throw_if( 'query', query )
-			if not ( isinstance( query, str ) ):
-				raise ValueError( 'Invalid query argument.' )
 			throw_if( 'model', model )
-			if not ( isinstance( model, str ) ):
-				raise ValueError( 'Invalid model argument.' )
 			throw_if( 'temperature', temperature )
-			if not ( type( temperature ) in ( int, float ) and temperature >= 0 ):
-				raise ValueError( 'Invalid temperature argument.' )
 			throw_if( 'max_tokens', max_tokens )
-			if not ( type( max_tokens ) is int and max_tokens > 0 ):
-				raise ValueError( 'Invalid max_tokens argument.' )
 			throw_if( 'top_p', top_p )
-			if not ( type( top_p ) in ( int, float ) and 0 <= top_p <= 1 ):
-				raise ValueError( 'Invalid top_p argument.' )
 			if top_k is not None:
 				throw_if( 'top_k', top_k )
-				if not ( type( top_k ) is int and top_k > 0 ):
-					raise ValueError( 'Invalid top_k argument.' )
 			throw_if( 'web_search', web_search )
-			if not ( type( web_search ) is bool ):
-				raise ValueError( 'Invalid web_search argument.' )
 			if thinking_budget is not None:
 				throw_if( 'thinking_budget', thinking_budget )
-				if not ( type( thinking_budget ) is int ):
-					raise ValueError( 'Invalid thinking_budget argument.' )
 			self.query = query
 			self.model = model
 			self.temperature = temperature
@@ -1966,8 +1910,6 @@ class Claude( Generator ):
 			
 			if thinking and self.supports_thinking( self.model ):
 				_budget = self.thinking_budget if self.thinking_budget is not None else 1024
-				if not ( _budget >= 1024 ):
-					raise ValueError( 'Invalid thinking_budget argument.' )
 				if _budget >= self.max_tokens:
 					raise ValueError( 'Thinking Budget must be less than Max Tokens.' )
 				
@@ -1978,8 +1920,6 @@ class Claude( Generator ):
 					}
 				
 				if self.top_p is not None:
-					if not ( 0.95 <= self.top_p <= 1.0 ):
-						raise ValueError( 'Invalid top_p argument.' )
 					self.params[ 'top_p' ] = self.top_p
 			else:
 				self.params[ 'temperature' ] = self.temperature
@@ -2267,27 +2207,13 @@ class Mistral( Generator ):
 		"""
 		try:
 			throw_if( 'query', query )
-			if not ( isinstance( query, str ) ):
-				raise ValueError( 'Invalid query argument.' )
 			throw_if( 'model', model )
-			if not ( isinstance( model, str ) ):
-				raise ValueError( 'Invalid model argument.' )
 			throw_if( 'temperature', temperature )
-			if not ( type( temperature ) in ( int, float ) and temperature >= 0 ):
-				raise ValueError( 'Invalid temperature argument.' )
 			throw_if( 'max_tokens', max_tokens )
-			if not ( type( max_tokens ) is int and max_tokens > 0 ):
-				raise ValueError( 'Invalid max_tokens argument.' )
 			throw_if( 'top_p', top_p )
-			if not ( type( top_p ) in ( int, float ) and 0 <= top_p <= 1 ):
-				raise ValueError( 'Invalid top_p argument.' )
 			if seed is not None:
 				throw_if( 'seed', seed )
-				if not ( type( seed ) is int ):
-					raise ValueError( 'Invalid seed argument.' )
 			throw_if( 'safe_mode', safe_mode )
-			if not ( type( safe_mode ) is bool ):
-				raise ValueError( 'Invalid safe_mode argument.' )
 			self.query = query
 			self.model = model
 			self.temperature = temperature
@@ -2891,32 +2817,14 @@ class Chat( Generator ):
 		"""
 		try:
 			throw_if( 'prompt', prompt )
-			if not ( isinstance( prompt, str ) ):
-				raise ValueError( 'Invalid prompt argument.' )
 			throw_if( 'model', model )
-			if not ( isinstance( model, str ) ):
-				raise ValueError( 'Invalid model argument.' )
 			throw_if( 'temperature', temperature )
-			if not ( type( temperature ) in ( int, float ) and temperature >= 0 ):
-				raise ValueError( 'Invalid temperature argument.' )
 			throw_if( 'max_tokens', max_tokens )
-			if not ( type( max_tokens ) is int and max_tokens > 0 ):
-				raise ValueError( 'Invalid max_tokens argument.' )
 			throw_if( 'top_p', top_p )
-			if not ( type( top_p ) in ( int, float ) and 0 <= top_p <= 1 ):
-				raise ValueError( 'Invalid top_p argument.' )
 			throw_if( 'store', store )
-			if not ( type( store ) is bool ):
-				raise ValueError( 'Invalid store argument.' )
 			throw_if( 'stream', stream )
-			if not ( type( stream ) is bool ):
-				raise ValueError( 'Invalid stream argument.' )
 			throw_if( 'web_search', web_search )
-			if not ( type( web_search ) is bool ):
-				raise ValueError( 'Invalid web_search argument.' )
 			throw_if( 'parallel_tool_calls', parallel_tool_calls )
-			if not ( type( parallel_tool_calls ) is bool ):
-				raise ValueError( 'Invalid parallel_tool_calls argument.' )
 			self.query = prompt
 			self.model = model
 			self.temperature = temperature
@@ -3052,8 +2960,6 @@ class Chat( Generator ):
 		"""
 		try:
 			throw_if( 'prompt', prompt )
-			if not ( isinstance( prompt, str ) ):
-				raise ValueError( 'Invalid prompt argument.' )
 			self.input_text = prompt
 			self.response = self.client.images.generate( model='gpt-image-1',
 				prompt=self.input_text, size='1024x1024' )
@@ -3092,8 +2998,6 @@ class Chat( Generator ):
 		"""
 		try:
 			throw_if( 'prompt', prompt )
-			if not ( isinstance( prompt, str ) ):
-				raise ValueError( 'Invalid prompt argument.' )
 			throw_if( 'url', url )
 			self.input_text = prompt
 			self.image_url = url
@@ -3141,8 +3045,6 @@ class Chat( Generator ):
 		"""
 		try:
 			throw_if( 'prompt', prompt )
-			if not ( isinstance( prompt, str ) ):
-				raise ValueError( 'Invalid prompt argument.' )
 			throw_if( 'path', path )
 			file_path = Path( path )
 			
@@ -3245,8 +3147,6 @@ class Chat( Generator ):
 		"""
 		try:
 			throw_if( 'prompt', prompt )
-			if not ( isinstance( prompt, str ) ):
-				raise ValueError( 'Invalid prompt argument.' )
 			self.query = prompt
 			self.tools = self.build_tools( web_search=False, file_search=True,
 				vector_store_ids=self.vector_store_ids, max_file_results=20 )
