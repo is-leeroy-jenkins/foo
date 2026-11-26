@@ -61,7 +61,6 @@ from openai import OpenAI
 from pathlib import Path
 from typing import Any, Dict, Optional, Pattern, List, Tuple
 from requests import Response
-from xai_sdk import Client as Xai
 from mistralai import Mistral as MistralAI
 import re
 import urllib
@@ -181,7 +180,7 @@ class Grok( Generator ):
 	    Wraps the xAI Responses or chat API for text generation, reasoning controls, structured output, and grounded web search.
 
 	Attributes:
-	    client (Optional[Xai]): Initialized provider SDK client used to execute API requests.
+	    client (Optional[OpenAI]): Initialized provider SDK client used to execute API requests.
 	    model (Optional[str]): Provider model identifier used for generation requests.
 	    response (Optional[Any]): Most recent raw response returned by the provider client.
 	    api_key (Optional[str]): Provider credential loaded from application configuration.
@@ -205,7 +204,7 @@ class Grok( Generator ):
 	    file_path (Any): Resolved filesystem path of the current source or output file.
 	    content (Any): Current content retained by the Grok workflow between related operations.
 	"""
-	client: Optional[ Xai ]
+	client: Optional[ OpenAI ]
 	model: Optional[ str ]
 	response: Optional[ Any ]
 	api_key: Optional[ str ]
@@ -237,7 +236,7 @@ class Grok( Generator ):
 		super( ).__init__( )
 		self.api_key = cfg.XAI_API_KEY
 		self.model = 'grok-4-fast-reasoning'
-		self.client = Xai( api_key=self.api_key, base_url='https://api.x.ai/v1' )
+		self.client = OpenAI( api_key=self.api_key, base_url='https://api.x.ai/v1' )
 		self.messages = None
 		self.temperature = 0.7
 		self.top_p = 1.0
@@ -654,48 +653,8 @@ class Grok( Generator ):
 		try:
 			throw_if( 'payload', payload )
 			
-			if hasattr( self.client, 'responses' ) and hasattr( self.client.responses, 'create' ):
-				return self.client.responses.create( **payload )
-			
-			if hasattr( self.client, 'chat' ) and hasattr( self.client.chat, 'create' ):
-				messages = payload.get( 'input', [ ] )
-				
-				if isinstance( messages, str ):
-					messages = [ { 'role': 'user', 'content': messages } ]
-				
-				chat_payload = { 'model': payload.get( 'model' ),
-						'messages': messages, 'stream': payload.get( 'stream', False ) }
-				
-				if payload.get( 'temperature' ) is not None:
-					chat_payload[ 'temperature' ] = payload.get( 'temperature' )
-				
-				if payload.get( 'top_p' ) is not None:
-					chat_payload[ 'top_p' ] = payload.get( 'top_p' )
-				
-				if payload.get( 'max_output_tokens' ) is not None:
-					chat_payload[ 'max_tokens' ] = payload.get( 'max_output_tokens' )
-				
-				if payload.get( 'tools' ):
-					chat_payload[ 'tools' ] = payload.get( 'tools' )
-				
-				if payload.get( 'tool_choice' ):
-					chat_payload[ 'tool_choice' ] = payload.get( 'tool_choice' )
-				
-				if payload.get( 'stop' ):
-					chat_payload[ 'stop' ] = payload.get( 'stop' )
-				
-				if payload.get( 'response_format' ):
-					chat_payload[ 'response_format' ] = payload.get( 'response_format' )
-				
-				if payload.get( 'reasoning_effort' ):
-					chat_payload[ 'reasoning_effort' ] = payload.get( 'reasoning_effort' )
-				
-				if payload.get( 'reasoning' ):
-					chat_payload[ 'reasoning' ] = payload.get( 'reasoning' )
-				
-				return self.client.chat.create( **chat_payload )
-			
-			raise RuntimeError( 'The xAI client does not expose responses.create or chat.create.' )
+			self.params = payload
+			return self.client.responses.create( **self.params )
 		
 		except Exception as exc:
 			exception = Error( exc )
@@ -791,11 +750,11 @@ class Grok( Generator ):
 			}
 			
 			if seed is not None:
-				self.params[ 'seed' ] = int( seed )
+				throw_if( 'seed', None )
 			
 			format_payload = self.build_response_format( response_format )
 			if format_payload:
-				self.params[ 'response_format' ] = format_payload
+				self.params[ 'text' ] = { 'format': format_payload }
 			
 			if self.tools:
 				self.params[ 'tools' ] = self.tools
@@ -803,9 +762,7 @@ class Grok( Generator ):
 			
 			is_reasoning = self.is_reasoning_model( self.model )
 			
-			if self.supports_reasoning_effort( self.model ) and self.reasoning_effort:
-				self.params[ 'reasoning_effort' ] = self.reasoning_effort
-			elif self.supports_reasoning_object( self.model ) and self.reasoning_effort:
+			if ( self.supports_reasoning_effort( self.model ) or self.supports_reasoning_object( self.model ) ) and self.reasoning_effort:
 				self.params[ 'reasoning' ] = { 'effort': self.reasoning_effort }
 			
 			if not is_reasoning:
@@ -813,7 +770,7 @@ class Grok( Generator ):
 				self.params[ 'top_p' ] = self.top_p
 				
 				if stop:
-					self.params[ 'stop' ] = [ str( item ) for item in stop if str( item ).strip() ]
+					throw_if( 'stop', None )
 			
 			self.response = self.create_response( self.params )
 			return self.extract_output_text( self.response )
@@ -1279,10 +1236,7 @@ class Gemini( Generator ):
 			if include_thoughts:
 				thinking_data[ 'include_thoughts' ] = True
 			
-			if hasattr( types, 'ThinkingConfig' ):
-				return types.ThinkingConfig( **thinking_data )
-			
-			return thinking_data
+			return types.ThinkingConfig( **thinking_data )
 		
 		except Exception as exc:
 			exception = Error( exc )
@@ -1311,10 +1265,7 @@ class Gemini( Generator ):
 			if not grounding:
 				return [ ]
 			
-			if hasattr( types, 'Tool' ) and hasattr( types, 'GoogleSearch' ):
-				return [ types.Tool( google_search=types.GoogleSearch( ) ) ]
-			
-			return [ { 'google_search': { } } ]
+			return [ types.Tool( google_search=types.GoogleSearch( ) ) ]
 		
 		except Exception as exc:
 			exception = Error( exc )
@@ -1405,10 +1356,7 @@ class Gemini( Generator ):
 			if thinking_config:
 				config_data[ 'thinking_config' ] = thinking_config
 			
-			if hasattr( types, 'GenerateContentConfig' ):
-				return types.GenerateContentConfig( **config_data )
-			
-			return config_data
+			return types.GenerateContentConfig( **config_data )
 		
 		except Exception as exc:
 			exception = Error( exc )
@@ -2920,14 +2868,15 @@ class Chat( Generator ):
 				self.request[ 'instructions' ] = self.system_instructions
 			
 			if seed is not None:
-				self.request[ 'seed' ] = int( seed )
+				throw_if( 'seed', None )
 			
 			if self.tools:
 				self.request[ 'tools' ] = self.tools
 				self.request[ 'tool_choice' ] = self.tool_choice
 			
-			if self.supports_reasoning( self.model ) and self.reasoning_effort:
-				self.request[ 'reasoning' ] = { 'effort': self.reasoning_effort }
+			if self.supports_reasoning( self.model ):
+				if self.reasoning_effort:
+					self.request[ 'reasoning' ] = { 'effort': self.reasoning_effort }
 			else:
 				self.request[ 'temperature' ] = self.temperature
 				self.request[ 'top_p' ] = self.top_percent
@@ -3017,13 +2966,13 @@ class Chat( Generator ):
 			self.response = self.client.images.generate( model='gpt-image-1',
 				prompt=self.input_text, size='1024x1024' )
 			
-			if hasattr( self.response, 'data' ) and self.response.data:
+			if self.response.data:
 				image = self.response.data[ 0 ]
-				
-				if hasattr( image, 'url' ) and image.url:
+				if image.b64_json:
+					return f'data:image/png;base64,{image.b64_json}'
+				if image.url:
 					return image.url
-			
-			return str( self.response )
+			return ''
 		
 		except Exception as e:
 			exception = Error( e )
