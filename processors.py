@@ -1610,8 +1610,6 @@ class TextParser( Processor ):
 		"""
 		try:
 			throw_if( 'size', size )
-			if not ( type( size ) is int and size > 0 ):
-				raise ValueError( 'Invalid size argument.' )
 			throw_if( 'filepath', filepath )
 			if not os.path.exists( filepath ):
 				raise FileNotFoundError( f'File not found: {filepath}' )
@@ -1662,8 +1660,6 @@ class TextParser( Processor ):
 		"""
 		try:
 			throw_if( 'size', size )
-			if not ( type( size ) is int and size > 0 ):
-				raise ValueError( 'Invalid size argument.' )
 			throw_if( 'filepath', source )
 			throw_if( 'destination', destination )
 			if not os.path.exists( source ):
@@ -1735,8 +1731,6 @@ class TextParser( Processor ):
 		"""
 		try:
 			throw_if( 'size', size )
-			if not ( type( size ) is int and size > 0 ):
-				raise ValueError( 'Invalid size argument.' )
 			throw_if( 'source', source )
 			throw_if( 'destination', destination )
 			if not os.path.exists( source ):
@@ -2303,8 +2297,6 @@ class WordParser( Processor ):
 		"""
 		try:
 			throw_if( 'num', num )
-			if not ( type( num ) is int and 1 <= num <= len( self.document.paragraphs ) ):
-				raise ValueError( 'Invalid num argument.' )
 			self.paragraphs = [ paragraph.text for paragraph in self.document.paragraphs ]
 			self.page_text = self.paragraphs[ num - 1 ]
 			return self.page_text
