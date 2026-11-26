@@ -10214,10 +10214,8 @@ class HistoricalWeather( Fetcher ):
 		    Resolves location through the configured geocoding service and returns geographic results.
 
 		Args:
-		    location (str): Location supplied by the caller and interpreted according to the
-		        method contract.
-		    count (int): Count supplied by the caller and interpreted according to the method
-		        contract.
+		    location (str): Location supplied by the caller according to the method contract.
+		    count (int): Count supplied by the caller and interpreted according to the method.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
@@ -10225,7 +10223,7 @@ class HistoricalWeather( Fetcher ):
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'location', location )
@@ -10276,34 +10274,33 @@ class HistoricalWeather( Fetcher ):
 		Args:
 		    lat (float): Geographic lat expressed in decimal degrees.
 		    long (float): Long supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    date (dt.date): Date supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 		    zone (str): Zone supplied by the caller and interpreted according to the method
-		    contract.
+		        contract.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'lat', lat )
 			throw_if( 'long', long )
 			throw_if( 'date', date )
-			
 			self.latitude = lat
 			self.longitude = long
-			if not -90.0 <= self.latitude <= 90.0 or not -180.0 <= self.longitude <= 180.0 or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
+			if (not -90.0 <= self.latitude <= 90.0 or not -180.0 <= self.longitude <= 180.0 or not
+			math.isfinite( self.latitude ) or not math.isfinite( self.longitude )):
 				raise ValueError( 'Invalid latitude or longitude.' )
 			if not isinstance( date, dt.date ):
 				raise ValueError( 'date must be a datetime.date instance.' )
 			self.target_date = date
 			self.timezone = zone.strip( ) if zone else 'auto'
-			
 			self.params = { 'latitude': self.latitude, 'longitude': self.longitude,
 					'start_date': self.target_date.isoformat( ),
 					'end_date': self.target_date.isoformat( ), 'timezone': self.timezone,
@@ -10316,13 +10313,11 @@ class HistoricalWeather( Fetcher ):
 			self.response = requests.get( self.url, params=self.params, headers=self.headers,
 				timeout=30 )
 			self.response.raise_for_status( )
-			
 			payload = self.response.json( )
 			if not isinstance( payload, dict ):
 				raise ValueError( 'Open-Meteo response must be a JSON object.' )
 			if payload.get( 'error' ):
 				raise ValueError( str( payload.get( 'reason', 'Open-Meteo request failed.' ) ) )
-			
 			return { 'location': self.location, 'latitude': self.latitude,
 					'longitude': self.longitude,
 					'timezone': payload.get( 'timezone', self.timezone ),
@@ -10333,8 +10328,7 @@ class HistoricalWeather( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'HistoricalWeather'
-			exception.method = ('fetch_historical( self, lat: float, long: float, date: dt.date, '
-			                    'zone: str=auto ) -> Dict[ str, Any ]')
+			exception.method = ('fetch_historical( self, **args ) -> Dict[ str, Any ]')
 			Logger( ).write( exception )
 			raise exception
 	
@@ -10347,29 +10341,23 @@ class HistoricalWeather( Fetcher ):
 		    configuration and returns the normalized result.
 
 		Args:
-		    location (str): Location supplied by the caller and interpreted according to the
-		    method contract.
-		    date (dt.date): Date supplied by the caller and interpreted according to the method
-		    contract.
-		    zone (str): Zone supplied by the caller and interpreted according to the method
-		    contract.
-		    count (int): Count supplied by the caller and interpreted according to the method
-		    contract.
+		    location (str): Location supplied by the caller according to the method contract.
+		    date (dt.date): Date supplied by the caller and interpreted according to the method.
+		    zone (str): Zone supplied by the caller and interpreted according to the method.
+		    count (int): Count supplied by the caller and interpreted according to the method.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'location', location )
 			throw_if( 'date', date )
-			
 			selected = self.geocode_location( location=location, count=count )
-			
 			if not selected:
 				return { 'location': location, 'date': date.isoformat( ),
 						'message': 'No geocoding results found.', 'data': { } }
@@ -10392,8 +10380,7 @@ class HistoricalWeather( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'HistoricalWeather'
-			exception.method = ('fetch( self, location: str, date: dt.date, zone: str=auto, '
-			                    'count: int=10 ) -> Dict[ str, Any ]')
+			exception.method = ('fetch( self, **args ) -> Dict[ str, Any ]')
 			Logger( ).write( exception )
 			raise exception
 	
@@ -10414,18 +10401,17 @@ class HistoricalWeather( Fetcher ):
 
 		Returns:
 		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		        metadata, or generated schema content.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error (exception): The source exception with module, class, and method metadata, writes it
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'function', function )
 			throw_if( 'tool', tool )
 			throw_if( 'description', description )
 			throw_if( 'parameters', parameters )
-			
 			if required is None:
 				required = list( parameters.keys( ) )
 			
@@ -10439,8 +10425,7 @@ class HistoricalWeather( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'HistoricalWeather'
-			exception.method = ('create_schema( self, function: str, tool: str, description: str, '
-			                    'parameters: dict, required: list[ str ] ) -> Dict[ str, str ]')
+			exception.method = ('create_schema( self, **args ) -> Dict[ str, str ]')
 			Logger( ).write( exception )
 			raise exception
 
@@ -10452,23 +10437,15 @@ class Grokipedia( Fetcher ):
 
 	Attributes:
 	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    client (Optional[GrokipediaClient]): Initialized provider SDK client used to execute API
-	    requests.
+	    client (Optional[GrokipediaClient]): SDK client used to execute requests.
 	    query (Optional[str]): Most recent search text or model prompt submitted by the instance.
-	    page (Optional[str]): Current page retained by the Grokipedia workflow between related
-	    operations.
-	    limit (Optional[int]): Current limit retained by the Grokipedia workflow between related
-	    operations.
-	    offset (Optional[int]): Current offset retained by the Grokipedia workflow between related
-	    operations.
-	    include_content (Optional[bool]): Flag controlling whether include content behavior is
-	    enabled.
-	    response (Optional[Dict[str, Any]]): Most recent raw response returned by the provider
-	    client.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
+	    page (Optional[str]): Current page retained by the Grokipedia workflow between operations.
+	    limit (Optional[int]): Current limit retained by the Grokipedia workflow between operations.
+	    offset (Optional[int]): Current offset retained by the Grokipedia workflow between operations.
+	    include_content (Optional[bool]): Flag controlling whether include content.
+	    response (Optional[Dict[str, Any]]): Most recent raw response returned.
+	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent call.
+	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result.
 	    url (Any): Most recent endpoint or resource URL used by the instance.
 	    headers (Any): HTTP headers sent with the current request.
 	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
@@ -10524,9 +10501,8 @@ class Grokipedia( Fetcher ):
 				'response', 'params', 'result', 'fetch_search', 'fetch_page', 'fetch',
 				'create_schema' ]
 	
-	def fetch_search( self, query: str, limit: int=12, offset: int=0 ) -> Dict[
-		                                                                          str,
-		                                                                          Any ] | None:
+	def fetch_search( self, query: str, limit: int=12,
+			offset: int=0 ) -> Dict[ str, Any ] | None:
 		"""Fetch search.
 
 		Purpose:
@@ -10538,25 +10514,21 @@ class Grokipedia( Fetcher ):
 		    offset (int): Zero-based record offset used for pagination.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any] | None: Dictionary containing normalized provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Wraps the source exception with module, class, and method metadata.
 		"""
 		try:
 			throw_if( 'query', query )
 			throw_if( 'limit', limit )
 			throw_if( 'offset', offset )
-			
 			self.query = query.strip( )
 			self.limit = limit
 			self.offset = offset
 			self.client = GrokipediaClient( )
 			self.url = 'grokipedia.search'
 			self.params = { 'query': self.query, 'limit': self.limit, 'offset': self.offset }
-			
 			self.response = self.client.search( query=self.query, limit=self.limit,
 				offset=self.offset )
 			
@@ -10565,7 +10537,6 @@ class Grokipedia( Fetcher ):
 					'data': self.response }
 			
 			return self.result
-		
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -10585,12 +10556,10 @@ class Grokipedia( Fetcher ):
 		    include_content (bool): Whether include content behavior is enabled for the operation.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any] | None: Dictionary containing normalized provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Wraps the source exception with module, class, and method metadata.
 		"""
 		try:
 			throw_if( 'page', page )
@@ -10605,7 +10574,6 @@ class Grokipedia( Fetcher ):
 					'data': self.response }
 			
 			return self.result
-		
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -10615,8 +10583,7 @@ class Grokipedia( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='search', query: str='', page: str='', limit: int=12,
-			offset: int=0, include_content: bool=True ) -> \
-	Dict[ str, Any ] | None:
+			offset: int=0, include_content: bool=True ) -> Dict[ str, Any ] | None:
 		"""Fetch.
 
 		Purpose:
@@ -10632,8 +10599,7 @@ class Grokipedia( Fetcher ):
 		    include_content (bool): Whether include content behavior is enabled for the operation.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any] | None: Dictionary containing normalized provider data.
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
@@ -10641,9 +10607,7 @@ class Grokipedia( Fetcher ):
 		"""
 		try:
 			throw_if( 'mode', mode )
-			
 			mode_value = ( mode or 'search' ).strip( ).lower( )
-			
 			if mode_value == 'search':
 				return self.fetch_search( query=query, limit=limit, offset=offset )
 			
@@ -10660,9 +10624,8 @@ class Grokipedia( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
-			required:
-	list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str,
+			parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Create schema.
 
 		Purpose:
@@ -10717,30 +10680,20 @@ class GoogleGeocoding( Fetcher ):
 	Attributes:
 	    api_key (Optional[str]): Provider credential loaded from application configuration.
 	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    mode (Optional[str]): Current mode retained by the GoogleGeocoding workflow between
-	    related operations.
+	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent call.
+	    mode (Optional[str]): Current mode retained by the GoogleGeocoding workflow.
 	    query (Optional[str]): Most recent search text or model prompt submitted by the instance.
-	    latitude (Optional[float]): Current latitude retained by the GoogleGeocoding workflow
-	    between related operations.
-	    longitude (Optional[float]): Current longitude retained by the GoogleGeocoding workflow
-	    between related operations.
+	    latitude (Optional[float]): Current latitude retained by the GoogleGeocoding workflow.
+	    longitude (Optional[float]): Current longitude retained by the GoogleGeocoding workflow.
 	    place_id (Optional[str]): Identifier of the current place resource.
-	    language (Optional[str]): Current language retained by the GoogleGeocoding workflow
-	    between related operations.
-	    region (Optional[str]): Current region retained by the GoogleGeocoding workflow between
-	    related operations.
-	    result_type (Optional[str]): Current result type retained by the GoogleGeocoding workflow
-	    between related operations.
-	    location_type (Optional[str]): Current location type retained by the GoogleGeocoding
-	    workflow between related operations.
+	    language (Optional[str]): Current language retained by the GoogleGeocoding operations.
+	    region (Optional[str]): Current region retained by the GoogleGeocoding operations.
+	    result_type (Optional[str]): Current result type retained by the GoogleGeocoding operations.
+	    location_type (Optional[str]): Current location type retained by the GoogleGeocoding.
 	    timeout (Optional[int]): Maximum request duration, in seconds, applied to provider calls.
 	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    payload (Optional[Any]): Current payload retained by the GoogleGeocoding workflow between
-	    related operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
+	    payload (Optional[Any]): Current payload retained by the GoogleGeocoding workflow.
+	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result.
 	    response (Any): Most recent raw response returned by the provider client.
 	    headers (Any): HTTP headers sent with the current request.
 	"""
@@ -10807,8 +10760,8 @@ class GoogleGeocoding( Fetcher ):
 				'response', 'payload', 'result', 'request', 'fetch_forward', 'fetch_reverse',
 				'fetch_place', 'fetch', 'create_schema' ]
 	
-	def request( self, params: Dict[ str, Any ], time: int=10, api_key: Optional[
-		str ] = None ) -> Dict[ str, Any ] | None:
+	def request( self, params: Dict[ str, Any ], time: int=10,
+			api_key: Optional[ str ]=None ) -> Dict[ str, Any ] | None:
 		"""Request.
 
 		Purpose:
@@ -10889,8 +10842,7 @@ class GoogleGeocoding( Fetcher ):
 			raise exception
 	
 	def fetch_forward( self, query: str, language: str='en', region: str='', time: int=10,
-			api_key:
-	Optional[ str ] = None ) -> Dict[ str, Any ] | None:
+			api_key: Optional[ str ]=None ) -> Dict[ str, Any ] | None:
 		"""Fetch forward.
 
 		Purpose:
@@ -10942,9 +10894,9 @@ class GoogleGeocoding( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_reverse( self, latitude: float, longitude: float, language: str='en', result_type:
-	str = '', location_type: str='', time: int=10, api_key:
-	Optional[ str ] = None ) -> Dict[ str, Any ] | None:
+	def fetch_reverse( self, latitude: float, longitude: float, language: str='en',
+			result_type: str='', location_type: str='', time: int=10,
+			api_key: Optional[ str ]=None ) -> Dict[ str, Any ] | None:
 		"""Fetch reverse.
 
 		Purpose:
@@ -11009,8 +10961,7 @@ class GoogleGeocoding( Fetcher ):
 			raise exception
 	
 	def fetch_place( self, place_id: str, language: str='en', region: str='', time: int=10,
-			api_key:
-	Optional[ str ] = None ) -> Dict[ str, Any ] | None:
+			api_key: Optional[ str ]=None ) -> Dict[ str, Any ] | None:
 		"""Fetch place.
 
 		Purpose:
@@ -11061,16 +11012,15 @@ class GoogleGeocoding( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='forward', query: str='', latitude: float=0.0, longitude:
-	float = 0.0, place_id: str='', language: str='en', region: str='', result_type: str =
-	'', location_type: str='', time: int=10, api_key:
-	Optional[ str ] = None ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='forward', query: str='', latitude: float=0.0,
+			longitude: float=0.0, place_id: str='', language: str='en', region: str='',
+			result_type: str='', location_type: str='', time: int=10,
+			api_key: Optional[ str ] = None ) -> Dict[ str, Any ] | None:
 		"""Fetch.
 
 		Purpose:
 		    Dispatches the requested retrieval or generation operation using the class
-		    configuration
-		    and returns the normalized result.
+		    configuration and returns the normalized result.
 
 		Args:
 		    mode (str): Provider or loader operating mode selected for the request.
@@ -11078,18 +11028,12 @@ class GoogleGeocoding( Fetcher ):
 		    latitude (float): Geographic latitude expressed in decimal degrees.
 		    longitude (float): Geographic longitude expressed in decimal degrees.
 		    place_id (str): Provider identifier of the target place resource.
-		    language (str): Language supplied by the caller and interpreted according to the
-		    method
-		        contract.
-		    region (str): Region supplied by the caller and interpreted according to the method
-		        contract.
-		    result_type (str): Result type supplied by the caller and interpreted according to the
-		        method contract.
-		    location_type (str): Location type supplied by the caller and interpreted according to
-		        the method contract.
+		    language (str): Language supplied by the caller and interpreted.
+		    region (str): Region supplied by the caller and interpreted according to the method.
+		    result_type (str): Result type supplied by the caller.
+		    location_type (str): Location type supplied by the caller by the method contract.
 		    time (int): Maximum request duration in seconds.
-		    api_key (Optional[str]): Api key supplied by the caller and interpreted according to
-		        the method contract.
+		    api_key (Optional[str]): Api key supplied by the caller and interpreted.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
@@ -11097,13 +11041,11 @@ class GoogleGeocoding( Fetcher ):
 
 		Raises:
 		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to
-		        the application logger, and re-raises it.
+		        to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'mode', mode )
 			self.mode = mode.strip( ).lower( )
-			
 			if self.mode == 'forward':
 				return self.fetch_forward( query=query, language=language, region=region,
 					time=time, api_key=api_key )
@@ -11131,8 +11073,7 @@ class GoogleGeocoding( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
-			required:
-	list[ str ] ) -> Dict[ str, str ] | None:
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Create schema.
 
 		Purpose:
@@ -11407,8 +11348,7 @@ class CensusData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_variables( self, year: str, dataset: str, time: int=20 ) -> Dict[ str,
-	Any ] | None:
+	def fetch_variables( self, year: str, dataset: str, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch variables.
 
 		Purpose:
@@ -11469,8 +11409,7 @@ class CensusData( Fetcher ):
 			raise exception
 	
 	def fetch_data( self, year: str, dataset: str, fields: str, geography_for: str='',
-			geography_in: str='', predicates: str='', time: int=20 ) -> \
-	Dict[ str, Any ] | None:
+			geography_in: str='', predicates: str='', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch data.
 
 		Purpose:
@@ -11551,9 +11490,8 @@ class CensusData( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='variables', year: str='2022', dataset: str='acs/acs5',
-			fields: str='NAME,B01001_001E', geography_for: str='state:*', geography_in: str =
-			'', predicates: str='', time: int=20 ) -> \
-	Dict[ str, Any ] | None:
+			fields: str='NAME,B01001_001E', geography_for: str='state:*',
+			geography_in: str='', predicates: str='', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch.
 
 		Purpose:
@@ -11608,8 +11546,7 @@ class CensusData( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
-			required:
-	list[ str ] ) -> Dict[ str, str ] | None:
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Create schema.
 
 		Purpose:
@@ -11904,9 +11841,8 @@ class Socrata( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_metadata( self, domain: str, dataset_id: str, time: int=20 ) -> Dict[
-		                                                                            str,
-		                                                                            Any ] | None:
+	def fetch_metadata( self, domain: str, dataset_id: str,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch metadata.
 
 		Purpose:
@@ -11962,9 +11898,8 @@ class Socrata( Fetcher ):
 			raise exception
 	
 	def fetch_rows( self, domain: str, dataset_id: str, select: str='', where: str='',
-			order: str='', group: str='', limit: int=25, offset: int=0, time: int=20 ) \
-			-> \
-	Dict[ str, Any ] | None:
+			order: str='', group: str='', limit: int=25, offset: int=0,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch rows.
 
 		Purpose:
@@ -12050,8 +11985,7 @@ class Socrata( Fetcher ):
 	
 	def fetch( self, mode: str='rows', domain: str='data.cdc.gov', dataset_id: str='',
 			select: str='', where: str='', order: str='', group: str='', limit: int=25,
-			offset: int=0, time: int=20 ) -> \
-	Dict[ str, Any ] | None:
+			offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch.
 
 		Purpose:
@@ -12106,8 +12040,7 @@ class Socrata( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
-			required:
-	list[ str ] ) -> Dict[ str, str ] | None:
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Create schema.
 
 		Purpose:
@@ -12403,9 +12336,8 @@ class HealthData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_metadata( self, domain: str, dataset_id: str, time: int=20 ) -> Dict[
-		                                                                            str,
-		                                                                            Any ] | None:
+	def fetch_metadata( self, domain: str, dataset_id: str,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch metadata.
 
 		Purpose:
@@ -12460,10 +12392,9 @@ class HealthData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_rows( self, domain: str, dataset_id: str, select: str='', where: str='',
-			order: str='', group: str='', limit: int=25, offset: int=0, time: int=20 ) \
-			-> \
-	Dict[ str, Any ] | None:
+	def fetch_rows( self, domain: str, dataset_id: str, select: str='',
+			where: str='', order: str='', group: str='', limit: int=25,
+			offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch rows.
 
 		Purpose:
@@ -12549,8 +12480,7 @@ class HealthData( Fetcher ):
 	
 	def fetch( self, mode: str='rows', domain: str='healthdata.gov', dataset_id: str='',
 			select: str='', where: str='', order: str='', group: str='', limit: int=25,
-			offset: int=0, time: int=20 ) -> \
-	Dict[ str, Any ] | None:
+			offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch.
 
 		Purpose:
@@ -12604,9 +12534,8 @@ class HealthData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
-			required:
-	list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str,
+			parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Create schema.
 
 		Purpose:

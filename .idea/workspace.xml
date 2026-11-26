@@ -5,8 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="649d1b1c-e24f-435b-9576-30e7d61c1f89" name="Changes" comment="updates">
-      <change beforePath="$PROJECT_DIR$/execution-path-audit.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements-docs.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fetchers.py" beforeDir="false" afterPath="$PROJECT_DIR$/fetchers.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -51,23 +51,23 @@
 }</component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.000000000001369" />
-      <entry key="MS500" value="1.0042397642893166" />
-      <entry key="S2" value="1.2828448177670808" />
-      <entry key="S5" value="1.8172256214338145" />
-      <entry key="S10" value="2.248979849371021" />
-      <entry key="S30" value="2.7032514899840185" />
-      <entry key="S60" value="2.8973612954575625" />
-      <entry key="M2" value="3.153052349330143" />
-      <entry key="M5" value="3.5262682465802957" />
-      <entry key="M10" value="3.7312098652047756" />
-      <entry key="M15" value="3.812777584464838" />
-      <entry key="M30" value="3.902111503805708" />
-      <entry key="H1" value="3.950474569362735" />
-      <entry key="H2" value="4.007561181275667" />
-      <entry key="H4" value="4.243709941090629" />
-      <entry key="D1" value="5.418091327814104" />
-      <entry key="W1" value="5.904238906825702" />
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0" />
+      <entry key="S5" value="1.0" />
+      <entry key="S10" value="1.0000000000000087" />
+      <entry key="S30" value="1.0000279839716038" />
+      <entry key="S60" value="1.0088921498857173" />
+      <entry key="M2" value="1.1793918476908252" />
+      <entry key="M5" value="2.20853710410704" />
+      <entry key="M10" value="4.062756782040282" />
+      <entry key="M15" value="5.8672728116874415" />
+      <entry key="M30" value="9.633667704250103" />
+      <entry key="H1" value="12.972208768591814" />
+      <entry key="H2" value="15.252922242292968" />
+      <entry key="H4" value="16.770685388206232" />
+      <entry key="D1" value="19.14032344647529" />
+      <entry key="W1" value="19.862976423882515" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -89,23 +89,23 @@
       <entry key="W1" value="0.0" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="4.116929130683073E-6" />
-      <entry key="MS500" value="0.08637510290570374" />
-      <entry key="S2" value="0.7735549329525958" />
-      <entry key="S5" value="1.4844015743319703" />
-      <entry key="S10" value="2.0161225445139497" />
-      <entry key="S30" value="2.598561526938871" />
-      <entry key="S60" value="2.839764556863879" />
-      <entry key="M2" value="3.121854282061367" />
-      <entry key="M5" value="3.512643679091737" />
-      <entry key="M10" value="3.7241033304447515" />
-      <entry key="M15" value="3.8079631908661824" />
-      <entry key="M30" value="3.899662642097668" />
-      <entry key="H1" value="3.9492387779706952" />
-      <entry key="H2" value="4.00693230304151" />
-      <entry key="H4" value="4.243366704972857" />
-      <entry key="D1" value="5.4180096656726935" />
-      <entry key="W1" value="5.904225790395262" />
+      <entry key="MS100" value="0.019505164826587686" />
+      <entry key="MS500" value="0.45501941204044954" />
+      <entry key="S2" value="0.8213107007520658" />
+      <entry key="S5" value="0.9242788014224065" />
+      <entry key="S10" value="0.96139419668647" />
+      <entry key="S30" value="0.9869897346204146" />
+      <entry key="S60" value="1.002253373084951" />
+      <entry key="M2" value="1.1748680080204708" />
+      <entry key="M5" value="2.2034359742829803" />
+      <entry key="M10" value="4.057249381964564" />
+      <entry key="M15" value="5.861732222311286" />
+      <entry key="M30" value="9.62896849740633" />
+      <entry key="H1" value="12.969007968883894" />
+      <entry key="H2" value="15.251028258517715" />
+      <entry key="H4" value="16.76962923614769" />
+      <entry key="D1" value="19.140110270527998" />
+      <entry key="W1" value="19.862944130214345" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -148,7 +148,7 @@
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
     "python.packages.toolwindow.project.migrated.to.right.top.v2": "true",
-    "settings.editor.selected.configurable": "preferences.sourceCode.Python",
+    "settings.editor.selected.configurable": "com.intellij.pycharm.community.ide.impl.configuration.interpreter.PyAllInterpretersConfigurable",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -167,8 +167,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-56aff7b04f6f-JavaScript-PY-263.7307.206" />
-        <option value="bundled-python-sdk-34611be1ca5a-e0583fc556d1-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-263.7307.206" />
+        <option value="bundled-js-predefined-d6986cc7102b-56aff7b04f6f-JavaScript-PY-263.7307.351" />
+        <option value="bundled-python-sdk-342d7f33e45b-e0583fc556d1-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-263.7307.351" />
       </set>
     </attachedChunks>
   </component>
@@ -248,23 +248,9 @@
       <workItem from="1791852096029" duration="590000" />
       <workItem from="1791852740663" duration="144000" />
       <workItem from="1794170602007" duration="743000" />
-      <workItem from="1794352693695" duration="13921000" />
-    </task>
-    <task id="LOCAL-00167" summary="updates">
-      <option name="closed" value="true" />
-      <created>1788865812529</created>
-      <option name="number" value="00167" />
-      <option name="presentableId" value="LOCAL-00167" />
-      <option name="project" value="LOCAL" />
-      <updated>1788865812530</updated>
-    </task>
-    <task id="LOCAL-00168" summary="updates">
-      <option name="closed" value="true" />
-      <created>1788872470110</created>
-      <option name="number" value="00168" />
-      <option name="presentableId" value="LOCAL-00168" />
-      <option name="project" value="LOCAL" />
-      <updated>1788872470111</updated>
+      <workItem from="1794352693695" duration="14149000" />
+      <workItem from="1795726227549" duration="232000" />
+      <workItem from="1795731205019" duration="3142000" />
     </task>
     <task id="LOCAL-00169" summary="updates">
       <option name="closed" value="true" />
@@ -642,7 +628,23 @@
       <option name="project" value="LOCAL" />
       <updated>1794402810587</updated>
     </task>
-    <option name="localTasksCounter" value="216" />
+    <task id="LOCAL-00216" summary="updates">
+      <option name="closed" value="true" />
+      <created>1794402963508</created>
+      <option name="number" value="00216" />
+      <option name="presentableId" value="LOCAL-00216" />
+      <option name="project" value="LOCAL" />
+      <updated>1794402963510</updated>
+    </task>
+    <task id="LOCAL-00217" summary="updates">
+      <option name="closed" value="true" />
+      <created>1794403039074</created>
+      <option name="number" value="00217" />
+      <option name="presentableId" value="LOCAL-00217" />
+      <option name="project" value="LOCAL" />
+      <updated>1794403039074</updated>
+    </task>
+    <option name="localTasksCounter" value="218" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
