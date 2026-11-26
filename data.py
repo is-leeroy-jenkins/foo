@@ -450,8 +450,6 @@ class SQLite( DB ):
 			throw_if( 'source_file', source_file )
 			throw_if( 'chunks', chunks )
 			throw_if( 'vectors', vectors )
-			if not ( isinstance( vectors, np.ndarray ) and vectors.ndim == 2 and len( vectors ) == len( chunks ) ):
-				raise ValueError( 'Invalid vectors argument.' )
 			records = [ (source_file, i, chunks[ i ], json.dumps( vectors[ i ].tolist( ) ))
 			            for i in range( len( chunks ) ) ]
 			
