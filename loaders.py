@@ -1907,12 +1907,15 @@ class JsonLoader( Loader ):
 		try:
 			throw_if( 'filepath', filepath )
 			self.file_path = self.verify_exists( filepath )
-			self.jq_schema = jq_schema if isinstance( jq_schema,
-				str ) and jq_schema.strip( ) else '.'
-			self.content_key = (content_key.strip( ) if isinstance( content_key,
-				str ) and content_key.strip( ) else None)
-			self.text_content = bool( is_text )
-			self.json_lines = bool( is_lines )
+			throw_if( 'jq_schema', jq_schema if isinstance( jq_schema, str ) else None )
+			throw_if( 'is_text', is_text if isinstance( is_text, bool ) else None )
+			throw_if( 'is_lines', is_lines if isinstance( is_lines, bool ) else None )
+			if content_key is not None:
+				throw_if( 'content_key', content_key if isinstance( content_key, str ) else None )
+			self.jq_schema = jq_schema
+			self.content_key = content_key
+			self.text_content = is_text
+			self.json_lines = is_lines
 			kwargs = { 'file_path': self.file_path, 'jq_schema': self.jq_schema,
 				'text_content': self.text_content, 'json_lines': self.json_lines, }
 			
