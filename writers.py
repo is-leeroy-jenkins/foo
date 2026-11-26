@@ -155,12 +155,12 @@ class Writer( ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'text', text )
-			throw_if( 'filename', filename )
-			throw_if( 'directory', directory )
-			self.text = str( text )
-			self.filename = str( filename ).strip( )
-			self.directory = str( directory ).strip( )
+			throw_if( 'text', text if isinstance( text, str ) else None )
+			throw_if( 'filename', filename if isinstance( filename, str ) else None )
+			throw_if( 'directory', directory if isinstance( directory, str ) else None )
+			self.text = text
+			self.filename = filename
+			self.directory = directory
 			self.output_path = Path( self.directory )
 			self.output_path.mkdir( parents=True, exist_ok=True )
 			self.file_path = self.output_path / f'{self.filename}.md'
@@ -244,9 +244,9 @@ class MarkdownWriter( Writer ):
 		"""
 		try:
 			throw_if( 'result', result )
-			throw_if( 'path', path )
+			throw_if( 'path', path if isinstance( path, str ) else None )
 			self.result = result
-			self.path = str( path ).strip( )
+			self.path = path
 			self.file_path = Path( self.path ).resolve( )
 			self.output_path = self.file_path.parent
 			self.output_path.mkdir( parents=True, exist_ok=True )
