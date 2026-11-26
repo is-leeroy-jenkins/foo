@@ -1219,8 +1219,8 @@ class WebCrawler( WebFetcher ):
 			self.fetch( url=url, time=request_timeout )
 			raw_html = self.html or ''
 			if self.response is not None:
-				page_result[ 'status_code' ] = getattr( self.response, 'status_code', None )
-				page_result[ 'encoding' ] = getattr( self.response, 'encoding', None )
+				page_result[ 'status_code' ] = self.response.status_code
+				page_result[ 'encoding' ] = self.response.encoding
 			else:
 				page_result[ 'status_code' ] = 200
 				page_result[ 'encoding' ] = 'rendered'
@@ -1868,7 +1868,7 @@ class TheNews( Fetcher ):
 			source_ids: str='', exclude_source_ids: str='', published_after: str='',
 			published_before: str='', published_on: str='', sort: str='published_at',
 			limit: int=10, page: int=1, include_similar: bool=True, headlines_per_category: int=6,
-			time: int=10, api_key: str=None ) -> Dict[ str, Any ]:
+			time: int=10 ) -> Dict[ str, Any ]:
 		"""Fetch.
 
 		Purpose:
@@ -1908,8 +1908,6 @@ class TheNews( Fetcher ):
 		    headlines_per_category (int): Headlines per category supplied by the caller and
 		        interpreted according to the method contract.
 		    time (int): Maximum request duration in seconds.
-		    api_key (str): Api key supplied by the caller and interpreted according to the method
-		        contract.
 
 		Returns:
 		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
@@ -1924,9 +1922,6 @@ class TheNews( Fetcher ):
 			self.timeout = time
 			self.limit = max( 1, min( limit, 50 ) )
 			self.page = max( 1, page )
-			active_key = (api_key or self.api_key or '').strip( )
-			if not active_key:
-				raise ValueError( 'The News API key is required.' )
 			
 			valid_endpoints = { 'all', 'top', 'headlines', 'sources' }
 			if self.endpoint not in valid_endpoints:
@@ -1934,7 +1929,7 @@ class TheNews( Fetcher ):
 				                  f"Supported endpoints: "
 				                  f"{', '.join( sorted( valid_endpoints ) )}." )
 			
-			self.params = { 'api_token': active_key }
+			self.params = { 'api_token': self.api_key }
 			if self.endpoint in ('all', 'top'):
 				if query and query.strip( ):
 					self.params[ 'search' ] = query.strip( )
@@ -2875,8 +2870,8 @@ class GoogleWeather( Fetcher ):
 			throw_if( 'address', address )
 			self.address = address.strip( )
 			lat, lng = self.gmaps.geocode_location( address=self.address )
-			self.latitude = float( lat )
-			self.longitude = float( lng )
+			self.latitude = lat
+			self.longitude = lng
 			self.coordinates = (self.latitude, self.longitude)
 			return self.coordinates
 		
@@ -5942,7 +5937,7 @@ class SpaceWeather( Fetcher ):
 	def fetch_endpoint( self, endpoint: str, start_date: str, end_date: str, time: int=20,
 			location: str='', catalog: str='', notification_type: str='',
 			most_accurate_only: bool=True, complete_entry_only: bool=True, speed: int=0,
-			half_angle: int=0, keyword: str='', api_key: str=None ) -> \
+			half_angle: int=0, keyword: str='' ) -> \
 	Dict[ str, Any ] | None:
 		"""Fetch endpoint.
 
@@ -5970,8 +5965,6 @@ class SpaceWeather( Fetcher ):
 		    half_angle (int): Half angle supplied by the caller and interpreted according to the
 		    method contract.
 		    keyword (str): Keyword supplied by the caller and interpreted according to the method
-		    contract.
-		    api_key (str): Api key supplied by the caller and interpreted according to the method
 		    contract.
 
 		Returns:
@@ -6002,7 +5995,7 @@ class SpaceWeather( Fetcher ):
 				if start > end:
 					raise ValueError( 'start_date must precede or equal end_date.' )
 			# NASA documents DEMO_KEY for limited unauthenticated use.
-			self.active_key = ( api_key or self.api_key or 'DEMO_KEY' ).strip( )
+			self.active_key = self.api_key or 'DEMO_KEY'
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { 'api_key': self.active_key }
 			if self.start_date:
@@ -6021,8 +6014,8 @@ class SpaceWeather( Fetcher ):
 				self.half_angle = half_angle
 				if self.speed < 0 or not 0 <= self.half_angle <= 180:
 					raise ValueError( 'CME speed and half_angle must be nonnegative; half_angle <= 180.' )
-				self.params[ 'mostAccurateOnly' ] = str( bool( most_accurate_only ) ).lower( )
-				self.params[ 'completeEntryOnly' ] = str( bool( complete_entry_only ) ).lower( )
+				self.params[ 'mostAccurateOnly' ] = str( most_accurate_only ).lower( )
+				self.params[ 'completeEntryOnly' ] = str( complete_entry_only ).lower( )
 				self.params[ 'speed' ] = self.speed
 				self.params[ 'halfAngle' ] = self.half_angle
 				if self.catalog:
@@ -6056,7 +6049,7 @@ class SpaceWeather( Fetcher ):
 	def fetch( self, mode: str='cme', start_date: str='', end_date: str='', time: int=20,
 			location: str='ALL', catalog: str='ALL', notification_type: str='all',
 			most_accurate_only: bool=True, complete_entry_only: bool=True, speed: int=0,
-			half_angle: int=0, keyword: str='', api_key: str=None ) -> \
+			half_angle: int=0, keyword: str='' ) -> \
 	Dict[ str, Any ] | None:
 		"""Fetch.
 
@@ -6084,8 +6077,6 @@ class SpaceWeather( Fetcher ):
 		    half_angle (int): Half angle supplied by the caller and interpreted according to the
 		    method contract.
 		    keyword (str): Keyword supplied by the caller and interpreted according to the method
-		    contract.
-		    api_key (str): Api key supplied by the caller and interpreted according to the method
 		    contract.
 
 		Returns:
@@ -6116,7 +6107,7 @@ class SpaceWeather( Fetcher ):
 				catalog or 'ALL' ).strip( ), notification_type=( notification_type or 'all'
 			).strip( ), most_accurate_only=most_accurate_only, complete_entry_only=(
 				complete_entry_only ), speed=speed, half_angle=half_angle,
-				keyword=( keyword or '' ).strip( ), api_key=api_key )
+				keyword=( keyword or '' ).strip( ) )
 		
 		except Exception as exc:
 			exception = Error( exc )
@@ -6729,11 +6720,6 @@ class AstroQuery( Fetcher ):
 				for col in table.colnames:
 					try:
 						value = row[ col ]
-						if hasattr( value, 'item' ):
-							try:
-								value = value.item( )
-							except Exception:
-								pass
 						record[ str( col ) ] = str( value )
 					except Exception:
 						record[ str( col ) ] = ''
@@ -24150,7 +24136,6 @@ class Firms( Fetcher ):
 			throw_if( 'time', time )
 			self.url = url.strip( )
 			self.timeout = time
-			throw_if( 'map_key', self.map_key )
 			if self.timeout < 1:
 				raise ValueError( 'time must be greater than or equal to 1.' )
 			
