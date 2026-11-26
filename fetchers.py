@@ -2190,7 +2190,7 @@ class GoogleSearch( Fetcher ):
 			lr: str='', safe: str='off', search_type: str='', site_search: str='',
 			site_search_filter: str='', sort: str='', img_size: str='', img_type: str='',
 			img_color_type: str='', img_dominant_color: str='', time: int=10,
-			api_key: str=None, cse_id: str=None ) ->  Dict[ str, Any ] | None:
+			cse_id: str=None ) ->  Dict[ str, Any ] | None:
 		"""Fetch.
 
 		Purpose:
@@ -2232,7 +2232,6 @@ class GoogleSearch( Fetcher ):
 		    img_dominant_color (str): Img dominant color supplied by the caller and interpreted
 		        according to the method contract.
 		    time (int): Maximum request duration in seconds.
-		    api_key (str): Api key supplied by the caller and interpreted according to the method
 		        contract.
 		    cse_id (str): Provider identifier of the target cse resource.
 
@@ -2248,8 +2247,6 @@ class GoogleSearch( Fetcher ):
 			throw_if( 'keywords', keywords )
 			throw_if( 'time', time )
 			
-			if api_key:
-				self.api_key = api_key.strip( )
 			
 			if cse_id:
 				self.cse_id = cse_id.strip( )
@@ -10760,8 +10757,7 @@ class GoogleGeocoding( Fetcher ):
 				'response', 'payload', 'result', 'request', 'fetch_forward', 'fetch_reverse',
 				'fetch_place', 'fetch', 'create_schema' ]
 	
-	def request( self, params: Dict[ str, Any ], time: int=10,
-			api_key: Optional[ str ]=None ) -> Dict[ str, Any ] | None:
+	def request( self, params: Dict[ str, Any ], time: int=10 ) -> Dict[ str, Any ] | None:
 		"""Request.
 
 		Purpose:
@@ -10772,8 +10768,6 @@ class GoogleGeocoding( Fetcher ):
 		    params (Dict[str, Any]): Params supplied by the caller and interpreted according to
 		    the method contract.
 		    time (int): Maximum request duration in seconds.
-		    api_key (Optional[str]): Api key supplied by the caller and interpreted according to
-		    the method contract.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
@@ -10787,8 +10781,6 @@ class GoogleGeocoding( Fetcher ):
 			throw_if( 'params', params )
 			throw_if( 'time', time )
 			
-			if api_key:
-				self.api_key = api_key.strip( )
 			
 			
 			self.timeout = time
@@ -10841,8 +10833,7 @@ class GoogleGeocoding( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_forward( self, query: str, language: str='en', region: str='', time: int=10,
-			api_key: Optional[ str ]=None ) -> Dict[ str, Any ] | None:
+	def fetch_forward( self, query: str, language: str='en', region: str='', time: int=10 ) -> Dict[ str, Any ] | None:
 		"""Fetch forward.
 
 		Purpose:
@@ -10855,8 +10846,6 @@ class GoogleGeocoding( Fetcher ):
 		    region (str): Region supplied by the caller and interpreted according to the method
 		    contract.
 		    time (int): Maximum request duration in seconds.
-		    api_key (Optional[str]): Api key supplied by the caller and interpreted according to
-		    the method contract.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
@@ -10880,7 +10869,7 @@ class GoogleGeocoding( Fetcher ):
 			if self.region:
 				self.params[ 'region' ] = self.region
 			
-			return self.request( params=self.params, time=self.timeout, api_key=api_key )
+			return self.request( params=self.params, time=self.timeout )
 		
 		except Error:
 			raise
@@ -10895,8 +10884,7 @@ class GoogleGeocoding( Fetcher ):
 			raise exception
 	
 	def fetch_reverse( self, latitude: float, longitude: float, language: str='en',
-			result_type: str='', location_type: str='', time: int=10,
-			api_key: Optional[ str ]=None ) -> Dict[ str, Any ] | None:
+			result_type: str='', location_type: str='', time: int=10 ) -> Dict[ str, Any ] | None:
 		"""Fetch reverse.
 
 		Purpose:
@@ -10912,8 +10900,6 @@ class GoogleGeocoding( Fetcher ):
 		    location_type (str): Location type supplied by the caller and interpreted according to
 		    the method contract.
 		    time (int): Maximum request duration in seconds.
-		    api_key (Optional[str]): Api key supplied by the caller and interpreted according to
-		    the method contract.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
@@ -10946,7 +10932,7 @@ class GoogleGeocoding( Fetcher ):
 			if self.location_type:
 				self.params[ 'location_type' ] = self.location_type
 			
-			return self.request( params=self.params, time=self.timeout, api_key=api_key )
+			return self.request( params=self.params, time=self.timeout )
 		
 		except Error:
 			raise
@@ -10960,8 +10946,7 @@ class GoogleGeocoding( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_place( self, place_id: str, language: str='en', region: str='', time: int=10,
-			api_key: Optional[ str ]=None ) -> Dict[ str, Any ] | None:
+	def fetch_place( self, place_id: str, language: str='en', region: str='', time: int=10 ) -> Dict[ str, Any ] | None:
 		"""Fetch place.
 
 		Purpose:
@@ -10975,8 +10960,6 @@ class GoogleGeocoding( Fetcher ):
 		    region (str): Region supplied by the caller and interpreted according to the method
 		        contract.
 		    time (int): Maximum request duration in seconds.
-		    api_key (Optional[str]): Api key supplied by the caller and interpreted according to
-		        the method contract.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
@@ -10999,7 +10982,7 @@ class GoogleGeocoding( Fetcher ):
 			if self.region:
 				self.params[ 'region' ] = self.region
 			
-			return self.request( params=self.params, time=self.timeout, api_key=api_key )
+			return self.request( params=self.params, time=self.timeout )
 		
 		except Error:
 			raise
@@ -11014,8 +10997,7 @@ class GoogleGeocoding( Fetcher ):
 	
 	def fetch( self, mode: str='forward', query: str='', latitude: float=0.0,
 			longitude: float=0.0, place_id: str='', language: str='en', region: str='',
-			result_type: str='', location_type: str='', time: int=10,
-			api_key: Optional[ str ] = None ) -> Dict[ str, Any ] | None:
+			result_type: str='', location_type: str='', time: int=10 ) -> Dict[ str, Any ] | None:
 		"""Fetch.
 
 		Purpose:
@@ -11033,7 +11015,6 @@ class GoogleGeocoding( Fetcher ):
 		    result_type (str): Result type supplied by the caller.
 		    location_type (str): Location type supplied by the caller by the method contract.
 		    time (int): Maximum request duration in seconds.
-		    api_key (Optional[str]): Api key supplied by the caller and interpreted.
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
@@ -11048,16 +11029,16 @@ class GoogleGeocoding( Fetcher ):
 			self.mode = mode.strip( ).lower( )
 			if self.mode == 'forward':
 				return self.fetch_forward( query=query, language=language, region=region,
-					time=time, api_key=api_key )
+					time=time )
 			
 			if self.mode == 'reverse':
 				return self.fetch_reverse( latitude=latitude, longitude=longitude,
 					language=language, result_type=result_type, location_type=location_type,
-					time=time, api_key=api_key )
+					time=time )
 			
 			if self.mode == 'place':
 				return self.fetch_place( place_id=place_id, language=language, region=region,
-					time=time, api_key=api_key )
+					time=time )
 			
 			raise ValueError( "Unsupported geocoding mode. Use 'forward', 'reverse', or 'place'." )
 		
@@ -17381,7 +17362,6 @@ class AirNow( Fetcher ):
 				raise ValueError( 'time must be greater than zero.' )
 			if params is not None and not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
-			throw_if( 'api_key', self.api_key )
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
 			
@@ -22268,7 +22248,6 @@ class PurpleAir( Fetcher ):
 		try:
 			self.endpoint = self.validate_endpoint( endpoint )
 			throw_if( 'time', time )
-			throw_if( 'api_key', self.api_key )
 			if params is not None and not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
 			
@@ -23253,7 +23232,6 @@ class OpenAQ( Fetcher ):
 			self.endpoint = endpoint.strip( ).strip( '/' )
 			self.endpoint = self.validate_endpoint( self.endpoint )
 			throw_if( 'time', time )
-			throw_if( 'api_key', self.api_key )
 			if params is not None and not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
 			
