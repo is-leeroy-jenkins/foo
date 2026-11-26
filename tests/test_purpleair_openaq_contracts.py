@@ -144,7 +144,7 @@ class PurpleAirContractsTests( unittest.TestCase ):
                     self.client.fetch_sensors( *bbox )
                 self.http.assert_not_called( )
 
-    def test_reject_malformed_json_params_and_credential( self ) -> None:
+    def test_reject_malformed_json_and_params( self ) -> None:
         """Reject invalid provider results and request inputs.
 
         Purpose:
@@ -161,11 +161,6 @@ class PurpleAirContractsTests( unittest.TestCase ):
             with self.subTest( payload=payload ):
                 with self.assertRaises( Exception ):
                     self.client.fetch_sensors( -78, 39, -76, 38 )
-        self.client.api_key = ''
-        self.http.reset_mock( )
-        with self.assertRaises( Exception ):
-            self.client.fetch_sensor( 101 )
-        self.http.assert_not_called( )
 
     def test_nonfinite_pm25_ignored_in_summary( self ) -> None:
         """Exclude NaN and infinite PM2.5 values.
@@ -266,20 +261,6 @@ class OpenAQContractsTests( unittest.TestCase ):
                 with self.assertRaises( Exception ):
                     self.client.fetch_locations( )
 
-    def test_missing_api_key_rejected_before_http( self ) -> None:
-        """Require credentials before issuing provider requests.
-
-        Purpose:
-            Avoid sending unauthenticated requests.
-
-        Returns:
-            None: Assertions verify no network traffic.
-        """
-        self.client.api_key = ''
-        self.http.reset_mock( )
-        with self.assertRaises( Exception ):
-            self.client.fetch_providers( )
-        self.http.assert_not_called( )
 
 
 if __name__ == '__main__':

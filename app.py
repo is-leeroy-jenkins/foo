@@ -4436,7 +4436,6 @@ elif mode == 'Retrieval':
 				st.session_state[ 'googlesearch_img_type' ] = ''
 				st.session_state[ 'googlesearch_img_color_type' ] = ''
 				st.session_state[ 'googlesearch_img_dominant_color' ] = ''
-				st.session_state[ 'googlesearch_api_key' ] = ''
 				st.session_state[ 'googlesearch_cse_id' ] = ''
 				st.session_state[ 'googlesearch_timeout' ] = 10
 				st.session_state[ 'googlesearch_results' ] = { }
@@ -4561,9 +4560,7 @@ elif mode == 'Retrieval':
 			
 			c18, c19 = st.columns( 2 )
 			with c18:
-				google_api_key = st.text_input( 'API Key', value='', type='password',
-					key='googlesearch_api_key',
-					placeholder='Uses GOOGLE_API_KEY when left blank.' )
+				st.caption( 'API key: GOOGLE_API_KEY (environment configuration).' )
 			
 			with c19:
 				google_cse_id = st.text_input( 'CSE ID', value='', key='googlesearch_cse_id',
@@ -6039,7 +6036,7 @@ elif mode == 'Retrieval':
 						img_size=google_img_size, img_type=google_img_type,
 						img_color_type=google_img_color_type,
 						img_dominant_color=google_img_dominant_color,
-						time=int( google_timeout ), api_key=( google_api_key or None),
+						time=int( google_timeout ),
 						cse_id=(google_cse_id or None) )
 					
 					st.session_state[ 'googlesearch_results' ] = result or { }
@@ -6840,7 +6837,6 @@ elif mode == 'Geospatial':
 				st.session_state[ 'googlegeocoding_region' ] = ''
 				st.session_state[ 'googlegeocoding_result_type' ] = ''
 				st.session_state[ 'googlegeocoding_location_type' ] = ''
-				st.session_state[ 'googlegeocoding_api_key' ] = ''
 				st.session_state[ 'googlegeocoding_timeout' ] = 10
 				st.session_state[ 'googlegeocoding_results' ] = { }
 				st.session_state[ 'googlegeocoding_clear_request' ] = False
@@ -6909,8 +6905,7 @@ elif mode == 'Geospatial':
 			
 			c7, c8 = st.columns( 2 )
 			with c7:
-				googlegeocoding_api_key = st.text_input( 'API Key', value='', type='password',
-					key='googlegeocoding_api_key', placeholder='Uses GOOGLE_API_KEY when blank.' )
+				st.caption( 'API key: GOOGLE_API_KEY (environment configuration).' )
 			
 			with c8:
 				googlegeocoding_timeout = st.number_input( 'Timeout', min_value=1, max_value=60,
@@ -7977,8 +7972,7 @@ elif mode == 'Geospatial':
 						region=str( googlegeocoding_region or '' ).strip( ),
 						result_type=str( googlegeocoding_result_type or '' ).strip( ),
 						location_type=str( googlegeocoding_location_type or '' ).strip( ),
-						time=int( googlegeocoding_timeout ),
-						api_key=(googlegeocoding_api_key or None) )
+						time=googlegeocoding_timeout )
 					
 					st.session_state[ 'googlegeocoding_results' ] = result or { }
 					st.rerun( )
