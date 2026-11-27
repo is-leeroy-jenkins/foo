@@ -10353,30 +10353,31 @@ class Grokipedia( Fetcher ):
 			raise exception
 
 class GoogleGeocoding( Fetcher ):
-	"""GoogleGeocoding component.
+	"""Google Geocoding API adapter.
 
 	Purpose:
-	    Provides forward, reverse, and place-based geocoding through Google Maps endpoints.
+	    Perform forward address, reverse coordinate, and place identifier geocoding, preserving
+	    the complete decoded response and excluding the API key from returned request parameters.
 
 	Attributes:
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent call.
-	    mode (Optional[str]): Current mode retained by the GoogleGeocoding workflow.
-	    query (Optional[str]): Most recent search text or model prompt submitted by the instance.
-	    latitude (Optional[float]): Current latitude retained by the GoogleGeocoding workflow.
-	    longitude (Optional[float]): Current longitude retained by the GoogleGeocoding workflow.
-	    place_id (Optional[str]): Identifier of the current place resource.
-	    language (Optional[str]): Current language retained by the GoogleGeocoding operations.
-	    region (Optional[str]): Current region retained by the GoogleGeocoding operations.
-	    result_type (Optional[str]): Current result type retained by the GoogleGeocoding operations.
-	    location_type (Optional[str]): Current location type retained by the GoogleGeocoding.
-	    timeout (Optional[int]): Maximum request duration, in seconds, applied to provider calls.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    payload (Optional[Any]): Current payload retained by the GoogleGeocoding workflow.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result.
-	    response (Any): Most recent raw response returned by the provider client.
-	    headers (Any): HTTP headers sent with the current request.
+	    api_key (Optional[str]): Google API key loaded from configuration.
+	    url (Optional[str]): Google Geocoding JSON endpoint.
+	    params (Optional[Dict[str, Any]]): Latest submitted parameters, including the API key.
+	    mode (Optional[str]): Forward, reverse, or place retrieval mode.
+	    query (Optional[str]): Latest forward-geocoding address or location query.
+	    latitude (Optional[float]): Latest reverse-geocoding latitude.
+	    longitude (Optional[float]): Latest reverse-geocoding longitude.
+	    place_id (Optional[str]): Latest requested Google place identifier.
+	    language (Optional[str]): Requested response language.
+	    region (Optional[str]): Optional region bias.
+	    result_type (Optional[str]): Optional reverse-geocoding result type filter.
+	    location_type (Optional[str]): Optional reverse-geocoding location type filter.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    response (Optional[Response]): Latest HTTP response.
+	    payload (Optional[Any]): Latest decoded provider response.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	api_key: Optional[ str ]
 	url: Optional[ str ]
@@ -10396,15 +10397,14 @@ class GoogleGeocoding( Fetcher ):
 	result: Optional[ Dict[ str, Any ] ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the Google API key and user-agent, configure the geocoding endpoint and JSON
+		    headers, and initialize forward mode, English language, and a ten-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.api_key = cfg.GOOGLE_API_KEY
@@ -10427,14 +10427,13 @@ class GoogleGeocoding( Fetcher ):
 		self.headers = { 'Accept': 'application/json', 'User-Agent': self.agents }
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'api_key', 'url', 'params', 'mode', 'query', 'latitude', 'longitude', 'place_id',
 				'language', 'region', 'result_type', 'location_type', 'timeout', 'agents',
@@ -10442,24 +10441,23 @@ class GoogleGeocoding( Fetcher ):
 				'fetch_place', 'fetch', 'create_schema' ]
 	
 	def request( self, params: Dict[ str, Any ], time: int=10 ) -> Dict[ str, Any ] | None:
-		"""Request.
+		"""Execute a Google Geocoding request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Require a nonempty parameter dictionary, omit None and blank strings, append the
+		    configured API key, issue a GET request, and reject non-object JSON or nonempty provider
+		    statuses other than OK.
 
 		Args:
-		    params (Dict[str, Any]): Params supplied by the caller and interpreted according to
-		    the method contract.
-		    time (int): Maximum request duration in seconds.
+		    params (Dict[str, Any]): Nonempty geocoding parameter dictionary.
+		    time (int): HTTP request timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, parameters excluding the key, provider status,
+		        results list, and raw decoded response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'params', params )
@@ -10517,26 +10515,24 @@ class GoogleGeocoding( Fetcher ):
 			raise exception
 	
 	def fetch_forward( self, query: str, language: str='en', region: str='', time: int=10 ) -> Dict[ str, Any ] | None:
-		"""Fetch forward.
+		"""Geocode an address or location query.
 
 		Purpose:
-		    Retrieves forward from the configured provider and returns normalized response data.
+		    Submit the query as the address parameter with the requested language and optional
+		    region.
 
 		Args:
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    language (str): Language supplied by the caller and interpreted according to the
-		    method contract.
-		    region (str): Region supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    query (str): Nonblank address or location query.
+		    language (str): Requested response language. Defaults to 'en'.
+		    region (str): Optional region bias passed to the provider. Defaults to an empty string.
+		    time (int): HTTP request timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, parameters excluding the key, provider status,
+		        results list, and raw decoded response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'query', query )
@@ -10567,29 +10563,28 @@ class GoogleGeocoding( Fetcher ):
 			raise exception
 	
 	def fetch_reverse( self, latitude: float, longitude: float, language: str='en', result_type: str='', location_type: str='', time: int=10 ) -> Dict[ str, Any ] | None:
-		"""Fetch reverse.
+		"""Reverse-geocode geographic coordinates.
 
 		Purpose:
-		    Retrieves reverse from the configured provider and returns normalized response data.
+		    Validate finite geographic coordinates, construct the latlng parameter, and attach
+		    optional result and location type filters.
 
 		Args:
-		    latitude (float): Geographic latitude expressed in decimal degrees.
-		    longitude (float): Geographic longitude expressed in decimal degrees.
-		    language (str): Language supplied by the caller and interpreted according to the
-		    method contract.
-		    result_type (str): Result type supplied by the caller and interpreted according to the
-		    method contract.
-		    location_type (str): Location type supplied by the caller and interpreted according to
-		    the method contract.
-		    time (int): Maximum request duration in seconds.
+		    latitude (float): Finite latitude in decimal degrees, from -90 through 90.
+		    longitude (float): Finite longitude in decimal degrees, from -180 through 180.
+		    language (str): Requested response language. Defaults to 'en'.
+		    result_type (str): Optional reverse-geocoding result type filter. Defaults to an empty
+		        string.
+		    location_type (str): Optional reverse-geocoding location type filter. Defaults to an
+		        empty string.
+		    time (int): HTTP request timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, parameters excluding the key, provider status,
+		        results list, and raw decoded response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'latitude', latitude )
@@ -10629,28 +10624,23 @@ class GoogleGeocoding( Fetcher ):
 			raise exception
 	
 	def fetch_place( self, place_id: str, language: str='en', region: str='', time: int=10 ) -> Dict[ str, Any ] | None:
-		"""Fetch place.
+		"""Geocode a Google place identifier.
 
 		Purpose:
-		    Retrieves place from the configured provider and returns normalized response data.
+		    Submit a place identifier with the requested language and optional region.
 
 		Args:
-		    place_id (str): Provider identifier of the target place resource.
-		    language (str): Language supplied by the caller and interpreted according to the
-		    method
-		        contract.
-		    region (str): Region supplied by the caller and interpreted according to the method
-		        contract.
-		    time (int): Maximum request duration in seconds.
+		    place_id (str): Nonblank Google place identifier.
+		    language (str): Requested response language. Defaults to 'en'.
+		    region (str): Optional region bias passed to the provider. Defaults to an empty string.
+		    time (int): HTTP request timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, parameters excluding the key, provider status,
+		        results list, and raw decoded response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to
-		    the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'place_id', place_id )
@@ -10679,31 +10669,36 @@ class GoogleGeocoding( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='forward', query: str='', latitude: float=0.0, longitude: float=0.0, place_id: str='', language: str='en', region: str='', result_type: str='', location_type: str='', time: int=10 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a geocoding operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select forward, reverse, or place mode and delegate with the corresponding query,
+		    coordinates, or place identifier.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    latitude (float): Geographic latitude expressed in decimal degrees.
-		    longitude (float): Geographic longitude expressed in decimal degrees.
-		    place_id (str): Provider identifier of the target place resource.
-		    language (str): Language supplied by the caller and interpreted.
-		    region (str): Region supplied by the caller and interpreted according to the method.
-		    result_type (str): Result type supplied by the caller.
-		    location_type (str): Location type supplied by the caller by the method contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): forward, reverse, or place. Defaults to 'forward'.
+		    query (str): Address or location query. Defaults to an empty string; required in forward
+		        mode.
+		    latitude (float): Finite latitude in decimal degrees, from -90 through 90. Defaults to
+		        0.0.
+		    longitude (float): Finite longitude in decimal degrees, from -180 through 180. Defaults
+		        to 0.0.
+		    place_id (str): Google place identifier. Defaults to an empty string; required in place
+		        mode.
+		    language (str): Requested response language. Defaults to 'en'.
+		    region (str): Optional region bias passed to the provider. Defaults to an empty string.
+		    result_type (str): Optional reverse-geocoding result type filter. Defaults to an empty
+		        string.
+		    location_type (str): Optional reverse-geocoding location type filter. Defaults to an
+		        empty string.
+		    time (int): HTTP request timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, parameters excluding the key, provider status,
+		        results list, and raw decoded response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -10735,26 +10730,25 @@ class GoogleGeocoding( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -10783,40 +10777,33 @@ class GoogleGeocoding( Fetcher ):
 			raise exception
 
 class CensusData( Fetcher ):
-	"""CensusData component.
+	"""U.S. Census Bureau dataset API adapter.
 
 	Purpose:
-	    Retrieves U.S. Census variables and data rows, shaping API tables into dictionaries
-	    suitable for analysis.
+	    Retrieve dataset variable metadata and geographic data tables, applying variable
+	    selection and optional predicates and converting tabular JSON to column names and row
+	    dictionaries.
 
 	Attributes:
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    year (Optional[str]): Current year retained by the CensusData workflow between related
-	    operations.
-	    dataset (Optional[str]): Current dataset retained by the CensusData workflow between
-	    related operations.
-	    mode (Optional[str]): Current mode retained by the CensusData workflow between related
-	    operations.
-	    fields (Optional[List[str]]): Current fields retained by the CensusData workflow between
-	    related operations.
-	    geography_for (Optional[str]): Current geography for retained by the CensusData workflow
-	    between related operations.
-	    geography_in (Optional[str]): Current geography in retained by the CensusData workflow
-	    between related operations.
-	    predicates (Optional[Dict[str, Any]]): Current predicates retained by the CensusData
-	    workflow between related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the CensusData workflow between
-	    related operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
+	    api_key (Optional[str]): Census API key loaded from configuration; attached to data
+	        requests when present.
+	    base_url (Optional[str]): Base provider API URL.
+	    year (Optional[str]): Requested four-digit Census vintage.
+	    dataset (Optional[str]): Requested dataset path.
+	    mode (Optional[str]): Selected retrieval operation.
+	    fields (Optional[List[str]]): Parsed list of requested variable names.
+	    geography_for (Optional[str]): Required target geography selector for data retrieval.
+	    geography_in (Optional[str]): Optional parent geography selector.
+	    predicates (Optional[Dict[str, Any]]): Parsed additional query predicates.
+	    params (Optional[Dict[str, Any]]): Latest query parameters, including the key when
+	        configured.
+	    payload (Optional[Any]): Latest decoded metadata object or tabular data array.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest endpoint URL.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	api_key: Optional[ str ]
 	base_url: Optional[ str ]
@@ -10833,15 +10820,14 @@ class CensusData( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the configured Census API key, configure the base data URL, JSON headers,
+		    twenty-second timeout, and empty dataset, geography, and response state.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.api_key = cfg.CENSUS_API_KEY
@@ -10863,14 +10849,13 @@ class CensusData( Fetcher ):
 		self.headers = { 'Accept': 'application/json', 'User-Agent': self.agents, }
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'api_key', 'base_url', 'year', 'dataset', 'mode', 'fields', 'geography_for',
 				'geography_in', 'predicates', 'params', 'payload', 'result', 'response', 'url',
@@ -10878,22 +10863,20 @@ class CensusData( Fetcher ):
 				'shape_table', 'fetch_variables', 'fetch_data', 'fetch', 'create_schema' ]
 	
 	def normalize_fields( self, fields: str ) -> str:
-		"""Normalize fields.
+		"""Parse Census variable selection.
 
 		Purpose:
-		    Normalizes fields into the canonical representation expected by the surrounding
-		    workflow.
+		    Split comma-separated names, trim and discard blank entries, retain the resulting list,
+		    and reject an empty selection.
 
 		Args:
-		    fields (str): Fields supplied by the caller and interpreted according to the method
-		    contract.
+		    fields (str): Nonblank comma-separated Census variable names.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Comma-separated nonblank variable names.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when field selection is missing or cannot produce any variables.
 		"""
 		try:
 			throw_if( 'fields', fields )
@@ -10915,22 +10898,22 @@ class CensusData( Fetcher ):
 			raise exception
 	
 	def parse_predicates( self, predicates: str='' ) -> Dict[ str, Any ]:
-		"""Parse predicates.
+		"""Parse additional Census predicates.
 
 		Purpose:
-		    Parses predicates into the typed representation expected by the provider request.
+		    Reset the predicate dictionary, parse nonblank lines on the first equals sign, trim
+		    names and values, and reject missing separators or blank keys and values.
 
 		Args:
-		    predicates (str): Predicates supplied by the caller and interpreted according to the
-		    method contract.
+		    predicates (str): Optional newline-separated key=value filters. Defaults to an empty
+		        string.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Parsed predicate names mapped to string values; duplicate names retain
+		        the last value.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when a predicate line is malformed.
 		"""
 		try:
 			self.predicates = { }
@@ -10968,22 +10951,21 @@ class CensusData( Fetcher ):
 			raise exception
 	
 	def shape_table( self, rows: List[ Any ] ) -> Dict[ str, Any ]:
-		"""Shape table.
+		"""Convert Census table rows to records.
 
 		Purpose:
-		    Transforms provider table into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Use the first list row as column names, convert subsequent list rows to dictionaries,
+		    fill missing cells with empty strings, and ignore extra cells and non-list data rows.
 
 		Args:
-		    rows (List[Any]): Maximum number of records requested from the provider.
+		    rows (List[Any]): Census tabular response containing a header row followed by records.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Column names, row dictionaries, and record count; empty collections for
+		        empty input.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when table shaping fails.
 		"""
 		try:
 			if not rows:
@@ -11009,25 +10991,23 @@ class CensusData( Fetcher ):
 			raise exception
 	
 	def fetch_variables( self, year: str, dataset: str, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch variables.
+		"""Retrieve Census variable metadata.
 
 		Purpose:
-		    Retrieves variables from the configured provider and returns normalized response data.
+		    Validate vintage and dataset path, request variables.json without an API key, and reject
+		    non-object or error-bearing JSON.
 
 		Args:
-		    year (str): Year supplied by the caller and interpreted according to the method
-		    contract.
-		    dataset (str): Dataset supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    year (str): Four-digit Census dataset vintage.
+		    dataset (str): Dataset path containing slash-separated segments of letters, digits,
+		        underscores, or hyphens.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, parameters excluding the key, and decoded variable metadata.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'year', year )
@@ -11067,33 +11047,31 @@ class CensusData( Fetcher ):
 			raise exception
 	
 	def fetch_data( self, year: str, dataset: str, fields: str, geography_for: str='', geography_in: str='', predicates: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch data.
+		"""Retrieve Census geographic data.
 
 		Purpose:
-		    Retrieves data from the configured provider and returns normalized response data.
+		    Validate dataset identifiers, parse predicates and variables, require target geography,
+		    and attach optional parent geography and configured API key. Require a JSON table with a
+		    list header row and shape its records.
 
 		Args:
-		    year (str): Year supplied by the caller and interpreted according to the method
-		    contract.
-		    dataset (str): Dataset supplied by the caller and interpreted according to the method
-		    contract.
-		    fields (str): Fields supplied by the caller and interpreted according to the method
-		    contract.
-		    geography_for (str): Geography for supplied by the caller and interpreted according to
-		    the method contract.
-		    geography_in (str): Geography in supplied by the caller and interpreted according to
-		    the method contract.
-		    predicates (str): Predicates supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    year (str): Four-digit Census dataset vintage.
+		    dataset (str): Dataset path containing slash-separated segments of letters, digits,
+		        underscores, or hyphens.
+		    fields (str): Nonblank comma-separated Census variable names.
+		    geography_for (str): Required Census geography selector for the 'for' parameter.
+		    geography_in (str): Optional parent geography selector for the 'in' parameter. Defaults
+		        to an empty string.
+		    predicates (str): Optional newline-separated key=value filters. Defaults to an empty
+		        string.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-					metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, parameters excluding the key, shaped columns and records, and
+		        raw tabular response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'year', year )
@@ -11146,35 +11124,32 @@ class CensusData( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='variables', year: str='2022', dataset: str='acs/acs5', fields: str='NAME,B01001_001E', geography_for: str='state:*', geography_in: str='', predicates: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a Census retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select variables metadata or geographic data retrieval and forward the applicable
+		    arguments.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    year (str): Year supplied by the caller and interpreted according to the method
-		    contract.
-		    dataset (str): Dataset supplied by the caller and interpreted according to the method
-		    contract.
-		    fields (str): Fields supplied by the caller and interpreted according to the method
-		    contract.
-		    geography_for (str): Geography for supplied by the caller and interpreted according to
-		    the method contract.
-		    geography_in (str): Geography in supplied by the caller and interpreted according to
-		    the method contract.
-		    predicates (str): Predicates supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): variables or data. Defaults to 'variables'.
+		    year (str): Four-digit Census dataset vintage. Defaults to '2022'.
+		    dataset (str): Dataset path containing slash-separated segments of letters, digits,
+		        underscores, or hyphens. Defaults to 'acs/acs5'.
+		    fields (str): Nonblank comma-separated Census variable names. Defaults to
+		        'NAME,B01001_001E'.
+		    geography_for (str): Required Census geography selector for the 'for' parameter.
+		        Defaults to 'state:*'.
+		    geography_in (str): Optional parent geography selector for the 'in' parameter. Defaults
+		        to an empty string.
+		    predicates (str): Optional newline-separated key=value filters. Defaults to an empty
+		        string.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Packaged variable metadata or shaped geographic data response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -11200,26 +11175,25 @@ class CensusData( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -11245,45 +11219,35 @@ class CensusData( Fetcher ):
 			raise exception
 
 class Socrata( Fetcher ):
-	"""Socrata component.
+	"""Socrata open-data portal adapter.
 
 	Purpose:
-	    Retrieves metadata and rows from Socrata Open Data datasets using validated domains,
-	    identifiers, limits, and offsets.
+	    Retrieve dataset metadata or rows through Socrata-style portal endpoints, applying
+	    optional SoQL clauses and pagination and sending the configured application token when
+	    present.
 
 	Attributes:
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    metadata_url (Optional[str]): URL associated with the current metadata resource or
-	    endpoint.
-	    domain (Optional[str]): Current domain retained by the Socrata workflow between related
-	    operations.
-	    dataset_id (Optional[str]): Identifier of the current dataset resource.
-	    mode (Optional[str]): Current mode retained by the Socrata workflow between related
-	    operations.
-	    select_clause (Optional[str]): Current select clause retained by the Socrata workflow
-	    between related operations.
-	    where_clause (Optional[str]): Current where clause retained by the Socrata workflow
-	    between related operations.
-	    order_clause (Optional[str]): Current order clause retained by the Socrata workflow
-	    between related operations.
-	    group_clause (Optional[str]): Current group clause retained by the Socrata workflow
-	    between related operations.
-	    limit_value (Optional[int]): Current limit value retained by the Socrata workflow between
-	    related operations.
-	    offset_value (Optional[int]): Current offset value retained by the Socrata workflow
-	    between related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the Socrata workflow between related
-	    operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
+	    api_key (Optional[str]): Socrata application token loaded from configuration; sent in
+	        X-App-Token when present.
+	    base_url (Optional[str]): Template URL for dataset row retrieval.
+	    metadata_url (Optional[str]): Template URL for dataset metadata retrieval.
+	    domain (Optional[str]): Normalized portal domain.
+	    dataset_id (Optional[str]): Normalized dataset identifier.
+	    mode (Optional[str]): Selected retrieval operation.
+	    select_clause (Optional[str]): Latest SoQL selection expression.
+	    where_clause (Optional[str]): Latest SoQL filtering expression.
+	    order_clause (Optional[str]): Latest SoQL ordering expression.
+	    group_clause (Optional[str]): Latest SoQL grouping expression.
+	    limit_value (Optional[int]): Requested row limit.
+	    offset_value (Optional[int]): Requested row offset.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    payload (Optional[Any]): Latest decoded provider response.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest endpoint URL.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	api_key: Optional[ str ]
 	base_url: Optional[ str ]
@@ -11303,15 +11267,15 @@ class Socrata( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure row and metadata endpoint templates, load the Socrata application token,
+		    initialize JSON headers, a twenty-second timeout, and paging defaults of 25 rows and
+		    zero offset.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.api_key = cfg.SOCRATA_API_KEY
@@ -11339,14 +11303,13 @@ class Socrata( Fetcher ):
 			self.headers[ 'X-App-Token' ] = self.api_key
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'api_key', 'base_url', 'metadata_url', 'domain', 'dataset_id', 'mode',
 				'select_clause', 'where_clause', 'order_clause', 'group_clause', 'limit_value',
@@ -11355,22 +11318,21 @@ class Socrata( Fetcher ):
 				'validate_offset', 'fetch_metadata', 'fetch_rows', 'fetch', 'create_schema' ]
 	
 	def normalize_domain( self, domain: str ) -> str:
-		"""Normalize domain.
+		"""Normalize a portal domain.
 
 		Purpose:
-		    Normalizes domain into the canonical representation expected by the surrounding
-		    workflow.
+		    Strip surrounding whitespace, remove HTTP and HTTPS scheme strings and surrounding
+		    slashes, then require a nonempty value containing a dot.
 
 		Args:
-		    domain (str): Domain supplied by the caller and interpreted according to the method
-		    contract.
+		    domain (str): Nonblank portal domain; scheme and surrounding slashes are removed, and a
+		        dot is required.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized domain string.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied domain is missing or fails the nonempty and dot checks.
 		"""
 		try:
 			throw_if( 'domain', domain )
@@ -11392,21 +11354,21 @@ class Socrata( Fetcher ):
 			raise exception
 	
 	def normalize_dataset_id( self, dataset_id: str ) -> str:
-		"""Normalize dataset id.
+		"""Normalize a dataset identifier.
 
 		Purpose:
-		    Normalizes dataset id into the canonical representation expected by the surrounding
-		    workflow.
+		    Strip whitespace, remove .json substrings and surrounding slashes, and reject an empty
+		    result.
 
 		Args:
-		    dataset_id (str): Provider identifier of the target dataset resource.
+		    dataset_id (str): Nonblank dataset identifier; .json and surrounding slashes are
+		        removed.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized dataset identifier.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the identifier is missing or becomes empty.
 		"""
 		try:
 			throw_if( 'dataset_id', dataset_id )
@@ -11428,20 +11390,19 @@ class Socrata( Fetcher ):
 			raise exception
 	
 	def validate_limit( self, limit: int ) -> int:
-		"""Validate limit.
+		"""Validate the requested row limit.
 
 		Purpose:
-		    Validates the limit against provider constraints and returns the accepted value.
+		    Enforce the inclusive range from 1 through 50000.
 
 		Args:
-		    limit (int): Maximum number of records or characters permitted by the operation.
+		    limit (int): Requested row count from 1 through 50000.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted limit.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the limit is missing or outside the range.
 		"""
 		try:
 			
@@ -11462,20 +11423,19 @@ class Socrata( Fetcher ):
 			raise exception
 	
 	def validate_offset( self, offset: int ) -> int:
-		"""Validate offset.
+		"""Validate the requested row offset.
 
 		Purpose:
-		    Validates the offset against provider constraints and returns the accepted value.
+		    Reject missing or negative offsets.
 
 		Args:
-		    offset (int): Zero-based record offset used for pagination.
+		    offset (int): Nonnegative row offset.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted offset.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the offset is missing or negative.
 		"""
 		try:
 			
@@ -11496,24 +11456,24 @@ class Socrata( Fetcher ):
 			raise exception
 	
 	def fetch_metadata( self, domain: str, dataset_id: str, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch metadata.
+		"""Retrieve dataset metadata.
 
 		Purpose:
-		    Retrieves metadata from the configured provider and returns normalized response data.
+		    Normalize the domain and dataset identifier, construct the metadata endpoint, attach the
+		    application token if configured, issue a GET request, and decode JSON.
 
 		Args:
-		    domain (str): Domain supplied by the caller and interpreted according to the method
-		    contract.
-		    dataset_id (str): Provider identifier of the target dataset resource.
-		    time (int): Maximum request duration in seconds.
+		    domain (str): Nonblank portal domain; scheme and surrounding slashes are removed, and a
+		        dot is required.
+		    dataset_id (str): Nonblank dataset identifier; .json and surrounding slashes are
+		        removed.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, response URL, empty query parameters, and decoded metadata.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 
@@ -11549,34 +11509,32 @@ class Socrata( Fetcher ):
 			raise exception
 	
 	def fetch_rows( self, domain: str, dataset_id: str, select: str='', where: str='', order: str='', group: str='', limit: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch rows.
+		"""Retrieve dataset rows.
 
 		Purpose:
-		    Retrieves rows from the configured provider and returns normalized response data.
+		    Normalize endpoint identifiers, validate pagination, assemble optional SoQL clauses,
+		    issue a GET request with the configured application token when present, and package the
+		    decoded response.
 
 		Args:
-		    domain (str): Domain supplied by the caller and interpreted according to the method
-		    contract.
-		    dataset_id (str): Provider identifier of the target dataset resource.
-		    select (str): Select supplied by the caller and interpreted according to the method
-		    contract.
-		    where (str): Where supplied by the caller and interpreted according to the method
-		    contract.
-		    order (str): Order supplied by the caller and interpreted according to the method
-		    contract.
-		    group (str): Group supplied by the caller and interpreted according to the method
-		    contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    offset (int): Zero-based record offset used for pagination.
-		    time (int): Maximum request duration in seconds.
+		    domain (str): Nonblank portal domain; scheme and surrounding slashes are removed, and a
+		        dot is required.
+		    dataset_id (str): Nonblank dataset identifier; .json and surrounding slashes are
+		        removed.
+		    select (str): Optional SoQL selection expression. Defaults to an empty string.
+		    where (str): Optional SoQL filtering expression. Defaults to an empty string.
+		    order (str): Optional SoQL ordering expression. Defaults to an empty string.
+		    group (str): Optional SoQL grouping expression. Defaults to an empty string.
+		    limit (int): Requested row limit from 1 through 50000. Defaults to 25.
+		    offset (int): Nonnegative row offset. Defaults to 0.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, response URL, submitted parameters, decoded data, and count equal
+		        to the list length or zero for non-list payloads.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 
@@ -11632,36 +11590,31 @@ class Socrata( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='rows', domain: str='data.cdc.gov', dataset_id: str='', select: str='', where: str='', order: str='', group: str='', limit: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a dataset retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select metadata or rows retrieval and forward the corresponding endpoint identifiers and
+		    filters.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    domain (str): Domain supplied by the caller and interpreted according to the method
-		    contract.
-		    dataset_id (str): Provider identifier of the target dataset resource.
-		    select (str): Select supplied by the caller and interpreted according to the method
-		    contract.
-		    where (str): Where supplied by the caller and interpreted according to the method
-		    contract.
-		    order (str): Order supplied by the caller and interpreted according to the method
-		    contract.
-		    group (str): Group supplied by the caller and interpreted according to the method
-		    contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    offset (int): Zero-based record offset used for pagination.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): metadata or rows. Defaults to 'rows'.
+		    domain (str): Nonblank portal domain; scheme and surrounding slashes are removed, and a
+		        dot is required. Defaults to 'data.cdc.gov'.
+		    dataset_id (str): Nonblank dataset identifier; .json and surrounding slashes are
+		        removed. Defaults to an empty string; supply a dataset identifier for either mode.
+		    select (str): Optional SoQL selection expression. Defaults to an empty string.
+		    where (str): Optional SoQL filtering expression. Defaults to an empty string.
+		    order (str): Optional SoQL ordering expression. Defaults to an empty string.
+		    group (str): Optional SoQL grouping expression. Defaults to an empty string.
+		    limit (int): Requested row limit from 1 through 50000. Defaults to 25.
+		    offset (int): Nonnegative row offset. Defaults to 0.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Packaged metadata or row response for the selected operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -11686,26 +11639,25 @@ class Socrata( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -11731,45 +11683,35 @@ class Socrata( Fetcher ):
 			raise exception
 
 class HealthData( Fetcher ):
-	"""HealthData component.
+	"""HealthData.gov Socrata-style dataset adapter.
 
 	Purpose:
-	    Retrieves HealthData.gov Socrata metadata and records with normalized dataset identifiers
-	    and paging controls.
+	    Retrieve dataset metadata or rows through Socrata-style portal endpoints, applying
+	    optional SoQL clauses and pagination and sending the configured application token when
+	    present.
 
 	Attributes:
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    metadata_url (Optional[str]): URL associated with the current metadata resource or
-	    endpoint.
-	    domain (Optional[str]): Current domain retained by the HealthData workflow between related
-	    operations.
-	    dataset_id (Optional[str]): Identifier of the current dataset resource.
-	    mode (Optional[str]): Current mode retained by the HealthData workflow between related
-	    operations.
-	    select_clause (Optional[str]): Current select clause retained by the HealthData workflow
-	    between related operations.
-	    where_clause (Optional[str]): Current where clause retained by the HealthData workflow
-	    between related operations.
-	    order_clause (Optional[str]): Current order clause retained by the HealthData workflow
-	    between related operations.
-	    group_clause (Optional[str]): Current group clause retained by the HealthData workflow
-	    between related operations.
-	    limit_value (Optional[int]): Current limit value retained by the HealthData workflow
-	    between related operations.
-	    offset_value (Optional[int]): Current offset value retained by the HealthData workflow
-	    between related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the HealthData workflow between
-	    related operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
+	    api_key (Optional[str]): HealthData application token loaded from configuration; sent in
+	        X-App-Token when present.
+	    base_url (Optional[str]): Template URL for dataset row retrieval.
+	    metadata_url (Optional[str]): Template URL for dataset metadata retrieval.
+	    domain (Optional[str]): Normalized portal domain.
+	    dataset_id (Optional[str]): Normalized dataset identifier.
+	    mode (Optional[str]): Selected retrieval operation.
+	    select_clause (Optional[str]): Latest SoQL selection expression.
+	    where_clause (Optional[str]): Latest SoQL filtering expression.
+	    order_clause (Optional[str]): Latest SoQL ordering expression.
+	    group_clause (Optional[str]): Latest SoQL grouping expression.
+	    limit_value (Optional[int]): Requested row limit.
+	    offset_value (Optional[int]): Requested row offset.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    payload (Optional[Any]): Latest decoded provider response.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest endpoint URL.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	api_key: Optional[ str ]
 	base_url: Optional[ str ]
@@ -11789,15 +11731,15 @@ class HealthData( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure row and metadata endpoint templates, load the HealthData application token,
+		    initialize JSON headers, a twenty-second timeout, and paging defaults of 25 rows and
+		    zero offset.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.api_key = cfg.HEALTHDATA_API_KEY
@@ -11825,14 +11767,13 @@ class HealthData( Fetcher ):
 			self.headers[ 'X-App-Token' ] = self.api_key
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'api_key', 'base_url', 'metadata_url', 'domain', 'dataset_id', 'mode',
 				'select_clause', 'where_clause', 'order_clause', 'group_clause', 'limit_value',
@@ -11841,22 +11782,21 @@ class HealthData( Fetcher ):
 				'validate_offset', 'fetch_metadata', 'fetch_rows', 'fetch', 'create_schema' ]
 	
 	def normalize_domain( self, domain: str ) -> str:
-		"""Normalize domain.
+		"""Normalize a portal domain.
 
 		Purpose:
-		    Normalizes domain into the canonical representation expected by the surrounding
-		    workflow.
+		    Strip surrounding whitespace, remove HTTP and HTTPS scheme strings and surrounding
+		    slashes, then require a nonempty value containing a dot.
 
 		Args:
-		    domain (str): Domain supplied by the caller and interpreted according to the method
-		    contract.
+		    domain (str): Nonblank portal domain; scheme and surrounding slashes are removed, and a
+		        dot is required.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized domain string.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied domain is missing or fails the nonempty and dot checks.
 		"""
 		try:
 			throw_if( 'domain', domain )
@@ -11878,21 +11818,21 @@ class HealthData( Fetcher ):
 			raise exception
 	
 	def normalize_dataset_id( self, dataset_id: str ) -> str:
-		"""Normalize dataset id.
+		"""Normalize a dataset identifier.
 
 		Purpose:
-		    Normalizes dataset id into the canonical representation expected by the surrounding
-		    workflow.
+		    Strip whitespace, remove .json substrings and surrounding slashes, and reject an empty
+		    result.
 
 		Args:
-		    dataset_id (str): Provider identifier of the target dataset resource.
+		    dataset_id (str): Nonblank dataset identifier; .json and surrounding slashes are
+		        removed.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized dataset identifier.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the identifier is missing or becomes empty.
 		"""
 		try:
 			throw_if( 'dataset_id', dataset_id )
@@ -11914,20 +11854,19 @@ class HealthData( Fetcher ):
 			raise exception
 	
 	def validate_limit( self, limit: int ) -> int:
-		"""Validate limit.
+		"""Validate the requested row limit.
 
 		Purpose:
-		    Validates the limit against provider constraints and returns the accepted value.
+		    Enforce the inclusive range from 1 through 50000.
 
 		Args:
-		    limit (int): Maximum number of records or characters permitted by the operation.
+		    limit (int): Requested row count from 1 through 50000.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted limit.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the limit is missing or outside the range.
 		"""
 		try:
 			
@@ -11948,20 +11887,19 @@ class HealthData( Fetcher ):
 			raise exception
 	
 	def validate_offset( self, offset: int ) -> int:
-		"""Validate offset.
+		"""Validate the requested row offset.
 
 		Purpose:
-		    Validates the offset against provider constraints and returns the accepted value.
+		    Reject missing or negative offsets.
 
 		Args:
-		    offset (int): Zero-based record offset used for pagination.
+		    offset (int): Nonnegative row offset.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted offset.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the offset is missing or negative.
 		"""
 		try:
 			
@@ -11982,24 +11920,24 @@ class HealthData( Fetcher ):
 			raise exception
 	
 	def fetch_metadata( self, domain: str, dataset_id: str, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch metadata.
+		"""Retrieve dataset metadata.
 
 		Purpose:
-		    Retrieves metadata from the configured provider and returns normalized response data.
+		    Normalize the domain and dataset identifier, construct the metadata endpoint, attach the
+		    application token if configured, issue a GET request, and decode JSON.
 
 		Args:
-		    domain (str): Domain supplied by the caller and interpreted according to the method
-		    contract.
-		    dataset_id (str): Provider identifier of the target dataset resource.
-		    time (int): Maximum request duration in seconds.
+		    domain (str): Nonblank portal domain; scheme and surrounding slashes are removed, and a
+		        dot is required.
+		    dataset_id (str): Nonblank dataset identifier; .json and surrounding slashes are
+		        removed.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, response URL, empty query parameters, and decoded metadata.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 
@@ -12035,34 +11973,32 @@ class HealthData( Fetcher ):
 			raise exception
 	
 	def fetch_rows( self, domain: str, dataset_id: str, select: str='', where: str='', order: str='', group: str='', limit: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch rows.
+		"""Retrieve dataset rows.
 
 		Purpose:
-		    Retrieves rows from the configured provider and returns normalized response data.
+		    Normalize endpoint identifiers, validate pagination, assemble optional SoQL clauses,
+		    issue a GET request with the configured application token when present, and package the
+		    decoded response.
 
 		Args:
-		    domain (str): Domain supplied by the caller and interpreted according to the method
-		    contract.
-		    dataset_id (str): Provider identifier of the target dataset resource.
-		    select (str): Select supplied by the caller and interpreted according to the method
-		    contract.
-		    where (str): Where supplied by the caller and interpreted according to the method
-		    contract.
-		    order (str): Order supplied by the caller and interpreted according to the method
-		    contract.
-		    group (str): Group supplied by the caller and interpreted according to the method
-		    contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    offset (int): Zero-based record offset used for pagination.
-		    time (int): Maximum request duration in seconds.
+		    domain (str): Nonblank portal domain; scheme and surrounding slashes are removed, and a
+		        dot is required.
+		    dataset_id (str): Nonblank dataset identifier; .json and surrounding slashes are
+		        removed.
+		    select (str): Optional SoQL selection expression. Defaults to an empty string.
+		    where (str): Optional SoQL filtering expression. Defaults to an empty string.
+		    order (str): Optional SoQL ordering expression. Defaults to an empty string.
+		    group (str): Optional SoQL grouping expression. Defaults to an empty string.
+		    limit (int): Requested row limit from 1 through 50000. Defaults to 25.
+		    offset (int): Nonnegative row offset. Defaults to 0.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, response URL, submitted parameters, decoded data, and count equal
+		        to the list length or zero for non-list payloads.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 
@@ -12118,36 +12054,31 @@ class HealthData( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='rows', domain: str='healthdata.gov', dataset_id: str='', select: str='', where: str='', order: str='', group: str='', limit: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a dataset retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select metadata or rows retrieval and forward the corresponding endpoint identifiers and
+		    filters.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    domain (str): Domain supplied by the caller and interpreted according to the method
-		    contract.
-		    dataset_id (str): Provider identifier of the target dataset resource.
-		    select (str): Select supplied by the caller and interpreted according to the method
-		    contract.
-		    where (str): Where supplied by the caller and interpreted according to the method
-		    contract.
-		    order (str): Order supplied by the caller and interpreted according to the method
-		    contract.
-		    group (str): Group supplied by the caller and interpreted according to the method
-		    contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    offset (int): Zero-based record offset used for pagination.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): metadata or rows. Defaults to 'rows'.
+		    domain (str): Nonblank portal domain; scheme and surrounding slashes are removed, and a
+		        dot is required. Defaults to 'healthdata.gov'.
+		    dataset_id (str): Nonblank dataset identifier; .json and surrounding slashes are
+		        removed. Defaults to an empty string; supply a dataset identifier for either mode.
+		    select (str): Optional SoQL selection expression. Defaults to an empty string.
+		    where (str): Optional SoQL filtering expression. Defaults to an empty string.
+		    order (str): Optional SoQL ordering expression. Defaults to an empty string.
+		    group (str): Optional SoQL grouping expression. Defaults to an empty string.
+		    limit (int): Requested row limit from 1 through 50000. Defaults to 25.
+		    offset (int): Nonnegative row offset. Defaults to 0.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Packaged metadata or row response for the selected operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -12172,26 +12103,25 @@ class HealthData( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -12217,32 +12147,28 @@ class HealthData( Fetcher ):
 			raise exception
 
 class GlobalHealthData( Fetcher ):
-	"""GlobalHealthData component.
+	"""WHO Global Health Observatory retrieval adapter.
 
 	Purpose:
-	    Queries World Health Organization indicator registries and Athena data endpoints.
+	    Retrieve the WHO indicator metadata registry page or query the configured GHO API
+	    endpoint, decoding JSON responses and retaining non-JSON content as HTML or text.
 
 	Attributes:
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    athena_base_url (Optional[str]): URL associated with the current athena base resource or
-	    endpoint.
-	    mode (Optional[str]): Current mode retained by the GlobalHealthData workflow between
-	    related operations.
-	    query_path (Optional[str]): Path associated with the current query resource.
-	    fmt (Optional[str]): Current fmt retained by the GlobalHealthData workflow between related
-	    operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the GlobalHealthData workflow between
-	    related operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
+	    api_key (Optional[str]): WHO API key loaded from configuration; sent in X-API-Key when
+	        present.
+	    base_url (Optional[str]): WHO Global Health Observatory website base URL.
+	    athena_base_url (Optional[str]): Configured GHO API base URL used by athena mode.
+	    mode (Optional[str]): Selected retrieval operation.
+	    query_path (Optional[str]): Normalized relative GHO API query path.
+	    fmt (Optional[str]): Requested provider output format.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    payload (Optional[Any]): Latest decoded JSON response or HTML/text dictionary.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest endpoint URL.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	api_key: Optional[ str ]
 	base_url: Optional[ str ]
@@ -12256,15 +12182,14 @@ class GlobalHealthData( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the configured WHO API key, initialize the registry and GHO API base URLs, JSON
+		    headers, twenty-second timeout, registry mode, and JSON format default.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.api_key = cfg.WHO_API_KEY
@@ -12286,14 +12211,13 @@ class GlobalHealthData( Fetcher ):
 			self.headers[ 'X-API-Key' ] = self.api_key
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'api_key', 'base_url', 'athena_base_url', 'mode', 'query_path', 'fmt', 'params',
 				'payload', 'result', 'response', 'url', 'timeout', 'agents', 'headers',
@@ -12301,22 +12225,22 @@ class GlobalHealthData( Fetcher ):
 				'create_schema' ]
 	
 	def normalize_query_path( self, query_path: str ) -> str:
-		"""Normalize query path.
+		"""Normalize a relative GHO query path.
 
 		Purpose:
-		    Normalizes query path into the canonical representation expected by the surrounding
-		    workflow.
+		    Trim whitespace and leading slashes, then reject empty paths, full HTTP or HTTPS URLs,
+		    and any parent-directory markers.
 
 		Args:
-		    query_path (str): Query path supplied by the caller and interpreted according to the
-		    method contract.
+		    query_path (str): Nonblank relative query path; leading slashes and surrounding
+		        whitespace are stripped. Full HTTP(S) URLs and parent-directory markers are
+		        rejected.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Accepted normalized relative query path.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the path is missing or fails the path checks.
 		"""
 		try:
 			throw_if( 'query_path', query_path )
@@ -12343,22 +12267,22 @@ class GlobalHealthData( Fetcher ):
 			raise exception
 	
 	def fetch_indicator_registry( self, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch indicator registry.
+		"""Retrieve the WHO indicator metadata registry.
 
 		Purpose:
-		    Retrieves indicator registry from the configured provider and returns normalized
-		    response data.
+		    Request the registry webpage with the configured key header when present. Decode JSON
+		    when the content type includes application/json; otherwise retain response text under
+		    html.
 
 		Args:
-		    time (int): Maximum request duration in seconds.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, response URL, empty parameters, and decoded JSON or an HTML
+		        dictionary.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 
@@ -12398,24 +12322,26 @@ class GlobalHealthData( Fetcher ):
 			raise exception
 	
 	def fetch_athena( self, query_path: str, fmt: str='json', time: int=20 ) -> (Dict[ str, Any ] | None):
-		"""Fetch athena.
+		"""Retrieve GHO API data using a relative path.
 
 		Purpose:
-		    Retrieves athena from the configured provider and returns normalized response data.
+		    Normalize the query path, attach the requested $format parameter and configured key
+		    header when present, and issue a GET request. Decode JSON for application/json
+		    responses; otherwise retain response text.
 
 		Args:
-		    query_path (str): Query path supplied by the caller and interpreted according to the
-method contract.
-		    fmt (str): Fmt supplied by the caller and interpreted according to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    query_path (str): Nonblank relative query path; leading slashes and surrounding
+		        whitespace are stripped. Full HTTP(S) URLs and parent-directory markers are
+		        rejected.
+		    fmt (str): Nonblank provider output format passed as $format. Defaults to 'json'.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, response URL, submitted parameters, and decoded JSON or a text
+		        dictionary.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'athena'
@@ -12459,26 +12385,24 @@ method contract.
 			raise exception
 	
 	def fetch( self, mode: str='indicator_registry', query_path: str='', fmt: str='json', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a WHO GHO retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select indicator_registry or athena and delegate with applicable query options.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    query_path (str): Query path supplied by the caller and interpreted according to the
-		    method contract.
-		    fmt (str): Fmt supplied by the caller and interpreted according to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): indicator_registry or athena. Defaults to 'indicator_registry'.
+		    query_path (str): Nonblank relative query path; leading slashes and surrounding
+		        whitespace are stripped. Full HTTP(S) URLs and parent-directory markers are
+		        rejected. Defaults to an empty string; required for athena mode.
+		    fmt (str): Nonblank provider output format passed as $format. Defaults to 'json'.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Packaged registry or GHO API response for the selected mode.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -12503,26 +12427,25 @@ method contract.
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
