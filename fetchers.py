@@ -22749,39 +22749,32 @@ class OpenAQ( Fetcher ):
 			raise exception
 
 class Firms( Fetcher ):
-	"""Firms component.
+	"""NASA FIRMS fire detection and data-availability adapter.
 
 	Purpose:
-	    Retrieves NASA FIRMS active-fire observations and data-availability records from CSV
-	    endpoints.
+	    Retrieve CSV area detections and sensor data-availability records through NASA FIRMS,
+	    validate source and geographic filters, shape records, and redact the map-key path
+	    segment in returned URLs.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    map_key (Optional[str]): Current map key retained by the Firms workflow between related
-	    operations.
-	    mode (Optional[str]): Current mode retained by the Firms workflow between related
-	    operations.
-	    source (Optional[str]): Current source retained by the Firms workflow between related
-	    operations.
-	    area_coordinates (Optional[str]): Current area coordinates retained by the Firms workflow
-	    between related operations.
-	    day_range (Optional[int]): Current day range retained by the Firms workflow between
-	    related operations.
-	    date (Optional[str]): Current date retained by the Firms workflow between related
-	    operations.
-	    sensor (Optional[str]): Current sensor retained by the Firms workflow between related
-	    operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the Firms workflow between related
-	    operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
+	    base_url (Optional[str]): Base provider API URL.
+	    map_key (Optional[str]): FIRMS map key loaded from configuration.
+	    mode (Optional[str]): Selected retrieval operation.
+	    source (Optional[str]): Selected fire-detection product source.
+	    area_coordinates (Optional[str]): Normalized world selector or west,south,east,north
+	        bounds.
+	    day_range (Optional[int]): Requested number of days.
+	    date (Optional[str]): Optional requested calendar date string.
+	    sensor (Optional[str]): Selected data-availability sensor.
+	    params (Optional[Dict[str, Any]]): Descriptive request metadata; filters are encoded in
+	        the URL.
+	    payload (Optional[Any]): Latest raw CSV response text.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest request URL, including the map key before output redaction.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	base_url: Optional[ str ]
 	map_key: Optional[ str ]
@@ -22797,15 +22790,15 @@ class Firms( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the configured FIRMS map key, configure the API base URL and CSV headers,
+		    initialize area mode, VIIRS_SNPP_NRT, worldwide bounds, one-day range, ALL sensor
+		    selection, and twenty-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.base_url = 'https://firms.modaps.eosdis.nasa.gov/api'
@@ -22826,14 +22819,13 @@ class Firms( Fetcher ):
 		self.headers = { 'Accept': 'text/csv', 'User-Agent': self.agents }
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'map_key', 'mode', 'source', 'area_coordinates', 'day_range', 'date',
 				'sensor', 'params', 'payload', 'result', 'response', 'url', 'timeout', 'agents',
@@ -22843,20 +22835,19 @@ class Firms( Fetcher ):
 				'request_csv', 'fetch_area', 'fetch_data_availability', 'fetch', 'create_schema' ]
 	
 	def validate_mode( self, mode: str ) -> str:
-		"""Validate mode.
+		"""Validate the FIRMS retrieval mode.
 
 		Purpose:
-		    Validates the mode against provider constraints and returns the accepted value.
+		    Trim and lowercase the supplied mode and accept only area or data-availability.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
+		    mode (str): area or data-availability; trimmed and lowercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted mode.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -22875,21 +22866,21 @@ class Firms( Fetcher ):
 			raise exception
 	
 	def validate_source( self, source: str ) -> str:
-		"""Validate source.
+		"""Validate a FIRMS product source.
 
 		Purpose:
-		    Validates the source against provider constraints and returns the accepted value.
+		    Trim and uppercase the supplied source and accept only the supported LANDSAT, MODIS and
+		    VIIRS identifiers.
 
 		Args:
-		    source (str): Source supplied by the caller and interpreted according to the method
-		    contract.
+		    source (str): LANDSAT_NRT, MODIS_NRT, MODIS_SP, VIIRS_NOAA20_NRT, VIIRS_NOAA20_SP,
+		        VIIRS_NOAA21_NRT, VIIRS_SNPP_NRT, or VIIRS_SNPP_SP; trimmed and uppercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted source.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'source', source )
@@ -22911,21 +22902,20 @@ class Firms( Fetcher ):
 			raise exception
 	
 	def validate_sensor( self, sensor: str ) -> str:
-		"""Validate sensor.
+		"""Validate a FIRMS sensor selector.
 
 		Purpose:
-		    Validates the sensor against provider constraints and returns the accepted value.
+		    Trim and uppercase the supplied sensor and accept only supported sensor identifiers.
 
 		Args:
-		    sensor (str): Sensor supplied by the caller and interpreted according to the method
-		    contract.
+		    sensor (str): ALL, LANDSAT, MODIS, VIIRS_SNPP, VIIRS_NOAA20, or VIIRS_NOAA21; trimmed
+		        and uppercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted sensor.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'sensor', sensor )
@@ -22945,21 +22935,19 @@ class Firms( Fetcher ):
 			raise exception
 	
 	def validate_day_range( self, day_range: int ) -> int:
-		"""Validate day range.
+		"""Validate the requested day range.
 
 		Purpose:
-		    Validates the day range against provider constraints and returns the accepted value.
+		    Require an integer from one through five, excluding booleans.
 
 		Args:
-		    day_range (int): Day range supplied by the caller and interpreted according to the
-		    method contract.
+		    day_range (int): Integer from 1 through 5; booleans are rejected.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted day range.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'day_range', day_range )
@@ -22977,21 +22965,21 @@ class Firms( Fetcher ):
 			raise exception
 	
 	def validate_date( self, date: str='' ) -> str:
-		"""Validate date.
+		"""Validate an optional FIRMS date.
 
 		Purpose:
-		    Validates the date against provider constraints and returns the accepted value.
+		    Trim the supplied value, allow an empty string, and parse nonempty values with the
+		    YYYY-MM-DD format.
 
 		Args:
-		    date (str): Date supplied by the caller and interpreted according to the method
-		    contract.
+		    date (str): Optional date parsed with YYYY-MM-DD after trimming. Defaults to an empty
+		        string.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Trimmed date string or an empty string.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			value = ( date or '' ).strip( )
@@ -23010,22 +22998,22 @@ class Firms( Fetcher ):
 			raise exception
 	
 	def validate_area_coordinates( self, area_coordinates: str='world' ) -> str:
-		"""Validate area coordinates.
+		"""Validate the FIRMS geographic selector.
 
 		Purpose:
-		    Validates the area coordinates against provider constraints and returns the accepted
-		    value.
+		    Normalize world to lowercase or parse four finite geographic coordinates, require strict
+		    west-to-east and south-to-north ordering, and serialize using general numeric format.
 
 		Args:
-		    area_coordinates (str): Area coordinates supplied by the caller and interpreted
- according to the method contract.
+		    area_coordinates (str): Case-insensitive world or comma-separated west,south,east,north
+		        bounds; finite longitude from -180 through 180 and latitude from -90 through 90,
+		        with strictly increasing axes. Defaults to 'world'.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: World selector or comma-separated numeric bounds.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'area_coordinates', area_coordinates )
@@ -23070,23 +23058,21 @@ class Firms( Fetcher ):
 			raise exception
 	
 	def csv_to_rows( self, csv_text: str ) -> List[ Dict[ str, Any ] ]:
-		"""Csv to rows.
+		"""Parse FIRMS CSV records.
 
 		Purpose:
-		    Csv to rows using the class state and returns data required by the surrounding
-		    workflow.
+		    Return no rows for blank text; require at least two nonblank header fields and reject
+		    records containing extra cells. Convert field names to title case with spaces, retaining
+		    CSV string values and None for missing cells.
 
 		Args:
-		    csv_text (str): Csv text supplied by the caller and interpreted according to the
-		    method contract.
+		    csv_text (str): Raw CSV response text.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Display-oriented CSV record dictionaries.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			text = csv_text or ''
@@ -23122,22 +23108,20 @@ class Firms( Fetcher ):
 			raise exception
 	
 	def summarize_rows( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Summarize rows.
+		"""Summarize shaped FIRMS records.
 
 		Purpose:
-		    Computes a compact summary of rows so callers can inspect the response without
-		    traversing every record.
+		    Count rows and extract date, sensor, latitude and longitude from the first row using
+		    alternative display field names and truthiness-based fallbacks.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Count, first_date, first_sensor, first_lat, and first_lon.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			count = len( rows or [ ] )
@@ -23168,22 +23152,21 @@ class Firms( Fetcher ):
 			raise exception
 	
 	def package_response( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Package response.
+		"""Package shaped FIRMS records.
 
 		Purpose:
-		    Combines normalized records, summary metrics, and request metadata into the standard
-		    response payload.
+		    Combine mode, redacted request URL, descriptive parameters, summary, rows and raw CSV
+		    text.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL with map-key path segment redacted, descriptive parameters,
+		        summary, shaped rows, and raw CSV text.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.result = { 'mode': self.mode, 'url': self.url.replace( f'/{self.map_key}/', '/[REDACTED]/' ), 'params': self.params,
@@ -23200,23 +23183,23 @@ class Firms( Fetcher ):
 			raise exception
 	
 	def request_csv( self, url: str, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Request csv.
+		"""Execute a FIRMS CSV request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Trim the URL, validate a positive integer timeout, issue a GET, check HTTP status, and
+		    retain response text without parsing it. Redact the configured map-key path segment in
+		    the returned URL.
 
 		Args:
-		    url (str): Absolute endpoint or resource URL.
-		    time (int): Maximum request duration in seconds.
+		    url (str): Nonblank FIRMS request URL.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Redacted URL, retained descriptive parameters, and raw response text.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'url', url )
@@ -23244,29 +23227,30 @@ class Firms( Fetcher ):
 			raise exception
 	
 	def fetch_area( self, source: str, area_coordinates: str='world', day_range: int=1, date: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch area.
+		"""Retrieve FIRMS area fire-detection records.
 
 		Purpose:
-		    Retrieves area from the configured provider and returns normalized response data.
+		    Validate source, geographic selector, integer day range and optional date; construct the
+		    authenticated area CSV path, retrieve and parse records, and package the response.
 
 		Args:
-		    source (str): Source supplied by the caller and interpreted according to the method
-		    contract.
-		    area_coordinates (str): Area coordinates supplied by the caller and interpreted
-		    according to the method contract.
-		    day_range (int): Day range supplied by the caller and interpreted according to the
-		    method contract.
-		    date (str): Date supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    source (str): LANDSAT_NRT, MODIS_NRT, MODIS_SP, VIIRS_NOAA20_NRT, VIIRS_NOAA20_SP,
+		        VIIRS_NOAA21_NRT, VIIRS_SNPP_NRT, or VIIRS_SNPP_SP; trimmed and uppercased.
+		    area_coordinates (str): Case-insensitive world or comma-separated west,south,east,north
+		        bounds; finite longitude from -180 through 180 and latitude from -90 through 90,
+		        with strictly increasing axes. Defaults to 'world'.
+		    day_range (int): Integer from 1 through 5; booleans are rejected. Defaults to 1.
+		    date (str): Optional date parsed with YYYY-MM-DD after trimming. Defaults to an empty
+		        string.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL with map-key path segment redacted, descriptive parameters,
+		        summary, shaped rows, and raw CSV text.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'area'
@@ -23301,24 +23285,24 @@ class Firms( Fetcher ):
 			raise exception
 	
 	def fetch_data_availability( self, sensor: str='ALL', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch data availability.
+		"""Retrieve FIRMS sensor data availability.
 
 		Purpose:
-		    Retrieves data availability from the configured provider and returns normalized
-		    response data.
+		    Validate sensor, construct the authenticated data_availability CSV path, retrieve and
+		    parse records, and package the result.
 
 		Args:
-		    sensor (str): Sensor supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    sensor (str): ALL, LANDSAT, MODIS, VIIRS_SNPP, VIIRS_NOAA20, or VIIRS_NOAA21; trimmed
+		        and uppercased. Defaults to 'ALL'.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL with map-key path segment redacted, descriptive parameters,
+		        summary, shaped rows, and raw CSV text.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'data-availability'
@@ -23342,33 +23326,34 @@ class Firms( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='area', source: str='VIIRS_SNPP_NRT', area_coordinates: str = 'world', day_range: int=1, date: str='', sensor: str='ALL', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a FIRMS retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Validate mode and select area detections or sensor data availability, forwarding
+		    applicable arguments.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    source (str): Source supplied by the caller and interpreted according to the method
-		    contract.
-		    area_coordinates (str): Area coordinates supplied by the caller and interpreted
-		    according to the method contract.
-		    day_range (int): Day range supplied by the caller and interpreted according to the
-		    method contract.
-		    date (str): Date supplied by the caller and interpreted according to the method
-		    contract.
-		    sensor (str): Sensor supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): area or data-availability; trimmed and lowercased. Defaults to 'area'.
+		    source (str): LANDSAT_NRT, MODIS_NRT, MODIS_SP, VIIRS_NOAA20_NRT, VIIRS_NOAA20_SP,
+		        VIIRS_NOAA21_NRT, VIIRS_SNPP_NRT, or VIIRS_SNPP_SP; trimmed and uppercased. Defaults
+		        to 'VIIRS_SNPP_NRT'.
+		    area_coordinates (str): Case-insensitive world or comma-separated west,south,east,north
+		        bounds; finite longitude from -180 through 180 and latitude from -90 through 90,
+		        with strictly increasing axes. Defaults to 'world'.
+		    day_range (int): Integer from 1 through 5; booleans are rejected. Defaults to 1.
+		    date (str): Optional date parsed with YYYY-MM-DD after trimming. Defaults to an empty
+		        string.
+		    sensor (str): ALL, LANDSAT, MODIS, VIIRS_SNPP, VIIRS_NOAA20, or VIIRS_NOAA21; trimmed
+		        and uppercased. Defaults to 'ALL'.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL with map-key path segment redacted, descriptive parameters,
+		        summary, shaped rows, and raw CSV text.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = self.validate_mode( mode )
@@ -23390,26 +23375,25 @@ class Firms( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a function description with object parameter definitions and required argument
+		    names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Parameter-property dictionary.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -23437,55 +23421,43 @@ class Firms( Fetcher ):
 			raise exception
 
 class OpenSky( Fetcher ):
-	"""OpenSky component.
+	"""OpenSky Network state, flight, and aircraft track adapter.
 
 	Purpose:
-	    Retrieves OpenSky aircraft states, flights, airport activity, and tracks with optional
-	    authenticated access.
+	    Retrieve aircraft state vectors, historical aircraft flights, airport arrivals and
+	    departures, and aircraft tracks through OpenSky API endpoints, using OAuth2 client
+	    credentials when configured and shaping provider responses into dictionaries.
 
 	Attributes:
-	    token_url (Optional[str]): URL associated with the current token resource or endpoint.
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    client_id (Optional[str]): Identifier of the current client resource.
-	    client_secret (Optional[str]): Current client secret retained by the OpenSky workflow
-	    between related operations.
-	    access_token (Optional[str]): Current access token retained by the OpenSky workflow
-	    between related operations.
-	    mode (Optional[str]): Current mode retained by the OpenSky workflow between related
-	    operations.
-	    endpoint (Optional[str]): Current endpoint retained by the OpenSky workflow between
-	    related operations.
-	    icao24 (Optional[str]): Current icao24 retained by the OpenSky workflow between related
-	    operations.
-	    airport (Optional[str]): Current airport retained by the OpenSky workflow between related
-	    operations.
-	    begin (Optional[int]): Current begin retained by the OpenSky workflow between related
-	    operations.
-	    end (Optional[int]): Current end retained by the OpenSky workflow between related
-	    operations.
-	    time_value (Optional[int]): Current time value retained by the OpenSky workflow between
-	    related operations.
-	    lamin (Optional[float]): Current lamin retained by the OpenSky workflow between related
-	    operations.
-	    lomin (Optional[float]): Current lomin retained by the OpenSky workflow between related
-	    operations.
-	    lamax (Optional[float]): Current lamax retained by the OpenSky workflow between related
-	    operations.
-	    lomax (Optional[float]): Current lomax retained by the OpenSky workflow between related
-	    operations.
-	    extended (Optional[bool]): Current extended retained by the OpenSky workflow between
-	    related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the OpenSky workflow between related
-	    operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    headers (Any): HTTP headers sent with the current request.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    base_url (Optional[str]): Base provider API URL.
+	    token_url (Optional[str]): OAuth2 client-credentials token endpoint.
+	    client_id (Optional[str]): Configured OpenSky OAuth2 client identifier.
+	    client_secret (Optional[str]): Configured OAuth2 client secret or legacy credentials
+	        fallback.
+	    access_token (Optional[str]): Latest OAuth2 bearer access token, or None.
+	    mode (Optional[str]): Selected retrieval operation.
+	    endpoint (Optional[str]): Selected supported OpenSky API path.
+	    icao24 (Optional[str]): Selected normalized six-character hexadecimal aircraft address.
+	    airport (Optional[str]): Selected normalized four-character airport code.
+	    begin (Optional[int]): Beginning Unix epoch seconds for flight queries.
+	    end (Optional[int]): Ending Unix epoch seconds for flight queries.
+	    time_value (Optional[int]): Optional snapshot or track Unix epoch seconds.
+	    lamin (Optional[float]): Minimum bounding latitude.
+	    lomin (Optional[float]): Minimum bounding longitude.
+	    lamax (Optional[float]): Maximum bounding latitude.
+	    lomax (Optional[float]): Maximum bounding longitude.
+	    extended (Optional[bool]): Extended state-vector request flag.
+	    params (Optional[Dict[str, Any]]): Latest request parameters or descriptive request
+	        metadata.
+	    payload (Optional[Any]): Latest decoded API response, which may be an object, list, or
+	        None.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest request URL.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP headers, including a bearer token after
+	        successful authentication.
 	"""
 	token_url: Optional[ str ]
 	base_url: Optional[ str ]
@@ -23510,15 +23482,15 @@ class OpenSky( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the configured OpenSky client ID and client secret (or legacy credential fallback),
+		    configure API and OAuth2 endpoints and JSON headers, initialize states_bbox mode and
+		    empty filter state, and set a twenty-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.timeout = 20
@@ -23549,14 +23521,13 @@ class OpenSky( Fetcher ):
 		self.headers = { 'Accept': 'application/json', 'User-Agent': self.agents, }
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'timeout', 'headers', 'response', 'url', 'result', 'query', 'token_url',
 				'base_url', 'client_id', 'client_secret', 'access_token', 'mode', 'endpoint',
@@ -23570,20 +23541,21 @@ class OpenSky( Fetcher ):
 				'fetch', 'create_schema' ]
 	
 	def validate_mode( self, mode: str ) -> str:
-		"""Validate mode.
+		"""Validate an OpenSky retrieval mode.
 
 		Purpose:
-		    Validates the mode against provider constraints and returns the accepted value.
+		    Trim and lowercase the supplied mode and accept only supported state, flight, arrival,
+		    departure, and track operations.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
+		    mode (str): states_bbox, flights_aircraft, arrivals_airport, departures_airport, or
+		        track_aircraft; trimmed and lowercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted mode.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -23611,21 +23583,21 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def validate_endpoint( self, endpoint: str ) -> str:
-		"""Validate endpoint.
+		"""Validate an OpenSky endpoint.
 
 		Purpose:
-		    Validates the endpoint against provider constraints and returns the accepted value.
+		    Trim whitespace, reject full URLs and parent-directory markers, and require an exact
+		    supported API path.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
+		    endpoint (str): One of /states/all, /flights/aircraft, /flights/arrival,
+		        /flights/departure, or /tracks/all.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Trimmed accepted endpoint.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'endpoint', endpoint )
@@ -23656,21 +23628,19 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def validate_icao24( self, icao24: str ) -> str:
-		"""Validate icao24.
+		"""Validate an aircraft address.
 
 		Purpose:
-		    Validates the icao24 against provider constraints and returns the accepted value.
+		    Trim and lowercase the input and require six hexadecimal characters.
 
 		Args:
-		    icao24 (str): Icao24 supplied by the caller and interpreted according to the method
-		    contract.
+		    icao24 (str): Six-character hexadecimal aircraft address, trimmed and lowercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized aircraft address.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'icao24', icao24 )
@@ -23692,21 +23662,19 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def validate_airport( self, airport: str ) -> str:
-		"""Validate airport.
+		"""Validate an airport code.
 
 		Purpose:
-		    Validates the airport against provider constraints and returns the accepted value.
+		    Trim and uppercase the input and require four letters or digits.
 
 		Args:
-		    airport (str): Airport supplied by the caller and interpreted according to the method
-		    contract.
+		    airport (str): Four-character alphanumeric ICAO airport code, trimmed and uppercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized airport code.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'airport', airport )
@@ -23728,21 +23696,20 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def validate_epoch( self, name: str, value: Any ) -> int:
-		"""Validate epoch.
+		"""Validate a Unix epoch argument.
 
 		Purpose:
-		    Validates the epoch against provider constraints and returns the accepted value.
+		    Require a nonnegative integer, excluding booleans.
 
 		Args:
-		    name (str): Argument name included in validation error messages.
-		    value (Any): Candidate value to validate or normalize.
+		    name (str): Nonblank argument label used in validation messages.
+		    value (Any): Nonnegative Unix epoch seconds.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted epoch value.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'name', name )
@@ -23767,21 +23734,22 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def validate_time_range( self, begin: int, end: int ) -> Tuple[ int, int ]:
-		"""Validate time range.
+		"""Validate a flight query interval.
 
 		Purpose:
-		    Validates the time range against provider constraints and returns the accepted value.
+		    Validate both epoch values and require begin strictly less than end.
 
 		Args:
-		    begin (int): Date boundary or date value used by the request.
-		    end (int): Date boundary or date value used by the request.
+		    begin (int): Nonnegative Unix epoch seconds at the beginning of the interval; booleans
+		        are rejected.
+		    end (int): Nonnegative Unix epoch seconds strictly greater than begin; booleans are
+		        rejected.
 
 		Returns:
-		    Tuple[int, int]: Ordered values or records produced by the operation.
+		    Tuple[int, int]: Original accepted beginning and ending epoch seconds.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			start = self.validate_epoch( 'begin', begin )
@@ -23804,21 +23772,20 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def validate_latitude( self, name: str, value: Any ) -> float:
-		"""Validate latitude.
+		"""Validate a latitude value.
 
 		Purpose:
-		    Validates the latitude against provider constraints and returns the accepted value.
+		    Reject booleans, nonfinite values and values outside geographic latitude bounds.
 
 		Args:
-		    name (str): Argument name included in validation error messages.
-		    value (Any): Candidate value to validate or normalize.
+		    name (str): Nonblank argument label used in validation messages.
+		    value (Any): Finite latitude from -90 through 90 degrees.
 
 		Returns:
-		    float: Computed numeric value produced by the operation.
+		    float: Original accepted numeric latitude.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'name', name )
@@ -23843,21 +23810,20 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def validate_longitude( self, name: str, value: Any ) -> float:
-		"""Validate longitude.
+		"""Validate a longitude value.
 
 		Purpose:
-		    Validates the longitude against provider constraints and returns the accepted value.
+		    Reject booleans, nonfinite values and values outside geographic longitude bounds.
 
 		Args:
-		    name (str): Argument name included in validation error messages.
-		    value (Any): Candidate value to validate or normalize.
+		    name (str): Nonblank argument label used in validation messages.
+		    value (Any): Finite longitude from -180 through 180 degrees.
 
 		Returns:
-		    float: Computed numeric value produced by the operation.
+		    float: Original accepted numeric longitude.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'name', name )
@@ -23882,27 +23848,28 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def validate_bbox( self, lamin: float, lomin: float, lamax: float, lomax: float ) -> Tuple[ float, float, float, float ]:
-		"""Validate bbox.
+		"""Validate a geographic bounding box.
 
 		Purpose:
-		    Validates the bbox against provider constraints and returns the accepted value.
+		    Validate all four coordinates and require strict increasing latitude and longitude
+		    bounds.
 
 		Args:
-		    lamin (float): Lamin supplied by the caller and interpreted according to the method
-		    contract.
-		    lomin (float): Lomin supplied by the caller and interpreted according to the method
-		    contract.
-		    lamax (float): Lamax supplied by the caller and interpreted according to the method
-		    contract.
-		    lomax (float): Lomax supplied by the caller and interpreted according to the method
-		    contract.
+		    lamin (float): Finite minimum latitude from -90 through 90 degrees; booleans are
+		        rejected.
+		    lomin (float): Finite minimum longitude from -180 through 180 degrees; booleans are
+		        rejected.
+		    lamax (float): Finite maximum latitude from -90 through 90 degrees, greater than lamin;
+		        booleans are rejected.
+		    lomax (float): Finite maximum longitude from -180 through 180 degrees, greater than
+		        lomin; booleans are rejected.
 
 		Returns:
-		    Tuple[float, float, float, float]: Ordered values or records produced by the operation.
+		    Tuple[float, float, float, float]: Original accepted minimum latitude, minimum
+		        longitude, maximum latitude, and maximum longitude.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			min_lat = self.validate_latitude( 'lamin', lamin )
@@ -23930,19 +23897,18 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def authenticate( self ) -> str | None:
-		"""Authenticate.
+		"""Obtain an OpenSky OAuth2 access token.
 
 		Purpose:
-		    Authenticate using the class state and returns data required by the surrounding
- workflow.
+		    Return None when either credential is absent; otherwise POST client credentials, check
+		    HTTP status, require a JSON object with a truthy access_token, and retain the bearer
+		    token and Authorization header.
 
 		Returns:
-		    str | None: Normalized text produced by the operation, or ``None`` when no text is
-		    available.
+		    str | None: Access token from the provider, or None when credentials are absent.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			if not self.client_id or not self.client_secret:
@@ -23976,25 +23942,24 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def request( self, endpoint: str, params: Dict[ str, Any ] | None = None ) -> Any:
-		"""Request.
+		"""Execute an OpenSky API request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Validate endpoint and optional parameters, clear previous bearer authorization,
+		    authenticate again when credentials exist, omit None and blank strings, issue a GET
+		    using the retained timeout, and validate endpoint-specific response structure.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
-		    params (Dict[str, Any] | None): Params supplied by the caller and interpreted
-		    according to the method contract.
-
+		    endpoint (str): One of /states/all, /flights/aircraft, /flights/arrival,
+		        /flights/departure, or /tracks/all.
+		    params (Dict[str, Any] | None): Optional query parameter dictionary. Defaults to None.
 
 		Returns:
-		    Any: Provider, loader, or normalized application value produced by the operation.
+		    Any: Decoded provider JSON; state object, flight record list, or track object or None
+		        depending on endpoint.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.endpoint = self.validate_endpoint( endpoint )
@@ -24040,23 +24005,22 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def normalize_states( self, payload: Dict[ str, Any ] | None ) -> Dict[ str, Any ] | None:
-		"""Normalize states.
+		"""Shape OpenSky aircraft state vectors.
 
 		Purpose:
-		    Normalizes states into the canonical representation expected by the surrounding
-		    workflow.
+		    Map the first seventeen positional state-vector fields to named dictionary keys, trim
+		    callsigns, use None for missing positions, and skip non-list entries. Additional
+		    positional fields are not retained.
 
 		Args:
-		    payload (Dict[str, Any] | None): Validated request dictionary forwarded to the
-		    provider client.
+		    payload (Dict[str, Any] | None): Decoded state response object or None.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, provider snapshot time, count, and normalized state-vector
+		        dictionaries.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			states = [ ]
@@ -24104,24 +24068,21 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def normalize_flights( self, payload: List[ Dict[ str, Any ] ] | None, mode: str ) -> Dict[ str, Any ] | None:
-		"""Normalize flights.
+		"""Shape OpenSky flight records.
 
 		Purpose:
-		    Normalizes flights into the canonical representation expected by the surrounding
-		    workflow.
+		    Skip non-dictionary records and map provider fields to named keys for aircraft,
+		    callsign, first and last seen times, estimated airports, distances and candidate counts.
 
 		Args:
-		    payload (List[Dict[str, Any]] | None): Validated request dictionary forwarded to the
-		    provider client.
-		    mode (str): Provider or loader operating mode selected for the request.
+		    payload (List[Dict[str, Any]] | None): Decoded flight records or None.
+		    mode (str): Operation label included in the result.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, count, and normalized flight record dictionaries.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			items: List[ Dict[ str, Any ] ] = [ ]
@@ -24165,23 +24126,22 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def normalize_track( self, payload: Dict[ str, Any ] | None ) -> Dict[ str, Any ] | None:
-		"""Normalize track.
+		"""Shape an OpenSky aircraft track.
 
 		Purpose:
-		    Normalizes track into the canonical representation expected by the surrounding
-		    workflow.
+		    Map path array positions to time, coordinates, barometric altitude, heading and ground
+		    status, skip non-list entries, and retain track metadata. Return empty items and None
+		    metadata for falsey payloads.
 
 		Args:
-		    payload (Dict[str, Any] | None): Validated request dictionary forwarded to the
-		    provider client.
+		    payload (Dict[str, Any] | None): Decoded track object or None.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, aircraft address, callsign, start and end times, count, and
+		        normalized track-point dictionaries.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			if not payload:
@@ -24222,34 +24182,37 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def fetch_states( self, icao24: str='', time_value: int=None, lamin: float | None = None, lomin: float | None = None, lamax: float | None = None, lomax: float | None = None, extended: bool=False ) -> Dict[ str, Any ] | None:
-		"""Fetch states.
+		"""Retrieve OpenSky aircraft state vectors.
 
 		Purpose:
-		    Retrieves states from the configured provider and returns normalized response data.
+		    Apply optional aircraft address and epoch filters, require all four geographic bounds
+		    when any is supplied, submit extended=1 for truthy extended values, request state
+		    vectors and normalize the response.
 
 		Args:
-		    icao24 (str): Icao24 supplied by the caller and interpreted according to the method
-		    contract.
-		    time_value (int): Time value supplied by the caller and interpreted according to the
-		    method contract.
-		    lamin (float | None): Lamin supplied by the caller and interpreted according to the
- method contract.
-		    lomin (float | None): Lomin supplied by the caller and interpreted according to the
-		    method contract.
-		    lamax (float | None): Lamax supplied by the caller and interpreted according to the
-		    method contract.
-		    lomax (float | None): Lomax supplied by the caller and interpreted according to the
-		    method contract.
-		    extended (bool): Whether extended behavior is enabled for the operation.
-
+		    icao24 (str): Six-character hexadecimal aircraft address, trimmed and lowercased.
+		        Defaults to an empty string; omit for all aircraft.
+		    time_value (int | None): Optional nonnegative Unix epoch seconds; booleans are rejected.
+		        Defaults to None.
+		    lamin (float | None): Finite minimum latitude from -90 through 90 degrees; booleans are
+		        rejected. Defaults to None; all four bounds must be supplied together or omitted.
+		    lomin (float | None): Finite minimum longitude from -180 through 180 degrees; booleans
+		        are rejected. Defaults to None; all four bounds must be supplied together or
+		        omitted.
+		    lamax (float | None): Finite maximum latitude from -90 through 90 degrees, greater than
+		        lamin; booleans are rejected. Defaults to None; all four bounds must be supplied
+		        together or omitted.
+		    lomax (float | None): Finite maximum longitude from -180 through 180 degrees, greater
+		        than lomin; booleans are rejected. Defaults to None; all four bounds must be
+		        supplied together or omitted.
+		    extended (bool): When truthy, submit extended=1. Defaults to False.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, provider snapshot time, count, and normalized state-vector
+		        dictionaries.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'states_bbox'
@@ -24302,26 +24265,24 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def fetch_flights_aircraft( self, icao24: str, begin: int, end: int ) -> Dict[ str, Any ] | None:
-		"""Fetch flights aircraft.
+		"""Retrieve historical flights for an aircraft.
 
 		Purpose:
-		    Retrieves flights aircraft from the configured provider and returns normalized
-		    response data.
+		    Validate aircraft address and epoch range, enforce a maximum interval of 172800 seconds,
+		    request aircraft flights, and normalize records.
 
 		Args:
-		    icao24 (str): Icao24 supplied by the caller and interpreted according to the method
-		    contract.
-		    begin (int): Date boundary or date value used by the request.
-		    end (int): Date boundary or date value used by the request.
-
+		    icao24 (str): Six-character hexadecimal aircraft address, trimmed and lowercased.
+		    begin (int): Nonnegative Unix epoch seconds at the beginning of the interval; booleans
+		        are rejected.
+		    end (int): Nonnegative Unix epoch seconds strictly greater than begin; booleans are
+		        rejected. Interval cannot exceed two days.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, count, and normalized flight record dictionaries.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'flights_aircraft'
@@ -24346,26 +24307,24 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def fetch_arrivals_airport( self, airport: str, begin: int, end: int ) -> Dict[ str, Any ] | None:
-		"""Fetch arrivals airport.
+		"""Retrieve historical arrivals at an airport.
 
 		Purpose:
-		    Retrieves arrivals airport from the configured provider and returns normalized
-		    response data.
+		    Validate airport code and epoch range, enforce a maximum interval of 172800 seconds,
+		    request arrivals, and normalize records.
 
 		Args:
-		    airport (str): Airport supplied by the caller and interpreted according to the method
-		    contract.
-		    begin (int): Date boundary or date value used by the request.
-		    end (int): Date boundary or date value used by the request.
-
+		    airport (str): Four-character alphanumeric ICAO airport code, trimmed and uppercased.
+		    begin (int): Nonnegative Unix epoch seconds at the beginning of the interval; booleans
+		        are rejected.
+		    end (int): Nonnegative Unix epoch seconds strictly greater than begin; booleans are
+		        rejected. Interval cannot exceed two days.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, count, and normalized flight record dictionaries.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'arrivals_airport'
@@ -24390,26 +24349,24 @@ class OpenSky( Fetcher ):
 			raise exception
 	
 	def fetch_departures_airport( self, airport: str, begin: int, end: int ) -> Dict[ str, Any ] | None:
-		"""Fetch departures airport.
+		"""Retrieve historical departures from an airport.
 
 		Purpose:
-		    Retrieves departures airport from the configured provider and returns normalized
-		    response data.
+		    Validate airport code and epoch range, request departures, and normalize records. No
+		    maximum interval is enforced locally.
 
 		Args:
-		    airport (str): Airport supplied by the caller and interpreted according to the method
-		    contract.
-		    begin (int): Date boundary or date value used by the request.
-		    end (int): Date boundary or date value used by the request.
-
+		    airport (str): Four-character alphanumeric ICAO airport code, trimmed and uppercased.
+		    begin (int): Nonnegative Unix epoch seconds at the beginning of the interval; booleans
+		        are rejected.
+		    end (int): Nonnegative Unix epoch seconds strictly greater than begin; booleans are
+		        rejected.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-metadata, or generated schema content.
+		    Dict[str, Any]: Mode, count, and normalized flight record dictionaries.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
- to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'departures_airport'
@@ -24433,26 +24390,23 @@ metadata, or generated schema content.
 			raise exception
 	
 	def fetch_track_aircraft( self, icao24: str, time_value: int=None ) -> Dict[ str, Any ] | None:
-		"""Fetch track aircraft.
+		"""Retrieve an aircraft track.
 
 		Purpose:
-		    Retrieves track aircraft from the configured provider and returns normalized response
-		    data.
+		    Validate the aircraft address and optional epoch, use zero when time_value is None,
+		    request the track endpoint, and normalize path records.
 
 		Args:
-		    icao24 (str): Icao24 supplied by the caller and interpreted according to the method
-		    contract.
-		    time_value (int): Time value supplied by the caller and interpreted according to the
-		    method contract.
-
+		    icao24 (str): Six-character hexadecimal aircraft address, trimmed and lowercased.
+		    time_value (int | None): Optional nonnegative Unix epoch seconds; booleans are rejected.
+		        Defaults to None. None is submitted as zero.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, aircraft address, callsign, start and end times, count, and
+		        normalized track-point dictionaries.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'track_aircraft'
@@ -24476,41 +24430,45 @@ metadata, or generated schema content.
 			raise exception
 	
 	def fetch( self, mode: str='states_bbox', icao24: str='', airport: str='', begin: int = None, end: int=None, time_value: int=None, lamin: float | None = None, lomin: float | None = None, lamax: float | None = None, lomax: float | None = None, extended: bool=False, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch an OpenSky retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Validate and retain the HTTP timeout, validate mode, and delegate to the selected state,
+		    flight, airport or track method with applicable arguments.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    icao24 (str): Icao24 supplied by the caller and interpreted according to the method
-		        contract.
-		    airport (str): Airport supplied by the caller and interpreted according to the method
-		        contract.
-		    begin (int): Date boundary or date value used by the request.
-		        end (int): Date boundary or date value used by the request.
-		    time_value (int): Time value supplied by the caller and interpreted according to the
-		        method contract.
-		    lamin (float | None): Lamin supplied by the caller and interpreted according to the
-		        method contract.
-		    lomin (float | None): Lomin supplied by the caller and interpreted according to the
-		        method contract.
-		    lamax (float | None): Lamax supplied by the caller and interpreted according to the
-		        method contract.
-		    lomax (float | None): Lomax supplied by the caller and interpreted according to the
-		        method contract.
-		    extended (bool): Whether extended behavior is enabled for the operation.
-
-		    time (int): Maximum request duration in seconds.
+		    mode (str): states_bbox, flights_aircraft, arrivals_airport, departures_airport, or
+		        track_aircraft; trimmed and lowercased. Defaults to 'states_bbox'.
+		    icao24 (str): Six-character hexadecimal aircraft address, trimmed and lowercased.
+		        Defaults to an empty string; required for aircraft flight and track modes.
+		    airport (str): Four-character alphanumeric ICAO airport code, trimmed and uppercased.
+		        Defaults to an empty string; required for airport modes.
+		    begin (int | None): Nonnegative Unix epoch seconds at the beginning of the interval;
+		        booleans are rejected. Defaults to None; required for flight and airport modes.
+		    end (int | None): Nonnegative Unix epoch seconds strictly greater than begin; booleans
+		        are rejected. Defaults to None; required for flight and airport modes.
+		    time_value (int | None): Optional nonnegative Unix epoch seconds; booleans are rejected.
+		        Defaults to None.
+		    lamin (float | None): Finite minimum latitude from -90 through 90 degrees; booleans are
+		        rejected. Defaults to None; all four bounds must be supplied together or omitted.
+		    lomin (float | None): Finite minimum longitude from -180 through 180 degrees; booleans
+		        are rejected. Defaults to None; all four bounds must be supplied together or
+		        omitted.
+		    lamax (float | None): Finite maximum latitude from -90 through 90 degrees, greater than
+		        lamin; booleans are rejected. Defaults to None; all four bounds must be supplied
+		        together or omitted.
+		    lomax (float | None): Finite maximum longitude from -180 through 180 degrees, greater
+		        than lomin; booleans are rejected. Defaults to None; all four bounds must be
+		        supplied together or omitted.
+		    extended (bool): When truthy, submit extended=1. Defaults to False.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Normalized state, flight, or track result for the selected operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'time', time )
@@ -24550,26 +24508,25 @@ metadata, or generated schema content.
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a function description with object parameter definitions and required argument
+		    names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Parameter-property dictionary.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
