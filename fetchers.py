@@ -460,6 +460,9 @@ class WebFetcher( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
+			throw_if( 'limit', limit )
+			if type( limit ) is not int or limit < 1:
+				raise ValueError( 'limit must be a positive integer.' )
 			throw_if( 'text', text )
 			self.text = text
 			self.limit = limit
@@ -1630,6 +1633,8 @@ class GoogleDrive( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
+			if type( results ) is not int or results < 1:
+				raise ValueError( 'results must be a positive integer.' )
 			throw_if( 'template', template )
 			throw_if( 'folder_id', folder_id )
 			throw_if( 'results', results )
@@ -1912,6 +1917,12 @@ class TheNews( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
+			throw_if( 'limit', limit )
+			if type( limit ) is not int or limit < 1:
+				raise ValueError( 'limit must be a positive integer.' )
+			throw_if( 'page', page )
+			if type( page ) is not int or page < 1:
+				raise ValueError( 'page must be a positive integer.' )
 			self.endpoint = endpoint
 			throw_if( 'time', time )
 			if type( time ) is not int or time < 1:
@@ -1991,10 +2002,15 @@ class TheNews( Fetcher ):
 				if published_on and published_on.strip( ):
 					self.params[ 'published_on' ] = published_on.strip( )
 				
-				self.params[ 'headlines_per_category' ] = max( 1, min( 
-					headlines_per_category, 10 ) )
+				if type( headlines_per_category ) is not int or not 1 <= headlines_per_category <= 10:
+					raise ValueError( 'headlines_per_category must be an integer between 1 and 10.' )
+				self.headlines_per_category = headlines_per_category
+				self.params[ 'headlines_per_category' ] = self.headlines_per_category
 				
-				self.params[ 'include_similar' ] = 'true' if include_similar else 'false'
+				if type( include_similar ) is not bool:
+					raise ValueError( 'include_similar must be a boolean.' )
+				self.include_similar = include_similar
+				self.params[ 'include_similar' ] = 'true' if self.include_similar else 'false'
 			
 			elif self.endpoint == 'sources':
 				if categories and categories.strip( ):
@@ -2231,6 +2247,12 @@ class GoogleSearch( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
+			throw_if( 'results', results )
+			if type( results ) is not int or results < 1:
+				raise ValueError( 'results must be a positive integer.' )
+			throw_if( 'start', start )
+			if type( start ) is not int or start < 1:
+				raise ValueError( 'start must be a positive integer.' )
 			throw_if( 'keywords', keywords )
 			throw_if( 'time', time )
 			
@@ -4023,6 +4045,12 @@ class EarthObservatory( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			throw_if( 'limit', limit )
+			if type( limit ) is not int or limit < 1:
+				raise ValueError( 'limit must be a positive integer.' )
+			throw_if( 'days', days )
+			if type( days ) is not int or days < 1:
+				raise ValueError( 'days must be a positive integer.' )
 			self.mode = 'events'
 			self.status = status
 			self.category = category
@@ -4994,6 +5022,9 @@ class NearbyObjects( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			throw_if( 'limit', limit )
+			if type( limit ) is not int or limit < 1:
+				raise ValueError( 'limit must be a positive integer.' )
 			throw_if( 'start_date', start_date )
 			throw_if( 'end_date', end_date )
 			self.mode = 'close_approaches'
@@ -5208,6 +5239,9 @@ class NearbyObjects( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			throw_if( 'limit', limit )
+			if type( limit ) is not int or limit < 1:
+				raise ValueError( 'limit must be a positive integer.' )
 			self.limit = limit
 			if self.limit < 1:
 				raise ValueError( 'limit must be positive.' )
@@ -7417,13 +7451,14 @@ class GovData( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'page_size', page_size )
 			
-			value = page_size
-			if value < 1 or value > 1000:
+			throw_if( 'page_size', page_size )
+			if type( page_size ) is not int:
+				raise ValueError( 'page_size must be an integer.' )
+			if page_size < 1 or page_size > 1000:
 				raise ValueError( 'page_size must be between 1 and 1000.' )
 			
-			return value
+			return page_size
 		
 		except Exception as e:
 			exception = Error( e )
@@ -8437,13 +8472,14 @@ class Congress( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'limit', limit )
 			
-			value = limit
-			if value < 1 or value > 250:
+			throw_if( 'limit', limit )
+			if type( limit ) is not int:
+				raise ValueError( 'limit must be an integer.' )
+			if limit < 1 or limit > 250:
 				raise ValueError( 'limit must be between 1 and 250.' )
 			
-			return value
+			return limit
 		
 		except Exception as e:
 			exception = Error( e )
@@ -8470,14 +8506,14 @@ class Congress( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			if offset is None:
-				raise ValueError( 'offset cannot be None.' )
 			
-			value = offset
-			if value < 0:
+			throw_if( 'offset', offset )
+			if type( offset ) is not int:
+				raise ValueError( 'offset must be an integer.' )
+			if offset < 0:
 				raise ValueError( 'offset must be greater than or equal to 0.' )
 			
-			return value
+			return offset
 		
 		except Exception as e:
 			exception = Error( e )
@@ -9296,11 +9332,13 @@ class InternetArchive( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			value = page
-			if value < 1:
+			throw_if( 'page', page )
+			if type( page ) is not int:
+				raise ValueError( 'page must be an integer.' )
+			if page < 1:
 				raise ValueError( 'page must be greater than or equal to 1.' )
 			
-			return value
+			return page
 		
 		except Exception as e:
 			exception = Error( e )
@@ -10388,6 +10426,10 @@ class Grokipedia( Fetcher ):
 		    Error: Wraps the source exception with module, class, and method metadata.
 		"""
 		try:
+			if type( limit ) is not int or limit < 1:
+				raise ValueError( 'limit must be a positive integer.' )
+			if type( offset ) is not int or offset < 0:
+				raise ValueError( 'offset must be a nonnegative integer.' )
 			throw_if( 'query', query )
 			throw_if( 'limit', limit )
 			throw_if( 'offset', offset )
@@ -11634,13 +11676,14 @@ class Socrata( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'limit', limit )
 			
-			value = limit
-			if value < 1 or value > 50000:
+			throw_if( 'limit', limit )
+			if type( limit ) is not int:
+				raise ValueError( 'limit must be an integer.' )
+			if limit < 1 or limit > 50000:
 				raise ValueError( 'limit must be between 1 and 50000.' )
 			
-			return value
+			return limit
 		
 		except Exception as e:
 			exception = Error( e )
@@ -11667,14 +11710,14 @@ class Socrata( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			if offset is None:
-				raise ValueError( 'offset cannot be None.' )
 			
-			value = offset
-			if value < 0:
+			throw_if( 'offset', offset )
+			if type( offset ) is not int:
+				raise ValueError( 'offset must be an integer.' )
+			if offset < 0:
 				raise ValueError( 'offset must be greater than or equal to 0.' )
 			
-			return value
+			return offset
 		
 		except Exception as e:
 			exception = Error( e )
@@ -12121,13 +12164,14 @@ class HealthData( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'limit', limit )
 			
-			value = limit
-			if value < 1 or value > 50000:
+			throw_if( 'limit', limit )
+			if type( limit ) is not int:
+				raise ValueError( 'limit must be an integer.' )
+			if limit < 1 or limit > 50000:
 				raise ValueError( 'limit must be between 1 and 50000.' )
 			
-			return value
+			return limit
 		
 		except Exception as e:
 			exception = Error( e )
@@ -12154,14 +12198,14 @@ class HealthData( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			if offset is None:
-				raise ValueError( 'offset cannot be None.' )
 			
-			value = offset
-			if value < 0:
+			throw_if( 'offset', offset )
+			if type( offset ) is not int:
+				raise ValueError( 'offset must be an integer.' )
+			if offset < 0:
 				raise ValueError( 'offset must be greater than or equal to 0.' )
 			
-			return value
+			return offset
 		
 		except Exception as e:
 			exception = Error( e )
@@ -13199,13 +13243,14 @@ class WorldPopulation( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'page', page )
 			
-			value = page
-			if value < 1:
+			throw_if( 'page', page )
+			if type( page ) is not int:
+				raise ValueError( 'page must be an integer.' )
+			if page < 1:
 				raise ValueError( 'page must be greater than or equal to 1.' )
 			
-			return value
+			return page
 		
 		except Exception as e:
 			exception = Error( e )
@@ -13232,13 +13277,14 @@ class WorldPopulation( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'page_size', page_size )
 			
-			value = page_size
-			if value < 1 or value > 500:
+			throw_if( 'page_size', page_size )
+			if type( page_size ) is not int:
+				raise ValueError( 'page_size must be an integer.' )
+			if page_size < 1 or page_size > 500:
 				raise ValueError( 'page_size must be between 1 and 500.' )
 			
-			return value
+			return page_size
 		
 		except Exception as e:
 			exception = Error( e )
@@ -14036,13 +14082,14 @@ class USGSEarthquakes( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'limit', limit )
 			
-			value = limit
-			if value < 1 or value > 20000:
+			throw_if( 'limit', limit )
+			if type( limit ) is not int:
+				raise ValueError( 'limit must be an integer.' )
+			if limit < 1 or limit > 20000:
 				raise ValueError( 'limit must be between 1 and 20000.' )
 			
-			return value
+			return limit
 		
 		except Exception as e:
 			exception = Error( e )
@@ -14854,13 +14901,14 @@ value.
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'limit', limit )
 			
-			value = limit
-			if value < 1 or value > 10000:
+			throw_if( 'limit', limit )
+			if type( limit ) is not int:
+				raise ValueError( 'limit must be an integer.' )
+			if limit < 1 or limit > 10000:
 				raise ValueError( 'limit must be between 1 and 10000.' )
 			
-			return value
+			return limit
 		
 		except Exception as e:
 			exception = Error( e )
@@ -15760,13 +15808,14 @@ class USGSTheNationalMap( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'max_items', max_items )
 			
-			value = max_items
-			if value < 1 or value > 500:
+			throw_if( 'max_items', max_items )
+			if type( max_items ) is not int:
+				raise ValueError( 'max_items must be an integer.' )
+			if max_items < 1 or max_items > 500:
 				raise ValueError( 'max_items must be between 1 and 500.' )
 			
-			return value
+			return max_items
 		
 		except Exception as e:
 			exception = Error( e )
@@ -15793,14 +15842,14 @@ class USGSTheNationalMap( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			if offset is None:
-				raise ValueError( 'offset cannot be None.' )
 			
-			value = offset
-			if value < 0 or value > 10000:
+			throw_if( 'offset', offset )
+			if type( offset ) is not int:
+				raise ValueError( 'offset must be an integer.' )
+			if offset < 0 or offset > 10000:
 				raise ValueError( 'offset must be between 0 and 10000.' )
 			
-			return value
+			return offset
 		
 		except Exception as e:
 			exception = Error( e )
@@ -16498,13 +16547,14 @@ class USGSScienceBase( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'max_items', max_items )
 			
-			value = max_items
-			if value < 5 or value > 1000 or value % 5 != 0:
+			throw_if( 'max_items', max_items )
+			if type( max_items ) is not int:
+				raise ValueError( 'max_items must be an integer.' )
+			if max_items < 5 or max_items > 1000 or max_items % 5 != 0:
 				raise ValueError( 'max_items must be a multiple of 5 between 5 and 1000.' )
 			
-			return value
+			return max_items
 		
 		except Exception as e:
 			exception = Error( e )
@@ -16531,14 +16581,14 @@ class USGSScienceBase( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			if offset is None:
-				raise ValueError( 'offset cannot be None.' )
 			
-			value = offset
-			if value < 0 or value > 150000 or value % 5 != 0:
+			throw_if( 'offset', offset )
+			if type( offset ) is not int:
+				raise ValueError( 'offset must be an integer.' )
+			if offset < 0 or offset > 150000 or offset % 5 != 0:
 				raise ValueError( 'offset must be a multiple of 5 between 0 and 150000.' )
 			
-			return value
+			return offset
 		
 		except Exception as e:
 			exception = Error( e )
@@ -17729,13 +17779,14 @@ class ClimateData( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'limit', limit )
 			
-			value = limit
-			if value < 1 or value > 500:
+			throw_if( 'limit', limit )
+			if type( limit ) is not int:
+				raise ValueError( 'limit must be an integer.' )
+			if limit < 1 or limit > 500:
 				raise ValueError( 'limit must be between 1 and 500.' )
 			
-			return value
+			return limit
 		
 		except Exception as e:
 			exception = Error( e )
@@ -17762,14 +17813,14 @@ class ClimateData( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			if offset is None:
-				raise ValueError( 'offset cannot be None.' )
 			
-			value = offset
-			if value < 0 or value > 10000:
+			throw_if( 'offset', offset )
+			if type( offset ) is not int:
+				raise ValueError( 'offset must be an integer.' )
+			if offset < 0 or offset > 10000:
 				raise ValueError( 'offset must be between 0 and 10000.' )
 			
-			return value
+			return offset
 		
 		except Exception as e:
 			exception = Error( e )
@@ -18506,13 +18557,14 @@ related operations.
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'limit', limit )
 			
-			value = limit
-			if value < 1 or value > 500:
+			throw_if( 'limit', limit )
+			if type( limit ) is not int:
+				raise ValueError( 'limit must be an integer.' )
+			if limit < 1 or limit > 500:
 				raise ValueError( 'limit must be between 1 and 500.' )
 			
-			return value
+			return limit
 		
 		except Exception as e:
 			exception = Error( e )
@@ -19299,13 +19351,14 @@ class EnviroFacts( Fetcher ):
 to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'limit', limit )
 			
-			value = limit
-			if value < 1 or value > 500:
+			throw_if( 'limit', limit )
+			if type( limit ) is not int:
+				raise ValueError( 'limit must be an integer.' )
+			if limit < 1 or limit > 500:
 				raise ValueError( 'limit must be between 1 and 500.' )
 			
-			return value
+			return limit
 		
 		except Exception as e:
 			exception = Error( e )
@@ -22453,15 +22506,18 @@ class OpenAQ( Fetcher ):
 			throw_if( 'name', name )
 			throw_if( name, value )
 			
-			number = int( value )
+			if type( value ) is not int:
+				raise ValueError( f'{name} must be an integer.' )
+			if maximum is not None and ( type( maximum ) is not int or maximum < 1 ):
+				raise ValueError( 'maximum must be a positive integer or None.' )
 			
-			if number < 1:
+			if value < 1:
 				raise ValueError( f'{name} must be greater than or equal to 1.' )
 			
-			if maximum is not None and number > maximum:
+			if maximum is not None and value > maximum:
 				raise ValueError( f'{name} must be less than or equal to {maximum}.' )
 			
-			return number
+			return value
 		
 		except Exception as e:
 			exception = Error( e )
