@@ -305,16 +305,11 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = uri
-			self.response = requests.get( url=self.url, headers=self.headers,
-				timeout=self.timeout )
-			self.response.raise_for_status( )
-			self.html = self.response.text or ''
-			self.raw_html = self.html
-			self.soup = BeautifulSoup( self.html, 'html.parser' )
+			self.scrape( url=uri, time=self.timeout )
 			blocks = [ p.get_text( ' ', strip=True ) for p in self.soup.find_all( 'p' ) ]
 			return [ block for block in blocks if block ]
+		except Error:
+			raise
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'scrapers'
@@ -340,16 +335,11 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = uri
-			self.response = requests.get( url=self.url, headers=self.headers,
-				timeout=self.timeout )
-			self.response.raise_for_status( )
-			self.html = self.response.text or ''
-			self.raw_html = self.html
-			self.soup = BeautifulSoup( self.html, 'html.parser' )
+			self.scrape( url=uri, time=self.timeout )
 			items = [ item.get_text( ' ', strip=True ) for item in self.soup.find_all( 'li' ) ]
 			return [ item for item in items if item ]
+		except Error:
+			raise
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'scrapers'
@@ -375,13 +365,7 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = uri
-			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
-			self.response.raise_for_status( )
-			self.html = self.response.text or ''
-			self.raw_html = self.html
-			self.soup = BeautifulSoup( self.html, 'html.parser' )
+			self.scrape( url=uri, time=self.timeout )
 			results: List[ str ] = [ ]
 			for table in self.soup.find_all( 'table' ):
 				for row in table.find_all( 'tr' ):
@@ -390,6 +374,8 @@ class WebExtractor( Extractor ):
 						if text:
 							results.append( text )
 			return results
+		except Error:
+			raise
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'scrapers'
@@ -415,16 +401,12 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = uri
-			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
-			self.response.raise_for_status( )
-			self.html = self.response.text or ''
-			self.raw_html = self.html
-			self.soup = BeautifulSoup( self.html, 'html.parser' )
+			self.scrape( url=uri, time=self.timeout )
 			blocks = [ article.get_text( ' ', strip=True )
 				for article in self.soup.find_all( 'article' ) ]
 			return [ block for block in blocks if block ]
+		except Error:
+			raise
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'scrapers'
@@ -450,18 +432,13 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = uri
-			self.response = requests.get( url=self.url, headers=self.headers,
-				timeout=self.timeout )
-			self.response.raise_for_status( )
-			self.html = self.response.text or ''
-			self.raw_html = self.html
-			self.soup = BeautifulSoup( self.html, 'html.parser' )
+			self.scrape( url=uri, time=self.timeout )
 			heading_tags = [ 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' ]
 			blocks = [ heading.get_text( ' ', strip=True )
 				for heading in self.soup.find_all( heading_tags ) ]
 			return [ block for block in blocks if block ]
+		except Error:
+			raise
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'scrapers'
@@ -487,16 +464,12 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = uri
-			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
-			self.response.raise_for_status( )
-			self.html = self.response.text or ''
-			self.raw_html = self.html
-			self.soup = BeautifulSoup( self.html, 'html.parser' )
+			self.scrape( url=uri, time=self.timeout )
 			blocks = [ division.get_text( ' ', strip=True )
 				for division in self.soup.find_all( 'div' ) ]
 			return [ block for block in blocks if block ]
+		except Error:
+			raise
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'scrapers'
@@ -522,16 +495,12 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = uri
-			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
-			self.response.raise_for_status( )
-			self.html = self.response.text or ''
-			self.raw_html = self.html
-			self.soup = BeautifulSoup( self.html, 'html.parser' )
+			self.scrape( url=uri, time=self.timeout )
 			blocks = [ section.get_text( ' ', strip=True )
 				for section in self.soup.find_all( 'section' ) ]
 			return [ block for block in blocks if block ]
+		except Error:
+			raise
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'scrapers'
@@ -557,16 +526,12 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = uri
-			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
-			self.response.raise_for_status( )
-			self.html = self.response.text or ''
-			self.raw_html = self.html
-			self.soup = BeautifulSoup( self.html, 'html.parser' )
+			self.scrape( url=uri, time=self.timeout )
 			blocks = [ quote.get_text( ' ', strip=True )
 				for quote in self.soup.find_all( 'blockquote' ) ]
 			return [ block for block in blocks if block ]
+		except Error:
+			raise
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'scrapers'
@@ -593,16 +558,12 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = uri
-			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
-			self.response.raise_for_status( )
-			self.html = self.response.text or ''
-			self.raw_html = self.html
-			self.soup = BeautifulSoup( self.html, 'html.parser' )
+			self.scrape( url=uri, time=self.timeout )
 			links = [ anchor.get( 'href' ) for anchor in self.soup.find_all( 'a' )
 				if anchor.get( 'href' ) ]
 			return links
+		except Error:
+			raise
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'scrapers'
@@ -629,16 +590,12 @@ class WebExtractor( Extractor ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'uri', uri )
-			self.url = uri
-			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
-			self.response.raise_for_status( )
-			self.html = self.response.text or ''
-			self.raw_html = self.html
-			self.soup = BeautifulSoup( self.html, 'html.parser' )
+			self.scrape( url=uri, time=self.timeout )
 			images = [ image.get( 'src' ) for image in self.soup.find_all( 'img' )
 				if image.get( 'src' ) ]
 			return images
+		except Error:
+			raise
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'scrapers'
