@@ -4878,6 +4878,7 @@ class NearbyObjects( Fetcher ):
 			exception.module = 'fetchers'
 			exception.cause = 'NearbyObjects'
 			exception.method = 'request( self, time: int=20 ) -> Dict[ str, Any ]'
+			Logger( ).write( exception )
 			raise exception
 
 
@@ -4922,6 +4923,7 @@ class NearbyObjects( Fetcher ):
 			exception.module = 'fetchers'
 			exception.cause = 'NearbyObjects'
 			exception.method = 'validate_nhats_options( self, dv: float, dur: int, stay: int, launch: str ) -> None'
+			Logger( ).write( exception )
 			raise exception
 
 
@@ -5491,6 +5493,7 @@ class OpenScience( Fetcher ):
 			exception.module = 'fetchers'
 			exception.cause = 'OpenScience'
 			exception.method = 'request( self, time: int=20 ) -> Dict[ str, Any ] | str'
+			Logger( ).write( exception )
 			raise exception
 
 
@@ -6207,33 +6210,43 @@ class AstroCatalog( Fetcher ):
 		    returning plain Python values for downstream model tools.
 
 		Args:
-		    table: Astroquery result table.
-		    catalog: Source catalog identifier.
+		    table (Table): Astroquery result table.
+		    catalog (str): Source catalog identifier.
 
 		Returns:
 		    Dict[str, Any]: Catalog name, columns, rows, and number of records.
+		Raises:
+		    Error: Wraps and logs validation or table serialization failures.
 		"""
-		throw_if( 'table', table )
-		throw_if( 'catalog', catalog )
-		rows: List[ Dict[ str, Any ] ] = [ ]
-		for record in table:
-			item: Dict[ str, Any ] = { }
-			for column in table.colnames:
-				value = record[ column ]
-				if np.ma.is_masked( value ):
-					item[ column ] = None
-					continue
-				if isinstance( value, np.generic ):
-					value = value.item( )
-				if isinstance( value, bytes ):
-					value = value.decode( 'utf-8', errors='replace' )
-				if isinstance( value, (str, int, float, bool) ) or value is None:
-					item[ column ] = value
-				else:
-					item[ column ] = str( value )
-			rows.append( item )
-		return { 'catalog': catalog, 'columns': list( table.colnames ),
-			'rows': rows, 'count': len( rows ) }
+		try:
+			throw_if( 'table', table )
+			throw_if( 'catalog', catalog )
+			rows: List[ Dict[ str, Any ] ] = [ ]
+			for record in table:
+				item: Dict[ str, Any ] = { }
+				for column in table.colnames:
+					value = record[ column ]
+					if np.ma.is_masked( value ):
+						item[ column ] = None
+						continue
+					if isinstance( value, np.generic ):
+						value = value.item( )
+					if isinstance( value, bytes ):
+						value = value.decode( 'utf-8', errors='replace' )
+					if isinstance( value, (str, int, float, bool) ) or value is None:
+						item[ column ] = value
+					else:
+						item[ column ] = str( value )
+				rows.append( item )
+			return { 'catalog': catalog, 'columns': list( table.colnames ),
+				'rows': rows, 'count': len( rows ) }
+		except Exception as exc:
+			exception = Error( exc )
+			exception.module = 'fetchers'
+			exception.cause = 'AstroCatalog'
+			exception.method = 'serialize_table( self, table: Table, catalog: str ) -> Dict[ str, Any ]'
+			Logger( ).write( exception )
+			raise exception
 
 	def request( self, route: str, params: Dict[ str, Any ] | None=None, time: int=20 ) -> Any:
 		"""Retrieve catalog data from SIMBAD or a named VizieR catalog.
@@ -6330,6 +6343,7 @@ class AstroCatalog( Fetcher ):
 			exception.module = 'fetchers'
 			exception.cause = 'AstroCatalog'
 			exception.method = 'request( self, route: str, params: Dict[ str, Any ] | None=None, time: int=20 ) -> Any'
+			Logger( ).write( exception )
 			raise exception
 
 	def fetch_object( self, name: str, quantity: str='', attributes: str='', arguments: str='', data_format: str='json', time: int=20 ) -> Any:
