@@ -193,7 +193,7 @@ class OpenSkyContractsTests( unittest.TestCase ):
         self.assertEqual( result[ 'count' ], 0 )
         self.client.client_id = 'client'
         self.client.client_secret = 'secret'
-        self.client.fetch_states( client_id='client', client_secret='secret' )
+        self.client.fetch_states( )
         self.assertEqual( self.http.call_args.kwargs[ 'headers' ][ 'Authorization' ],
             'Bearer token-one' )
         self.client.client_id = ''
@@ -261,8 +261,10 @@ class OpenSkyContractsTests( unittest.TestCase ):
         with self.assertRaises( Exception ):
             self.client.fetch_track_aircraft( 'abc123' )
         self.post.return_value.json.return_value = { }
+        self.client.client_id = 'client'
+        self.client.client_secret = 'secret'
         with self.assertRaises( Exception ):
-            self.client.fetch_states( client_id='client', client_secret='secret' )
+            self.client.fetch_states( )
 
 
 if __name__ == '__main__':
