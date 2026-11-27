@@ -6590,8 +6590,9 @@ class AstroCatalog( Fetcher ):
 		"""
 		try:
 			throw_if( 'name', name )
-			self.name = name.strip( )
-			self.format = ( data_format or 'json' ).strip( ).lower( )
+			self.name = name
+			throw_if( 'data_format', data_format )
+			self.format = data_format
 			if self.format not in ('json', 'csv', 'tsv'):
 				raise ValueError( 'Unsupported AstroCatalog output format.' )
 			route_parts = [ urllib.parse.quote( self.name, safe='' ) ]
@@ -6648,10 +6649,11 @@ class AstroCatalog( Fetcher ):
 		try:
 			throw_if( 'ra', ra )
 			throw_if( 'dec', dec )
-			self.right_ascension = ra.strip( )
-			self.declination = dec.strip( )
+			self.right_ascension = ra
+			self.declination = dec
 			self.radius = radius
-			self.format = ( data_format or 'json' ).strip( ).lower( )
+			throw_if( 'data_format', data_format )
+			self.format = data_format
 			if self.radius < 1:
 				raise ValueError( 'radius must be positive.' )
 			if self.format not in ('json', 'csv', 'tsv'):
@@ -6712,7 +6714,8 @@ class AstroCatalog( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.mode = ( mode or 'object_query' ).strip( ).lower( )
+			throw_if( 'mode', mode )
+			self.mode = mode
 			self.quantity = quantity
 			self.attributes = attributes
 			self.arguments = arguments
@@ -6722,15 +6725,15 @@ class AstroCatalog( Fetcher ):
 			self.timeout = time
 			if self.mode == 'object_query':
 				throw_if( 'query', query )
-				self.name = query.strip( )
+				self.name = query
 				return self.fetch_object( name=self.name, quantity=self.quantity,
 					attributes=self.attributes, arguments=self.arguments,
 					data_format=self.format, time=self.timeout )
 			if self.mode == 'cone_search':
 				throw_if( 'ra', ra )
 				throw_if( 'dec', dec )
-				self.right_ascension = ra.strip( )
-				self.declination = dec.strip( )
+				self.right_ascension = ra
+				self.declination = dec
 				self.radius = radius
 				return self.cone_search( ra=self.right_ascension,
 					dec=self.declination, radius=self.radius, quantity=self.quantity,
@@ -6768,6 +6771,7 @@ class AstroQuery( Fetcher ):
 	    row_limit (Optional[int]): Current row limit retained by the AstroQuery workflow between
 	        related operations.
 	    agents (Any): Configured user-agent string sent with web requests.
+	    radius_unit (str): Angular unit selected for region queries.
 	"""
 	url: Optional[ str ]
 	radius: Optional[ float ]
@@ -6776,6 +6780,7 @@ class AstroQuery( Fetcher ):
 	right_ascension: Optional[ str ]
 	params: Optional[ Dict[ str, Any ] ]
 	row_limit: Optional[ int ]
+	radius_unit: str
 	
 	def __init__( self ) -> None:
 		"""Initialize the instance.
@@ -6796,6 +6801,7 @@ class AstroQuery( Fetcher ):
 		self.declination = None
 		self.params = { }
 		self.row_limit = 100
+		self.radius_unit = 'deg'
 		self.agents = cfg.AGENTS
 		
 		if 'User-Agent' not in self.headers:
@@ -6880,6 +6886,7 @@ class AstroQuery( Fetcher ):
 		try:
 			throw_if( 'name', name )
 			self.name = name
+			throw_if( 'row_limit', row_limit )
 			self.row_limit = row_limit			
 			simbad = Simbad( )
 			simbad.ROW_LIMIT = self.row_limit
@@ -6919,6 +6926,7 @@ class AstroQuery( Fetcher ):
 		try:
 			throw_if( 'name', name )
 			self.name = name
+			throw_if( 'row_limit', row_limit )
 			self.row_limit = row_limit
 			
 			simbad = Simbad( )
@@ -6964,15 +6972,19 @@ class AstroQuery( Fetcher ):
 		"""
 		try:
 			throw_if( 'ra', ra )
-			throw_if( 'dec', dec )			
 			self.right_ascension = ra
+			throw_if( 'dec', dec )
 			self.declination = dec
+			throw_if( 'radius', radius )
 			self.radius = radius
+			throw_if( 'radius_unit', radius_unit )
+			self.radius_unit = radius_unit
+			throw_if( 'row_limit', row_limit )
 			self.row_limit = row_limit
 			
 			unit_map = { 'deg': u.deg, 'arcmin': u.arcmin, 'arcsec': u.arcsec, }
 			
-			active_unit = unit_map[ radius_unit ]			
+			active_unit = unit_map[ self.radius_unit ]			
 			coord = SkyCoord( ra=self.right_ascension, dec=self.declination, unit=(u.hourangle,
 					u.deg) )
 			
@@ -6981,7 +6993,7 @@ class AstroQuery( Fetcher ):
 			result_table = simbad.query_region( coordinates=coord, radius=self.radius * active_unit)
 			
 			return { 'mode': 'region_search', 'ra': self.right_ascension, 'dec': self.declination,
-					'radius': self.radius, 'radius_unit': radius_unit,
+					'radius': self.radius, 'radius_unit': self.radius_unit,
 					'row_limit': self.row_limit,
 					'columns': list( result_table.colnames ) if result_table is not None else [ ],
 					'rows': self.table_to_records( result_table ), }
@@ -7471,7 +7483,8 @@ class StarMap( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			active_mode = (mode or 'object_link').strip( ).lower( )
+			throw_if( 'mode', mode )
+			active_mode = mode
 			
 			if active_mode == 'object_link':
 				return self.fetch_object_link( name=query, zoom=zoom, box_color=box_color,
@@ -7652,7 +7665,8 @@ class GovData( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			value = ( sort_field or 'score' ).strip( )
+			throw_if( 'sort_field', sort_field )
+			value = sort_field
 			allowed = { 'score', 'lastModified' }
 			
 			if value not in allowed:
@@ -7686,7 +7700,8 @@ class GovData( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			value = ( sort_order or 'DESC' ).strip( ).upper( )
+			throw_if( 'sort_order', sort_order )
+			value = sort_order
 			allowed = { 'ASC', 'DESC' }
 			
 			if value not in allowed:
@@ -7733,9 +7748,9 @@ class GovData( Fetcher ):
 
 			
 			self.mode = 'search'
-			self.query = query.strip( )
+			self.query = query
 			self.page_size = self.validate_page_size( page_size )
-			self.offset_mark = ( offset_mark or '*' ).strip( )
+			self.offset_mark = offset_mark
 			self.sort_field = self.validate_sort_field( sort_field )
 			self.sort_order = self.validate_sort_order( sort_order )
 			throw_if( 'time', time )
@@ -7790,7 +7805,7 @@ class GovData( Fetcher ):
 
 			
 			self.mode = 'package_summary'
-			self.package_id = package_id.strip( )
+			self.package_id = package_id
 			throw_if( 'time', time )
 			self.timeout = time
 			self.url = f'{self.base_url}/packages/{self.package_id}/summary'
@@ -7844,10 +7859,10 @@ class GovData( Fetcher ):
 
 			
 			self.mode = 'collection'
-			self.collection = collection.strip( )
-			self.start_date = start_date.strip( )
+			self.collection = collection
+			self.start_date = start_date
 			self.page_size = self.validate_page_size( page_size )
-			self.offset_mark = ( offset_mark or '*' ).strip( )
+			self.offset_mark = offset_mark
 			throw_if( 'time', time )
 			self.timeout = time
 			self.url = f'{self.base_url}/collections/{self.collection}/{self.start_date}'
@@ -7905,7 +7920,7 @@ method contract.
 		"""
 		try:
 			throw_if( 'mode', mode )
-			self.mode = ( mode or 'search' ).strip( ).lower( )
+			self.mode = mode
 			
 			if self.mode == 'search':
 				return self.fetch_search( query=query, page_size=page_size,
@@ -8228,11 +8243,11 @@ class StarChart( Fetcher ):
 
 			throw_if( 'name', name )
 			self.mode = 'object_chart'
-			self.query = name.strip( )
+			self.query = name
 			self.zoom = zoom
-			self.box_color = ( box_color or 'yellow' ).strip( )
+			self.box_color = box_color
 			self.show_box = show_box
-			self.image_source = ( image_source or '' ).strip( )
+			self.image_source = image_source
 			
 			self.url = self.link_url
 			self.params = { 'object': self.query, 'zoom': self.zoom,
@@ -8299,12 +8314,12 @@ class StarChart( Fetcher ):
 			self.ra = ra
 			self.dec = dec
 			self.zoom = zoom
-			self.box_color = ( box_color or 'yellow' ).strip( )
+			self.box_color = box_color
 			self.show_box = show_box
 			self.show_grid = show_grid
 			self.show_lines = show_lines
 			self.show_boundaries = show_boundaries
-			self.image_source = ( image_source or '' ).strip( )
+			self.image_source = image_source
 			
 			self.url = self.link_url
 			self.params = { 'ra': self.ra, 'de': self.dec, 'zoom': self.zoom,
@@ -8377,7 +8392,7 @@ class StarChart( Fetcher ):
 			self.ra = ra
 			self.dec = dec
 			self.zoom = zoom
-			self.image_source = ( image_source or 'DSS2' ).strip( )
+			self.image_source = image_source
 			self.show_grid = show_grid
 			self.show_lines = show_lines
 			self.show_boundaries = show_boundaries
@@ -8738,8 +8753,8 @@ class Congress( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			value = ( bill_type or '' ).strip( ).lower( )
-			throw_if( 'bill_type', value )
+			throw_if( 'bill_type', bill_type )
+			value = bill_type
 			
 			allowed = { 'hr', 's', 'hjres', 'sjres', 'hconres', 'sconres', 'hres', 'sres' }
 			
@@ -8776,8 +8791,8 @@ class Congress( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			value = ( law_type or '' ).strip( ).lower( )
-			throw_if( 'law_type', value )
+			throw_if( 'law_type', law_type )
+			value = law_type
 			
 			allowed = { 'pub', 'priv' }
 			
@@ -8813,8 +8828,8 @@ class Congress( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			value = ( report_type or '' ).strip( ).lower( )
-			throw_if( 'report_type', value )
+			throw_if( 'report_type', report_type )
+			value = report_type
 			
 			allowed = { 'hrpt', 'srpt', 'erpt' }
 			
@@ -8855,7 +8870,8 @@ class Congress( Fetcher ):
 			
 			self.limit = self.validate_limit( limit )
 			self.offset = self.validate_offset( offset )
-			self.sort = ( sort or 'updateDate+desc' ).strip( )
+			throw_if( 'sort', sort )
+			self.sort = sort
 			
 			return { 'api_key': self.api_key, 'format': 'json', 'limit': self.limit,
 					'offset': self.offset, 'sort': self.sort }
@@ -8896,8 +8912,8 @@ class Congress( Fetcher ):
 			throw_if( 'params', params )
 
 			
-			self.mode = mode.strip( )
-			self.url = url.strip( )
+			self.mode = mode
+			self.url = url
 			throw_if( 'time', time )
 			self.timeout = time
 			self.params = params
@@ -8988,9 +9004,9 @@ class Congress( Fetcher ):
 			throw_if( 'congress', congress )
 			
 			self.congress_number = congress
-			self.bill_type = ( bill_type or '' ).strip( ).lower( )
-			self.from_date_time = ( from_date_time or '' ).strip( )
-			self.to_date_time = ( to_date_time or '' ).strip( )
+			self.bill_type = bill_type
+			self.from_date_time = from_date_time
+			self.to_date_time = to_date_time
 			
 			if self.bill_type:
 				self.bill_type = self.normalize_bill_type( self.bill_type )
@@ -9091,7 +9107,7 @@ class Congress( Fetcher ):
 			throw_if( 'congress', congress )
 			
 			self.congress_number = congress
-			self.law_type = ( law_type or '' ).strip( ).lower( )
+			self.law_type = law_type
 			
 			if self.law_type:
 				self.law_type = self.normalize_law_type( self.law_type )
@@ -9192,7 +9208,7 @@ class Congress( Fetcher ):
 			throw_if( 'congress', congress )
 			
 			self.congress_number = congress
-			self.report_type = ( report_type or '' ).strip( ).lower( )
+			self.report_type = report_type
 			self.conference = conference
 			
 			if self.report_type:
@@ -9308,7 +9324,7 @@ class Congress( Fetcher ):
 		"""
 		try:
 			throw_if( 'mode', mode )
-			self.mode = ( mode or 'congresses' ).strip( ).lower( )
+			self.mode = mode
 			
 			if self.mode == 'congresses':
 				return self.fetch_congresses( limit=limit, offset=offset, time=time )
