@@ -1171,7 +1171,7 @@ class Gemini( Generator ):
 			
 			elif self.supports_thinking_budget( model ):
 				if thinking_budget is not None:
-					thinking_data[ 'thinking_budget' ] = int( thinking_budget )
+					thinking_data[ 'thinking_budget' ] = thinking_budget
 				else:
 					thinking_data[ 'thinking_budget' ] = -1
 			
@@ -1260,17 +1260,17 @@ class Gemini( Generator ):
 		"""
 		try:
 			config_data: Dict[ str, Any ] = {
-					'temperature': float( temperature ),
-					'max_output_tokens': int( max_tokens ),
-					'top_p': float( top_p ),
-					'candidate_count': int( candidate_count )
+					'temperature': temperature,
+					'max_output_tokens': max_tokens,
+					'top_p': top_p,
+					'candidate_count': candidate_count
 			}
 			
-			if top_k is not None and int( top_k ) > 0:
-				config_data[ 'top_k' ] = int( top_k )
+			if top_k is not None:
+				config_data[ 'top_k' ] = top_k
 			
 			if seed is not None:
-				config_data[ 'seed' ] = int( seed )
+				config_data[ 'seed' ] = seed
 			
 			system_instruction = self.build_system_instruction( system=system,
 				response_format=response_format, grounding=grounding,
@@ -1403,9 +1403,7 @@ class Gemini( Generator ):
 			self.top_k = top_k
 			self.candidate_count = candidate_count
 			self.seed = seed
-			self.system_instructions = (str( system ).strip( )
-			                            if system and str( system ).strip( )
-			                            else None)
+			self.system_instructions = system
 			self.response_format = response_format
 			self.stop_sequences = self.normalize_stop_sequences( stop_sequences )
 			self.grounding = grounding
@@ -1795,7 +1793,7 @@ class Claude( Generator ):
 			self.max_tokens = max_tokens
 			self.top_p = top_p
 			self.top_k = top_k
-			self.system_instructions = system if system and str( system ).strip( ) else None
+			self.system_instructions = system
 			self.web_search = web_search
 			self.client = Anthropic( api_key=self.api_key )
 			self.search_domains = self.normalize_domains( search_domains )
@@ -2130,7 +2128,7 @@ class Mistral( Generator ):
 					'safe_prompt': self.safe_prompt,
 			}
 			
-			if self.seed is not None and self.seed > 0:
+			if self.seed is not None:
 				self.params[ 'random_seed' ] = self.seed
 			
 			self.response = self.client.chat.complete( **self.params )
