@@ -324,7 +324,6 @@ class WebFetcher( Fetcher ):
 			self.url = url
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.response = requests.get( url=self.url, headers=self.headers,
 				timeout=self.timeout )
@@ -1136,7 +1135,6 @@ class WebCrawler( WebFetcher ):
 				self.url = url.strip( )
 
 				throw_if( 'time', time )
-
 				self.timeout = time
 				self.raw_url = self.url
 				self.raw_html = self.render_with_playwright( self.url, timeout=self.timeout )
@@ -1415,6 +1413,9 @@ class ArXiv( Fetcher ):
 	    include_metadata (Optional[bool]): Flag controlling whether include metadata behavior is
 	        enabled.
 	    query (Optional[str]): Most recent search text or model prompt submitted by the instance.
+	    load_max_docs (int): Document limit for the current retrieval.
+	    get_full_documents (bool): Whether the current retrieval includes full documents.
+	    load_all_available_meta (bool): Whether the current retrieval includes all available metadata.
 	"""
 	fetcher: Optional[ ArxivRetriever ]
 	documents: Optional[ List[ Document ] ]
@@ -1422,6 +1423,9 @@ class ArXiv( Fetcher ):
 	full_documents: Optional[ bool ]
 	include_metadata: Optional[ bool ]
 	query: Optional[ str ]
+	load_max_docs: int
+	get_full_documents: bool
+	load_all_available_meta: bool
 	
 	def __init__( self, max_documents: int=5, full_documents: bool=False, include_metadata: bool=False ) -> None:
 		"""Initialize the instance.
@@ -1445,11 +1449,14 @@ class ArXiv( Fetcher ):
 		self.fetcher = None
 		self.documents = None
 		self.query = None
-		self.max_documents = max( 1, min( max_documents, 300 ) )
+		self.max_documents = max_documents
 		self.full_documents = full_documents
 		self.include_metadata = include_metadata
+		self.load_max_docs = self.max_documents
+		self.get_full_documents = self.full_documents
+		self.load_all_available_meta = self.include_metadata
 	
-	def fetch( self, question: str, max_documents: int=None, full_documents: bool=None, include_metadata: bool=None ) -> List[ Document ] | None:
+	def fetch( self, question: str, max_documents: int | None=None, full_documents: bool | None=None, include_metadata: bool | None=None ) -> List[ Document ] | None:
 		"""Fetch.
 
 		Purpose:
@@ -1457,13 +1464,10 @@ class ArXiv( Fetcher ):
 		    configuration and returns the normalized result.
 
 		Args:
-		    question (str): Question supplied by the caller and interpreted according to the
-		        method contract.
-		    max_documents (int): Max documents supplied by the caller and interpreted according to
-		        the method contract.
-		    full_documents (bool): Whether full documents behavior is enabled for the operation.
-		    include_metadata (bool): Whether include metadata behavior is enabled for the
-		        operation.
+		    question (str): Nonblank search query submitted to the retriever.
+		    max_documents (int | None): Document limit; None uses the constructor default.
+		    full_documents (bool | None): Include full documents; None uses the constructor default.
+		    include_metadata (bool | None): Include all metadata; None uses the constructor default.
 
 		Returns:
 		    List[Document] | None: LangChain documents produced or transformed by the operation.
@@ -1473,24 +1477,30 @@ class ArXiv( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-			if full_documents is not None:
-				throw_if( 'full_documents', full_documents )
-
-			if include_metadata is not None:
-				throw_if( 'include_metadata', include_metadata )
-
 			throw_if( 'question', question )
-			self.query = question.strip( )
-			max_docs = self.max_documents if max_documents is None else max( 1, min( 
-				max_documents, 300 ) )
+			self.query = question
 			
-			get_full = self.full_documents if full_documents is None else full_documents
+			if max_documents is None:
+				self.load_max_docs = self.max_documents
+			else:
+				throw_if( 'max_documents', max_documents )
+				self.load_max_docs = max_documents
 			
-			load_meta = self.include_metadata if include_metadata is None else (
-				include_metadata )
+			if full_documents is None:
+				self.get_full_documents = self.full_documents
+			else:
+				throw_if( 'full_documents', full_documents )
+				self.get_full_documents = full_documents
 			
-			self.fetcher = ArxivRetriever( load_max_docs=max_docs, get_full_documents=get_full,
-				load_all_available_meta=load_meta )
+			if include_metadata is None:
+				self.load_all_available_meta = self.include_metadata
+			else:
+				throw_if( 'include_metadata', include_metadata )
+				self.load_all_available_meta = include_metadata
+			
+			self.fetcher = ArxivRetriever( load_max_docs=self.load_max_docs,
+				get_full_documents=self.get_full_documents,
+				load_all_available_meta=self.load_all_available_meta )
 			
 			self.documents = self.fetcher.invoke( self.query )
 			return self.documents
@@ -1499,7 +1509,7 @@ class ArXiv( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'ArXiv'
-			exception.method = 'fetch( self, question: str, max_documents: int=None, full_documents: bool=None, include_metadata: bool=None ) -> List[ Document ] | None'
+			exception.method = 'fetch( self, question: str, max_documents: int | None=None, full_documents: bool | None=None, include_metadata: bool | None=None ) -> List[ Document ] | None'
 			Logger( ).write( exception )
 			raise exception
 
@@ -1732,6 +1742,9 @@ class Wikipedia( Fetcher ):
 	    language (Optional[str]): Current language retained by the Wikipedia workflow between
 	        related operations.
 	    query (Optional[str]): Most recent search text or model prompt submitted by the instance.
+	    lang (str): Language selected for the current retrieval.
+	    load_max_docs (int): Document limit for the current retrieval.
+	    load_all_available_meta (bool): Whether the current retrieval includes all available metadata.
 	"""
 	fetcher: Optional[ WikipediaRetriever ]
 	documents: Optional[ List[ Document ] ]
@@ -1739,6 +1752,9 @@ class Wikipedia( Fetcher ):
 	include_metadata: Optional[ bool ]
 	language: Optional[ str ]
 	query: Optional[ str ]
+	lang: str
+	load_max_docs: int
+	load_all_available_meta: bool
 	
 	def __init__( self, language: str='en', max_documents: int=5, include_metadata: bool=False ) -> None:
 		"""Initialize the instance.
@@ -1763,11 +1779,14 @@ class Wikipedia( Fetcher ):
 		self.fetcher = None
 		self.documents = None
 		self.query = None
-		self.language = (language or 'en').strip( ) or 'en'
-		self.max_documents = max( 1, min( max_documents, 300 ) )
+		self.language = language
+		self.max_documents = max_documents
 		self.include_metadata = include_metadata
+		self.lang = self.language
+		self.load_max_docs = self.max_documents
+		self.load_all_available_meta = self.include_metadata
 	
-	def fetch( self, question: str, language: str=None, max_documents: int=None, include_metadata: bool=None ) -> List[ Document ] | None:
+	def fetch( self, question: str, language: str | None=None, max_documents: int | None=None, include_metadata: bool | None=None ) -> List[ Document ] | None:
 		"""Fetch.
 
 		Purpose:
@@ -1775,14 +1794,10 @@ class Wikipedia( Fetcher ):
 		    configuration and returns the normalized result.
 
 		Args:
-		    question (str): Question supplied by the caller and interpreted according to the
-		        method contract.
-		    language (str): Language supplied by the caller and interpreted according to the
-		        method contract.
-		    max_documents (int): Max documents supplied by the caller and interpreted according to
-		        the method contract.
-		    include_metadata (bool): Whether include metadata behavior is enabled for the
-		        operation.
+		    question (str): Nonblank search query submitted to the retriever.
+		    language (str | None): Wikipedia language; None uses the constructor default.
+		    max_documents (int | None): Document limit; None uses the constructor default.
+		    include_metadata (bool | None): Include all metadata; None uses the constructor default.
 
 		Returns:
 		    List[Document] | None: LangChain documents produced or transformed by the operation.
@@ -1792,18 +1807,29 @@ class Wikipedia( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-			if include_metadata is not None:
-				throw_if( 'include_metadata', include_metadata )
-
 			throw_if( 'question', question )
-			self.query = question.strip( )
-			lang = self.language if language is None else (language.strip( ) if language else 'en')
-			max_docs = self.max_documents if max_documents is None else max( 1, min( 
-				max_documents, 300 ) )
+			self.query = question
 			
-			load_meta = self.include_metadata if include_metadata is None else include_metadata
-			self.fetcher = WikipediaRetriever( lang=lang, load_max_docs=max_docs,
-				load_all_available_meta=load_meta )
+			if language is None:
+				self.lang = self.language
+			else:
+				throw_if( 'language', language )
+				self.lang = language
+			
+			if max_documents is None:
+				self.load_max_docs = self.max_documents
+			else:
+				throw_if( 'max_documents', max_documents )
+				self.load_max_docs = max_documents
+			
+			if include_metadata is None:
+				self.load_all_available_meta = self.include_metadata
+			else:
+				throw_if( 'include_metadata', include_metadata )
+				self.load_all_available_meta = include_metadata
+			
+			self.fetcher = WikipediaRetriever( lang=self.lang, load_max_docs=self.load_max_docs,
+				load_all_available_meta=self.load_all_available_meta )
 			
 			self.documents = self.fetcher.invoke( input=self.query )
 			return self.documents
@@ -1812,7 +1838,7 @@ class Wikipedia( Fetcher ):
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'Wikipedia'
-			exception.method = 'fetch( self, question: str, language: str=None, max_documents: int=None, include_metadata: bool=None ) -> List[ Document ] | None'
+			exception.method = 'fetch( self, question: str, language: str | None=None, max_documents: int | None=None, include_metadata: bool | None=None ) -> List[ Document ] | None'
 			Logger( ).write( exception )
 			raise exception
 
@@ -1951,7 +1977,6 @@ class TheNews( Fetcher ):
 			self.endpoint = endpoint
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.limit = limit
 			self.page = page
@@ -2286,7 +2311,6 @@ class GoogleSearch( Fetcher ):
 				self.cse_id = cse_id.strip( )
 			
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.keywords = keywords.strip( )
 			self.results = results
@@ -2953,7 +2977,6 @@ class GoogleWeather( Fetcher ):
 			self.path = path.strip( ).lstrip( '/' )
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.params = { }
 			
@@ -3060,7 +3083,6 @@ class GoogleWeather( Fetcher ):
 			self.units_system = units_system.strip( )
 			self.language_code = language_code.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.latitude, self.longitude = self.resolve_coordinates( address )
 			
@@ -3119,7 +3141,6 @@ class GoogleWeather( Fetcher ):
 			self.units_system = units_system.strip( )
 			self.language_code = language_code.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			if self.hours < 1 or self.hours > 240:
 				raise ValueError( 'hours must be between 1 and 240.' )
@@ -3180,7 +3201,6 @@ class GoogleWeather( Fetcher ):
 			self.units_system = units_system.strip( )
 			self.language_code = language_code.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			if self.days < 1 or self.days > 10:
 				raise ValueError( 'days must be between 1 and 10.' )
@@ -3241,7 +3261,6 @@ class GoogleWeather( Fetcher ):
 			self.units_system = units_system.strip( )
 			self.language_code = language_code.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			if self.hours < 1 or self.hours > 24:
 				raise ValueError( 'hours must be between 1 and 24 for hourly history.' )
@@ -3294,7 +3313,6 @@ class GoogleWeather( Fetcher ):
 			self.mode = 'alerts'
 			self.language_code = language_code.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.latitude, self.longitude = self.resolve_coordinates( address )
 			self.params = { 'location.latitude': self.latitude,
@@ -3526,7 +3544,6 @@ class NavalObservatory( Fetcher ):
 			throw_if( 'longitude', longitude )
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 
 			self.date_value = self.validate_date( date_value )
@@ -3818,7 +3835,6 @@ class SatelliteCenter( Fetcher ):
 			self.resolution_factor = resolution_factor
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			if self.resolution_factor < 1:
 				raise ValueError( 'resolution_factor must be greater than or equal to 1.' )
@@ -4022,7 +4038,6 @@ class EarthObservatory( Fetcher ):
 		try:
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.response = requests.get( url=self.url, params=self.params,
 				headers=self.headers, timeout=self.timeout )
@@ -4288,7 +4303,6 @@ class EarthObservatory( Fetcher ):
 			self.mode = mode
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			if self.mode == 'events':
 				self.status = status
@@ -4681,7 +4695,6 @@ class GlobalImagery( Fetcher ):
 			self.mode = 'wms_map'
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			request_url = self.build_wms_url( layer=self.layer, image_date=self.image_date,
 				bbox=self.bbox,
@@ -4954,7 +4967,6 @@ class NearbyObjects( Fetcher ):
 		try:
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.response = requests.get( url=self.url, params=self.params,
 				headers=self.headers, timeout=self.timeout )
@@ -5584,7 +5596,6 @@ class OpenScience( Fetcher ):
 		try:
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.response = requests.get( url=self.url, params=self.params,
 				headers=self.headers, timeout=self.timeout )
@@ -5988,7 +5999,6 @@ class SpaceWeather( Fetcher ):
 			throw_if( 'endpoint', endpoint )
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.endpoint = endpoint.strip( )
 			supported = { 'CME', 'CMEAnalysis', 'GST', 'IPS', 'FLR', 'SEP',
@@ -6382,7 +6392,6 @@ class AstroCatalog( Fetcher ):
 			throw_if( 'route', route )
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.route = route.strip( ).lstrip( '/' )
 			self.params = params if params is not None else { }
@@ -6500,7 +6509,6 @@ class AstroCatalog( Fetcher ):
 				self.params[ 'format' ] = self.format
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			return self.request( route=self.route, params=self.params, time=self.timeout )
 		except Exception as exc:
@@ -6565,7 +6573,6 @@ class AstroCatalog( Fetcher ):
 				self.params[ 'format' ] = self.format
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			return self.request( route=self.route, params=self.params, time=self.timeout )
 		except Exception as exc:
@@ -6615,7 +6622,6 @@ class AstroCatalog( Fetcher ):
 			self.format = data_format
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			if self.mode == 'object_query':
 				throw_if( 'query', query )
@@ -7144,7 +7150,6 @@ class StarMap( Fetcher ):
 			self.show_box = show_box
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.params = { 'object': self.object, 'show_box': self.normalize( self.show_box ),
@@ -7221,7 +7226,6 @@ class StarMap( Fetcher ):
 			self.show_boundaries = show_boundaries
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.params = { 'ra': f'{self.right_ascension}', 'de': f'{self.declination}',
@@ -7301,7 +7305,6 @@ class StarMap( Fetcher ):
 			self.show_const_names = show_const_names
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.params = { 'ra': f'{self.right_ascension}', 'de': f'{self.declination}',
@@ -7639,7 +7642,6 @@ class GovData( Fetcher ):
 			self.sort_field = self.validate_sort_field( sort_field )
 			self.sort_order = self.validate_sort_order( sort_order )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = f'{self.base_url}/search'
 			self.params = { 'api_key': self.api_key }
@@ -7693,7 +7695,6 @@ class GovData( Fetcher ):
 			self.mode = 'package_summary'
 			self.package_id = package_id.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = f'{self.base_url}/packages/{self.package_id}/summary'
 			self.params = { 'api_key': self.api_key }
@@ -7751,7 +7752,6 @@ class GovData( Fetcher ):
 			self.page_size = self.validate_page_size( page_size )
 			self.offset_mark = ( offset_mark or '*' ).strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = f'{self.base_url}/collections/{self.collection}/{self.start_date}'
 			self.params = { 'pageSize': self.page_size, 'offsetMark': self.offset_mark,
@@ -8802,7 +8802,6 @@ class Congress( Fetcher ):
 			self.mode = mode.strip( )
 			self.url = url.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.params = params
 			
@@ -9527,7 +9526,6 @@ class InternetArchive( Fetcher ):
 			
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.rows = self.validate_rows( rows )
 			self.page = self.validate_page( page )
@@ -10797,7 +10795,6 @@ class GoogleGeocoding( Fetcher ):
 			
 			
 			throw_if( 'time', time )
-
 			self.timeout = time
 			if not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
@@ -10877,7 +10874,6 @@ class GoogleGeocoding( Fetcher ):
 			self.language = ( language or 'en' ).strip( )
 			self.region = ( region or '' ).strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.params = { 'address': self.query, 'language': self.language }
 			
@@ -10936,7 +10932,6 @@ class GoogleGeocoding( Fetcher ):
 			self.result_type = ( result_type or '' ).strip( )
 			self.location_type = ( location_type or '' ).strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.params = { 'latlng': f'{self.latitude},{self.longitude}',
 					'language': self.language }
@@ -10992,7 +10987,6 @@ class GoogleGeocoding( Fetcher ):
 			self.language = ( language or 'en' ).strip( )
 			self.region = ( region or '' ).strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.params = { 'place_id': self.place_id, 'language': self.language }
 			if self.region:
@@ -11370,7 +11364,6 @@ class CensusData( Fetcher ):
 			self.year = year.strip( )
 			self.dataset = dataset.strip( ).strip( '/' )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			if not re.fullmatch( r'\d{4}', self.year ):
 				raise ValueError( 'year must be a four-digit Census vintage.' )
@@ -11443,7 +11436,6 @@ class CensusData( Fetcher ):
 			self.geography_in = ( geography_in or '' ).strip( )
 			self.predicates = self.parse_predicates( predicates )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			if not re.fullmatch( r'\d{4}', self.year ):
 				raise ValueError( 'year must be a four-digit Census vintage.' )
@@ -11857,7 +11849,6 @@ class Socrata( Fetcher ):
 			self.domain = self.normalize_domain( domain )
 			self.dataset_id = self.normalize_dataset_id( dataset_id )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = self.metadata_url.format( domain=self.domain, dataset=self.dataset_id )
 			self.params = { }
@@ -11927,7 +11918,6 @@ class Socrata( Fetcher ):
 			self.limit_value = self.validate_limit( limit )
 			self.offset_value = self.validate_offset( offset )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			
@@ -12345,7 +12335,6 @@ class HealthData( Fetcher ):
 			self.domain = self.normalize_domain( domain )
 			self.dataset_id = self.normalize_dataset_id( dataset_id )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = self.metadata_url.format( domain=self.domain, dataset=self.dataset_id )
 			self.params = { }
@@ -12415,7 +12404,6 @@ class HealthData( Fetcher ):
 			self.limit_value = self.validate_limit( limit )
 			self.offset_value = self.validate_offset( offset )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			
@@ -12704,7 +12692,6 @@ class GlobalHealthData( Fetcher ):
 			
 			self.mode = 'indicator_registry'
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = f'{self.base_url}/indicator-metadata-registry'
 			self.params = { }
@@ -12765,7 +12752,6 @@ method contract.
 			self.query_path = self.normalize_query_path( query_path )
 			self.fmt = ( fmt or 'json' ).strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = f'{self.athena_base_url}/{self.query_path}'
 			self.params = { }
@@ -13027,7 +13013,6 @@ class UnitedNations( Fetcher ):
 			
 			self.mode = 'datasets'
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = self.catalog_url
 			self.params = { }
@@ -13083,7 +13068,6 @@ class UnitedNations( Fetcher ):
 			self.mode = 'sdmx_query'
 			self.query_path = self.normalize_query_path( query_path )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			
@@ -13419,7 +13403,6 @@ class WorldPopulation( Fetcher ):
 			
 			self.mode = 'catalog'
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = self.base_url
 			self.params = { }
@@ -13479,7 +13462,6 @@ class WorldPopulation( Fetcher ):
 			self.page = self.validate_page( page )
 			self.page_size = self.validate_page_size( page_size )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = f'{self.base_url}/search'
 			self.params = { 'q': self.query_text, 'page': self.page, 'page_size': self.page_size }
@@ -13536,7 +13518,6 @@ class WorldPopulation( Fetcher ):
 			self.mode = 'raster_metadata'
 			self.asset_path = self.normalize_asset_path( asset_path )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.asset_path}'
 			self.params = { }
@@ -13891,7 +13872,6 @@ class Wonder( Fetcher ):
 			self.dataset_id = self.normalize_dataset_id( dataset_id )
 			self.request_xml = request_xml.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.dataset_id}'
 			self.params = { 'request_xml': self.request_xml,
@@ -14598,7 +14578,6 @@ class USGSEarthquakes( Fetcher ):
 			self.mode = 'feed'
 			self.feed = self.validate_feed( feed )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.params = { }
 			self.url = f'{self.feed_url}/{self.feed}'
@@ -14684,7 +14663,6 @@ class USGSEarthquakes( Fetcher ):
 			self.order_by = self.validate_order_by( order_by )
 			self.event_type = event_type.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = self.search_url
 			
@@ -15393,7 +15371,6 @@ value.
 				raise ValueError( 'params must be a dictionary.' )
 			self.collection = self.validate_collection( collection )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.collection}/items'
 			self.params = { }
@@ -15469,7 +15446,6 @@ value.
 			self.site_type = ( site_type or '' ).strip( )
 			self.limit = self.validate_limit( limit )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( collection='monitoring-locations', params={
@@ -15522,7 +15498,6 @@ value.
 			self.parameter_code = self.validate_parameter_code( parameter_code )
 			self.limit = self.validate_limit( limit )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( collection='time-series-metadata', params={
@@ -15575,7 +15550,6 @@ value.
 			self.parameter_code = self.validate_parameter_code( parameter_code )
 			self.limit = self.validate_limit( limit )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( collection='latest-continuous', params={
@@ -15628,7 +15602,6 @@ value.
 			self.parameter_code = self.validate_parameter_code( parameter_code )
 			self.limit = self.validate_limit( limit )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( collection='latest-daily', params={
@@ -16263,7 +16236,6 @@ class USGSTheNationalMap( Fetcher ):
 			
 			self.endpoint = self.validate_endpoint( endpoint )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
@@ -16320,7 +16292,6 @@ class USGSTheNationalMap( Fetcher ):
 			
 			self.mode = 'datasets'
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint='datasets', params={ }, time=self.timeout )
@@ -16378,7 +16349,6 @@ class USGSTheNationalMap( Fetcher ):
 			self.max_items = self.validate_max_items( max_items )
 			self.offset = self.validate_offset( offset )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint='products', params={ 'datasets': self.dataset,
@@ -16931,7 +16901,6 @@ class USGSScienceBase( Fetcher ):
 			
 			self.endpoint = self.validate_endpoint( endpoint )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
@@ -17002,7 +16971,6 @@ class USGSScienceBase( Fetcher ):
 			self.offset = self.validate_offset( offset )
 			self.fields = ( fields or '' ).strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint='items', params={ 'q': self.query_text, 'max': self.max_items,
@@ -17043,7 +17011,6 @@ class USGSScienceBase( Fetcher ):
 			self.mode = 'item'
 			self.item_id = item_id.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.request( endpoint=f'item/{self.item_id}', params={ }, time=self.timeout )
 			detail = self.shape_single_item( self.payload or { } )
@@ -17271,7 +17238,6 @@ class AirNow( Fetcher ):
 			
 			self.endpoint = endpoint.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			if params is not None and not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
@@ -17477,7 +17443,6 @@ class AirNow( Fetcher ):
 			if self.distance < 1:
 				raise ValueError( 'distance must be greater than zero.' )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint='observation/zipCode/current/', params={
@@ -17532,7 +17497,6 @@ class AirNow( Fetcher ):
 			if self.distance < 1:
 				raise ValueError( 'distance must be greater than zero.' )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint='observation/latLong/current/', params={
@@ -17587,7 +17551,6 @@ class AirNow( Fetcher ):
 			if self.distance < 1:
 				raise ValueError( 'distance must be greater than zero.' )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint='forecast/zipCode/', params={ 'zipCode': self.zip_code,
@@ -17646,7 +17609,6 @@ class AirNow( Fetcher ):
 			if self.distance < 1:
 				raise ValueError( 'distance must be greater than zero.' )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint='forecast/latLong/', params={ 'latitude': self.latitude,
@@ -18201,7 +18163,6 @@ class ClimateData( Fetcher ):
 			
 			self.url = url.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.params = { }
 			
@@ -18274,7 +18235,6 @@ class ClimateData( Fetcher ):
 			self.limit = self.validate_limit( limit )
 			self.offset = self.validate_offset( offset )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			if self.start_date and self.end_date:
 				self.start_date, self.end_date = self.validate_date_range( self.start_date,
@@ -18342,7 +18302,6 @@ class ClimateData( Fetcher ):
 			self.data_types = ( data_types or '' ).strip( )
 			self.limit = self.validate_limit( limit )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( url=self.data_url, params={ 'dataset': self.dataset,
@@ -19024,7 +18983,6 @@ related operations.
 			
 			self.endpoint = self.validate_endpoint( endpoint )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
@@ -19108,7 +19066,6 @@ related operations.
 				end_date=end_date )
 			self.bbox = self.validate_bbox( bbox )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint='events', params={ 'source': self.source,
@@ -19152,7 +19109,6 @@ related operations.
 			
 			self.mode = 'categories'
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint='categories', params={ }, time=self.timeout )
@@ -19672,7 +19628,6 @@ to the application logger, and re-raises it.
 			
 			self.url = url.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			
@@ -20396,7 +20351,6 @@ metadata, or generated schema content.
 			
 			self.url = url.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.params = { }
 			
@@ -20465,7 +20419,6 @@ metadata, or generated schema content.
 			self.mode = 'station'
 			self.station_id = self.validate_station_id( station_id )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( url=f'{self.metadata_url}/stations/{self.station_id}.json', params={ },
@@ -20523,7 +20476,6 @@ metadata, or generated schema content.
 			self.units = self.validate_units( units )
 			self.time_zone = self.validate_time_zone( time_zone )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( url=self.data_url, params={ 'product': 'water_level',
@@ -20587,7 +20539,6 @@ metadata, or generated schema content.
 			self.time_zone = self.validate_time_zone( time_zone )
 			self.interval = self.validate_interval( interval )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( url=self.data_url, params={ 'product': 'predictions',
@@ -21103,7 +21054,6 @@ class UvIndex( Fetcher ):
 				raise ValueError( 'params must be a dictionary.' )
 			self.params = params
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			
@@ -21151,7 +21101,6 @@ class UvIndex( Fetcher ):
 			self.zip_code = self.validate_zip_code( zip_code )
 			self.endpoint = 'getEnvirofactsUVDAILY'
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.params = { 'zip_code': self.zip_code }
 			self.url = (f'{self.base_url}/{self.endpoint}/ZIP/'
@@ -21204,7 +21153,6 @@ class UvIndex( Fetcher ):
 			self.state = self.validate_state( state )
 			self.endpoint = 'getEnvirofactsUVDAILY'
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.params = { 'city': self.city, 'state': self.state }
 			self.url = (f'{self.base_url}/{self.endpoint}/CITY/'
@@ -21252,7 +21200,6 @@ class UvIndex( Fetcher ):
 			self.zip_code = self.validate_zip_code( zip_code )
 			self.endpoint = 'getEnvirofactsUVHOURLY'
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.params = { 'zip_code': self.zip_code }
 			self.url = (f'{self.base_url}/{self.endpoint}/ZIP/'
@@ -21305,7 +21252,6 @@ class UvIndex( Fetcher ):
 			self.state = self.validate_state( state )
 			self.endpoint = 'getEnvirofactsUVHOURLY'
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.params = { 'city': self.city, 'state': self.state }
 			self.url = (f'{self.base_url}/{self.endpoint}/CITY/'
@@ -22104,7 +22050,6 @@ class PurpleAir( Fetcher ):
 				raise ValueError( 'params must be a dictionary.' )
 			
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
@@ -22193,7 +22138,6 @@ class PurpleAir( Fetcher ):
 			self.fields = self.normalize_fields( fields=fields, default_fields=default_fields )
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint='sensors', params={ 'fields': self.fields,
@@ -22244,7 +22188,6 @@ class PurpleAir( Fetcher ):
 			self.fields = self.normalize_fields( fields=fields, default_fields=default_fields )
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint=f'sensors/{self.sensor_index}', params={
@@ -22318,7 +22261,6 @@ class PurpleAir( Fetcher ):
 				self.fields = fields
 
 				throw_if( 'time', time )
-
 				self.timeout = time
 				return self.fetch_sensors( nwlng=self.nwlng, nwlat=self.nwlat,
 					selng=self.selng, selat=self.selat, location_type=self.location_type,
@@ -23080,7 +23022,6 @@ class OpenAQ( Fetcher ):
 				raise ValueError( 'params must be a dictionary.' )
 			
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
@@ -23145,7 +23086,6 @@ class OpenAQ( Fetcher ):
 			self.page = self.validate_positive_integer( 'page', page )
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint='countries', params={ 'providers_id': self.providers_id,
@@ -23189,7 +23129,6 @@ class OpenAQ( Fetcher ):
 			self.page = self.validate_positive_integer( 'page', page )
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint='providers', params={ 'limit': self.limit,
@@ -23232,7 +23171,6 @@ class OpenAQ( Fetcher ):
 			self.page = self.validate_positive_integer( 'page', page )
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint='parameters', params={ 'limit': self.limit,
@@ -23279,7 +23217,6 @@ class OpenAQ( Fetcher ):
 			self.page = self.validate_positive_integer( 'page', page )
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint=f'parameters/{self.parameter_id}/latest', params={
@@ -23337,7 +23274,6 @@ class OpenAQ( Fetcher ):
 			self.page = self.validate_positive_integer( 'page', page )
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint='locations', params={ 'country_id': self.country_id,
@@ -23381,7 +23317,6 @@ class OpenAQ( Fetcher ):
 				value=location_id )
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.request( endpoint=f'locations/{self.location_id}/latest', params={ },
@@ -23988,7 +23923,6 @@ class Firms( Fetcher ):
 
 			self.url = url.strip( )
 			throw_if( 'time', time )
-
 			self.timeout = time
 			
 			self.response = requests.get( url=self.url, headers=self.headers,
@@ -24042,7 +23976,6 @@ class Firms( Fetcher ):
 			self.date = self.validate_date( date )
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.params = { 'source': self.source, 'area_coordinates': self.area_coordinates,
 					'day_range': self.day_range, 'date': self.date }
@@ -24090,7 +24023,6 @@ class Firms( Fetcher ):
 			self.sensor = self.validate_sensor( sensor )
 
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.params = { 'sensor': self.sensor }
 			self.url = (f'{self.base_url}/data_availability/csv/'
@@ -25280,7 +25212,6 @@ metadata, or generated schema content.
 		"""
 		try:
 			throw_if( 'time', time )
-
 			self.timeout = time
 			self.mode = self.validate_mode( mode )
 			
