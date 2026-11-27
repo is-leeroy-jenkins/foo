@@ -234,7 +234,7 @@ class WebFetcher( Fetcher ):
 	    right_url (str): Second URL in the latest host comparison.
 	    left_host (str): First parsed network location.
 	    right_host (str): Second parsed network location.
-	    results (List[str]):  Dict[str, List[str]]|Latest link list or structured extraction groups.
+	    results (List[str] | Dict[str, List[str]]): Latest link list or structured extraction groups.
 	    seen (set[str]): Values encountered during deduplication.
 	    candidate (str): Current normalized hyperlink candidate.
 	    registry (Dict[str, Tuple[str, Any]]): Extraction method names mapped to display labels and callable extractors.
@@ -1333,26 +1333,21 @@ class WebCrawler( WebFetcher ):
 			raise exception
 
 class ArXiv( Fetcher ):
-	"""ArXiv component.
+	"""arXiv scholarly document retriever.
 
 	Purpose:
-	    Queries the arXiv corpus and converts scholarly search results into LangChain documents
-	    for downstream retrieval and analysis.
+	    Configure and invoke LangChain ArxivRetriever for scholarly search, using constructor defaults unless per-request overrides are supplied.
 
 	Attributes:
-	    fetcher (Optional[ArxivRetriever]): Current fetcher retained by the ArXiv workflow between
-	        related operations.
-	    documents (Optional[List[Document]]): LangChain documents loaded or produced by the most
-	        recent operation.
-	    max_documents (Optional[int]): Upper bound applied to documents.
-	    full_documents (Optional[bool]): Current full documents retained by the ArXiv workflow
-	        between related operations.
-	    include_metadata (Optional[bool]): Flag controlling whether include metadata behavior is
-	        enabled.
-	    query (Optional[str]): Most recent search text or model prompt submitted by the instance.
-	    load_max_docs (int): Document limit for the current retrieval.
-	    get_full_documents (bool): Whether the current retrieval includes full documents.
-	    load_all_available_meta (bool): Whether the current retrieval includes all available metadata.
+	    fetcher (Optional[ArxivRetriever]): Active LangChain arXiv retriever.
+	    documents (Optional[List[Document]]): Documents returned by the latest search.
+	    max_documents (Optional[int]): Default document limit.
+	    full_documents (Optional[bool]): Default full-document retrieval flag.
+	    include_metadata (Optional[bool]): Default all-metadata flag.
+	    query (Optional[str]): Latest scholarly search query.
+	    load_max_docs (int): Effective document limit for the current search.
+	    get_full_documents (bool): Effective full-document retrieval flag.
+	    load_all_available_meta (bool): Effective all-metadata flag.
 	"""
 	fetcher: Optional[ ArxivRetriever ]
 	documents: Optional[ List[ Document ] ]
@@ -1365,22 +1360,18 @@ class ArXiv( Fetcher ):
 	load_all_available_meta: bool
 	
 	def __init__( self, max_documents: int=5, full_documents: bool=False, include_metadata: bool=False ) -> None:
-		"""Initialize the instance.
+		"""Initialize arXiv retrieval defaults.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Store the default document limit, full-document and metadata options, and initialize retriever and response state without issuing a search.
 
 		Args:
-		    max_documents (int): Max documents supplied by the caller and interpreted according to
-		        the method contract.
-		    full_documents (bool): Whether full documents behavior is enabled for the operation.
-		    include_metadata (bool): Whether include metadata behavior is enabled for the
-		        operation.
+		    max_documents (int): Default maximum documents, 5.
+		    full_documents (bool): Request full documents by default. Defaults to False.
+		    include_metadata (bool): Load all available metadata by default. Defaults to False.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		        value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.fetcher = None
@@ -1394,24 +1385,22 @@ class ArXiv( Fetcher ):
 		self.load_all_available_meta = self.include_metadata
 	
 	def fetch( self, question: str, max_documents: int | None=None, full_documents: bool | None=None, include_metadata: bool | None=None ) -> List[ Document ] | None:
-		"""Fetch.
+		"""Retrieve scholarly documents from arXiv.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Resolve optional overrides against constructor defaults, construct ArxivRetriever, invoke it with the query, and store the resulting documents.
 
 		Args:
-		    question (str): Nonblank search query submitted to the retriever.
-		    max_documents (int | None): Document limit; None uses the constructor default.
-		    full_documents (bool | None): Include full documents; None uses the constructor default.
-		    include_metadata (bool | None): Include all metadata; None uses the constructor default.
+		    question (str): Nonblank scholarly search query.
+		    max_documents (int | None): Document limit; defaults to None to use the constructor setting.
+		    full_documents (bool | None): Full-document flag; defaults to None to use the constructor setting.
+		    include_metadata (bool | None): All-metadata flag; defaults to None to use the constructor setting.
 
 		Returns:
-		    List[Document] | None: LangChain documents produced or transformed by the operation.
+		    List[Document]: Documents returned by the LangChain retriever.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, retriever construction, or retrieval fails.
 		"""
 		try:
 			throw_if( 'question', question )
@@ -1451,33 +1440,24 @@ class ArXiv( Fetcher ):
 			raise exception
 
 class GoogleDrive( Fetcher ):
-	"""GoogleDrive component.
+	"""Google Drive document retriever.
 
 	Purpose:
-	    Searches Google Drive content through the LangChain retriever and returns matching
-	    documents with provider metadata.
+	    Construct and invoke LangChain GoogleDriveRetriever using configured credential paths, query templates, folder and MIME filters, and document or snippet mode.
 
 	Attributes:
-	    fetcher (Optional[GoogleDriveRetriever]): Current fetcher retained by the GoogleDrive
-	        workflow between related operations.
-	    documents (Optional[List[Document]]): LangChain documents loaded or produced by the most
-	        recent operation.
-	    num_results (Optional[int]): Current num results retained by the GoogleDrive workflow
-	        between related operations.
-	    folder_id (Optional[str]): Identifier of the current folder resource.
-	    template (Optional[str]): Current template retained by the GoogleDrive workflow between
-	        related operations.
-	    query (Optional[str]): Most recent search text or model prompt submitted by the instance.
-	    mime_type (Optional[str]): Current mime type retained by the GoogleDrive workflow between
-	        related operations.
-	    mode (Optional[str]): Current mode retained by the GoogleDrive workflow between related
-	        operations.
-	    credentials_path (Optional[str]): Path associated with the current credentials resource.
-	    token_path (Optional[str]): Path associated with the current token resource.
-	    retriever_kwargs (Optional[Dict[str, Any]]): Current retriever kwargs retained by the
-	        GoogleDrive workflow between related operations.
-	    invoke_query (Optional[str]): Current invoke query retained by the GoogleDrive workflow
-	        between related operations.
+	    fetcher (Optional[GoogleDriveRetriever]): Active LangChain Google Drive retriever.
+	    documents (Optional[List[Document]]): Documents returned by the latest retrieval.
+	    num_results (Optional[int]): Requested maximum results.
+	    folder_id (Optional[str]): Target Drive folder identifier.
+	    template (Optional[str]): Selected Drive query template.
+	    query (Optional[str]): Original search text.
+	    mime_type (Optional[str]): Optional MIME filter.
+	    mode (Optional[str]): Document or snippet retrieval mode.
+	    credentials_path (Optional[str]): Configured Google account credential file path.
+	    token_path (Optional[str]): Configured Drive token file path.
+	    retriever_kwargs (Optional[Dict[str, Any]]): Options assembled for retriever construction.
+	    invoke_query (Optional[str]): Effective query, including wildcard fallback where supported.
 	"""
 	fetcher: Optional[ GoogleDriveRetriever ]
 	documents: Optional[ List[ Document ] ]
@@ -1493,15 +1473,13 @@ class GoogleDrive( Fetcher ):
 	invoke_query: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize Google Drive retrieval state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load configured folder and credential paths, initialize a ten-result document search using the gdrive-query template, and prepare empty retriever state.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		        value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.fetcher = None
@@ -1518,14 +1496,13 @@ class GoogleDrive( Fetcher ):
 		self.invoke_query = ''
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed Google Drive members.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member names returned by dir(), including option properties and retrieval.
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'fetcher', 'documents', 'num_results', 'folder_id', 'template', 'query',
 				'mime_type', 'mode', 'credentials_path', 'token_path', 'retriever_kwargs',
@@ -1533,13 +1510,13 @@ class GoogleDrive( Fetcher ):
 	
 	@property
 	def mime_options( self ) -> List[ str ]:
-		"""Mime options.
+		"""Return MIME filter options.
 
 		Purpose:
-		    Returns supported mime choices for validation and user-interface selection.
+		    Expose MIME types supported by the wrapper, including a blank option for no filter.
 
 		Returns:
-		    List[str]: Ordered values or records produced by the operation.
+		    List[str]: Supported MIME filter strings.
 		"""
 		return [ '', 'text/text', 'text/plain', 'text/html', 'text/csv', 'text/markdown',
 				'image/png', 'image/jpeg', 'application/epub+zip', 'application/pdf',
@@ -1551,13 +1528,13 @@ class GoogleDrive( Fetcher ):
 	
 	@property
 	def template_options( self ) -> List[ str ]:
-		"""Template options.
+		"""Return Drive query templates.
 
 		Purpose:
-		    Returns supported template choices for validation and user-interface selection.
+		    Expose the supported folder, text, name, and MIME query templates.
 
 		Returns:
-		    List[str]: Ordered values or records produced by the operation.
+		    List[str]: Supported template identifiers.
 		"""
 		return [ 'gdrive-all-in-folder', 'gdrive-query', 'gdrive-by-name',
 				'gdrive-query-in-folder', 'gdrive-mime-type', 'gdrive-mime-type-in-folder',
@@ -1565,41 +1542,35 @@ class GoogleDrive( Fetcher ):
 	
 	@property
 	def mode_options( self ) -> List[ str ]:
-		"""Mode options.
+		"""Return retrieval mode options.
 
 		Purpose:
-		    Returns supported mode choices for validation and user-interface selection.
+		    Expose the document and snippet modes accepted by fetch.
 
 		Returns:
-		    List[str]: Ordered values or records produced by the operation.
+		    List[str]: documents and snippets.
 		"""
 		return [ 'documents', 'snippets' ]
 	
 	def fetch( self, question: str, folder_id: str='root', results: int=10, template: str='gdrive-query', mime_type: str=None, mode: str='documents' ) -> List[ Document ] | None:
-		"""Fetch.
+		"""Retrieve matching Google Drive documents.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Validate the selected template, mode, result range, and optional MIME filter. Use a wildcard for an empty query in supported folder or MIME templates, construct the retriever with configured credential paths, and invoke it.
 
 		Args:
-		    question (str): Question supplied by the caller and interpreted according to the
-		        method contract.
-		    folder_id (str): Provider identifier of the target folder resource.
-		    results (int): Results supplied by the caller and interpreted according to the method
-		        contract.
-		    template (str): Template supplied by the caller and interpreted according to the
-		        method contract.
-		    mime_type (str): Mime type supplied by the caller and interpreted according to the
-		        method contract.
-		    mode (str): Provider or loader operating mode selected for the request.
+		    question (str): Search text; may be empty for all-in-folder or MIME-only templates.
+		    folder_id (str): Nonblank target folder identifier. Defaults to root.
+		    results (int): Requested result count from 1 through 100. Defaults to 10.
+		    template (str): Supported query template identifier. Defaults to gdrive-query.
+		    mime_type (str | None): Optional supported MIME filter. Defaults to None.
+		    mode (str): documents or snippets. Defaults to documents.
 
 		Returns:
-		    List[Document] | None: LangChain documents produced or transformed by the operation.
+		    List[Document]: Documents returned by the LangChain retriever.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, retriever construction, or retrieval fails.
 		"""
 		try:
 			throw_if( 'template', template )
@@ -1657,26 +1628,21 @@ class GoogleDrive( Fetcher ):
 			raise exception
 
 class Wikipedia( Fetcher ):
-	"""Wikipedia component.
+	"""Wikipedia article retriever.
 
 	Purpose:
-	    Retrieves Wikipedia articles as LangChain documents for question answering, summarization,
-	    and retrieval-augmented generation.
+	    Construct and invoke LangChain WikipediaRetriever to obtain article documents with configurable language, document limit, and metadata options.
 
 	Attributes:
-	    fetcher (Optional[WikipediaRetriever]): Current fetcher retained by the Wikipedia workflow
-	        between related operations.
-	    documents (Optional[List[Document]]): LangChain documents loaded or produced by the most
-	        recent operation.
-	    max_documents (Optional[int]): Upper bound applied to documents.
-	    include_metadata (Optional[bool]): Flag controlling whether include metadata behavior is
-	        enabled.
-	    language (Optional[str]): Current language retained by the Wikipedia workflow between
-	        related operations.
-	    query (Optional[str]): Most recent search text or model prompt submitted by the instance.
-	    lang (str): Language selected for the current retrieval.
-	    load_max_docs (int): Document limit for the current retrieval.
-	    load_all_available_meta (bool): Whether the current retrieval includes all available metadata.
+	    fetcher (Optional[WikipediaRetriever]): Active LangChain Wikipedia retriever.
+	    documents (Optional[List[Document]]): Documents returned by the latest search.
+	    max_documents (Optional[int]): Default document limit.
+	    include_metadata (Optional[bool]): Default all-metadata flag.
+	    language (Optional[str]): Default Wikipedia language code.
+	    query (Optional[str]): Latest search query.
+	    lang (str): Effective language code for the current search.
+	    load_max_docs (int): Effective document limit for the current search.
+	    load_all_available_meta (bool): Effective all-metadata flag.
 	"""
 	fetcher: Optional[ WikipediaRetriever ]
 	documents: Optional[ List[ Document ] ]
@@ -1689,23 +1655,18 @@ class Wikipedia( Fetcher ):
 	load_all_available_meta: bool
 	
 	def __init__( self, language: str='en', max_documents: int=5, include_metadata: bool=False ) -> None:
-		"""Initialize the instance.
+		"""Initialize Wikipedia retrieval defaults.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Store default language, document limit, and metadata options without issuing a search.
 
 		Args:
-		    language (str): Language supplied by the caller and interpreted according to the
-		        method contract.
-		    max_documents (int): Max documents supplied by the caller and interpreted according to
-		        the method contract.
-		    include_metadata (bool): Whether include metadata behavior is enabled for the
-		        operation.
+		    language (str): Default Wikipedia language code, en.
+		    max_documents (int): Default maximum documents, 5.
+		    include_metadata (bool): Load all available metadata by default. Defaults to False.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		        value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.fetcher = None
@@ -1719,24 +1680,22 @@ class Wikipedia( Fetcher ):
 		self.load_all_available_meta = self.include_metadata
 	
 	def fetch( self, question: str, language: str | None=None, max_documents: int | None=None, include_metadata: bool | None=None ) -> List[ Document ] | None:
-		"""Fetch.
+		"""Retrieve Wikipedia article documents.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Resolve per-request overrides against constructor defaults, construct WikipediaRetriever, invoke it with the search text, and store the resulting documents.
 
 		Args:
-		    question (str): Nonblank search query submitted to the retriever.
-		    language (str | None): Wikipedia language; None uses the constructor default.
-		    max_documents (int | None): Document limit; None uses the constructor default.
-		    include_metadata (bool | None): Include all metadata; None uses the constructor default.
+		    question (str): Nonblank Wikipedia search query.
+		    language (str | None): Wikipedia language code; defaults to None to use the constructor setting.
+		    max_documents (int | None): Document limit; defaults to None to use the constructor setting.
+		    include_metadata (bool | None): All-metadata flag; defaults to None to use the constructor setting.
 
 		Returns:
-		    List[Document] | None: LangChain documents produced or transformed by the operation.
+		    List[Document]: Documents returned by the LangChain retriever.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, retriever construction, or retrieval fails.
 		"""
 		try:
 			throw_if( 'question', question )
