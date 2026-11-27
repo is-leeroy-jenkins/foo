@@ -2668,48 +2668,35 @@ class GoogleMaps( Fetcher ):
 			raise exception
 
 class GoogleWeather( Fetcher ):
-	"""GoogleWeather component.
+	"""Google Weather API retrieval adapter.
 
 	Purpose:
-	    Retrieves current, forecast, historical, and alert weather data after resolving a location
-	    to geographic coordinates.
+	    Geocode addresses through GoogleMaps and retrieve current conditions, hourly and daily
+	    forecasts, hourly history, or public weather alerts. Preserve the decoded provider object
+	    and request metadata while omitting the API key from returned parameters.
 
 	Attributes:
-	    gmaps (Optional[GoogleMaps]): Current gmaps retained by the GoogleWeather workflow between
-	        related operations.
-	    headers (Optional[Dict[str, Any]]): HTTP headers sent with the current request.
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    mode (Optional[str]): Current mode retained by the GoogleWeather workflow between related
-	        operations.
-	    latitude (Optional[float]): Current latitude retained by the GoogleWeather workflow
-	        between related operations.
-	    longitude (Optional[float]): Current longitude retained by the GoogleWeather workflow
-	        between related operations.
-	    coordinates (Optional[Tuple[float, float]]): Current coordinates retained by the
-	        GoogleWeather workflow between related operations.
-	    address (Optional[str]): Current address retained by the GoogleWeather workflow between
-	        related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	        provider call.
-	    response (Optional[Response]): Most recent raw response returned by the provider client.
-	    payload (Optional[Dict[str, Any]]): Current payload retained by the GoogleWeather workflow
-	        between related operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	        instance.
-	    units_system (Optional[str]): Current units system retained by the GoogleWeather workflow
-	        between related operations.
-	    language_code (Optional[str]): Current language code retained by the GoogleWeather
-	        workflow between related operations.
-	    hours (Optional[int]): Current hours retained by the GoogleWeather workflow between
-	        related operations.
-	    days (Optional[int]): Current days retained by the GoogleWeather workflow between related
-	        operations.
-	    path (Optional[str]): Current path retained by the GoogleWeather workflow between related
-	        operations.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    request_url (str): Complete URL for the current weather request.
+	    gmaps (Optional[GoogleMaps]): GoogleMaps instance used for forward geocoding.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    api_key (Optional[str]): Weather API key loaded from configuration.
+	    mode (Optional[str]): Selected weather retrieval operation.
+	    latitude (Optional[float]): Resolved latitude in decimal degrees.
+	    longitude (Optional[float]): Resolved longitude in decimal degrees.
+	    coordinates (Optional[Tuple[float, float]]): Resolved latitude and longitude pair.
+	    address (Optional[str]): Latest address submitted for geocoding.
+	    params (Optional[Dict[str, Any]]): Latest request parameters, including the API key.
+	    response (Optional[Response]): Latest weather HTTP response.
+	    payload (Optional[Dict[str, Any]]): Latest decoded weather JSON object.
+	    result (Optional[Dict[str, Any]]): Packaged weather response with request metadata.
+	    units_system (Optional[str]): Requested measurement system.
+	    language_code (Optional[str]): Requested response language.
+	    hours (Optional[int]): Requested forecast or historical hours.
+	    days (Optional[int]): Requested forecast days.
+	    path (Optional[str]): Weather API endpoint path.
+	    request_url (str): Complete weather endpoint URL.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    url (Optional[str]): Base Google Weather API URL.
+	    timeout (Optional[int]): Weather HTTP request timeout in seconds.
 	"""
 	gmaps: Optional[ GoogleMaps ]
 	headers: Optional[ Dict[ str, Any ] ]
@@ -2732,15 +2719,14 @@ class GoogleWeather( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize weather retrieval configuration.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the configured weather API key, create the GoogleMaps geocoder, and initialize JSON
+		    headers, a ten-second timeout, metric units, English language, and empty response state.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		        value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.api_key = cfg.GOOGLE_WEATHER_API_KEY
@@ -2772,14 +2758,13 @@ class GoogleWeather( Fetcher ):
 			self.headers[ 'Accept' ] = 'application/json'
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'api_key', 'url', 'timeout', 'headers', 'gmaps', 'mode', 'latitude', 'longitude',
 				'coordinates', 'address', 'params', 'response', 'payload', 'result',
@@ -2789,22 +2774,19 @@ class GoogleWeather( Fetcher ):
 				'fetch_daily_forecast', 'fetch_hourly_history', 'fetch_alerts' ]
 	
 	def resolve_coordinates( self, address: str ) -> Tuple[ float, float ]:
-		"""Resolve coordinates.
+		"""Resolve an address to coordinates.
 
 		Purpose:
-		    Resolve coordinates using the class state and returns data required by the surrounding
-		    workflow.
+		    Delegate forward geocoding to GoogleMaps and retain the resolved geographic coordinates.
 
 		Args:
-		    address (str): Address supplied by the caller and interpreted according to the method
-		        contract.
+		    address (str): Nonblank location or address to geocode.
 
 		Returns:
-		    Tuple[float, float]: Ordered values or records produced by the operation.
+		    Tuple[float, float]: Latitude followed by longitude in decimal degrees.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation or geocoding fails.
 		"""
 		try:
 			throw_if( 'address', address )
@@ -2827,25 +2809,23 @@ class GoogleWeather( Fetcher ):
 			raise exception
 	
 	def request( self, path: str, params: Dict[ str, Any ], time: int=10 ) -> Dict[ str, Any ]:
-		"""Request.
+		"""Execute a weather endpoint request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Remove None and blank string parameters, add the configured API key, perform an HTTP GET
+		    request, check its status, and package the decoded JSON object.
 
 		Args:
-		    path (str): Filesystem or resource path identifying the input or output.
-		    params (Dict[str, Any]): Params supplied by the caller and interpreted according to
-		        the method contract.
-		    time (int): Maximum request duration in seconds.
+		    path (str): Nonblank weather API endpoint path relative to the base URL.
+		    params (Dict[str, Any]): Nonempty dictionary of endpoint query parameters.
+		    time (int): HTTP request timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Response containing mode, endpoint URL, request parameters without the API
+		        key, and decoded weather data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when input validation, provider retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'path', path )
@@ -2892,19 +2872,18 @@ class GoogleWeather( Fetcher ):
 			raise exception
 	
 	def package_response( self ) -> Dict[ str, Any ]:
-		"""Package response.
+		"""Return the packaged weather response.
 
 		Purpose:
-		    Combines normalized records, summary metrics, and request metadata into the standard
-		    response payload.
+		    Return the existing result when it contains data; otherwise reconstruct it from the
+		    retained endpoint, request parameters, and payload.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Response containing mode, endpoint URL, request parameters without the API
+		        key, and decoded weather data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when response packaging fails.
 		"""
 		try:
 			if not isinstance( self.result, dict ):
@@ -2929,26 +2908,24 @@ class GoogleWeather( Fetcher ):
 			raise exception
 	
 	def fetch_current( self, address: str, units_system: str='METRIC', language_code: str='en', time: int=10 ) -> Dict[ str, Any ] | None:
-		"""Fetch current.
+		"""Retrieve current weather conditions.
 
 		Purpose:
-		    Retrieves current from the configured provider and returns normalized response data.
+		    Resolve the address and request current conditions using the specified measurement system
+		    and language.
 
 		Args:
-		    address (str): Address supplied by the caller and interpreted according to the method
-		        contract.
-		    units_system (str): Units system supplied by the caller and interpreted according to
-		        the method contract.
-		    language_code (str): Code identifying the requested language value.
-		    time (int): Maximum request duration in seconds.
+		    address (str): Nonblank location or address to geocode.
+		    units_system (str): Nonblank provider measurement-system setting. Defaults to 'METRIC'.
+		    language_code (str): Nonblank response language code. Defaults to 'en'.
+		    time (int): Weather HTTP request timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Response containing mode, endpoint URL, request parameters without the API
+		        key, and decoded weather data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when input validation, provider retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'address', address )
@@ -2983,29 +2960,24 @@ class GoogleWeather( Fetcher ):
 			raise exception
 	
 	def fetch_hourly_forecast( self, address: str, hours: int=24, units_system: str='METRIC', language_code: str='en', time: int=10 ) -> Dict[ str, Any ] | None:
-		"""Fetch hourly forecast.
+		"""Retrieve an hourly weather forecast.
 
 		Purpose:
-		    Retrieves hourly forecast from the configured provider and returns normalized response
-		    data.
+		    Validate the forecast horizon, geocode the address, and request hourly forecast data.
 
 		Args:
-		    address (str): Address supplied by the caller and interpreted according to the method
-		        contract.
-		    hours (int): Hours supplied by the caller and interpreted according to the method
-		        contract.
-		    units_system (str): Units system supplied by the caller and interpreted according to
-		        the method contract.
-		    language_code (str): Code identifying the requested language value.
-		    time (int): Maximum request duration in seconds.
+		    address (str): Nonblank location or address to geocode.
+		    hours (int): Forecast horizon from 1 through 240 hours. Defaults to 24.
+		    units_system (str): Nonblank provider measurement-system setting. Defaults to 'METRIC'.
+		    language_code (str): Nonblank response language code. Defaults to 'en'.
+		    time (int): Weather HTTP request timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Response containing mode, endpoint URL, request parameters without the API
+		        key, and decoded weather data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when input validation, provider retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'address', address )
@@ -3044,29 +3016,24 @@ class GoogleWeather( Fetcher ):
 			raise exception
 	
 	def fetch_daily_forecast( self, address: str, days: int=5, units_system: str='METRIC', language_code: str='en', time: int=10 ) -> Dict[ str, Any ] | None:
-		"""Fetch daily forecast.
+		"""Retrieve a daily weather forecast.
 
 		Purpose:
-		    Retrieves daily forecast from the configured provider and returns normalized response
-		    data.
+		    Validate the forecast horizon, geocode the address, and request daily forecast data.
 
 		Args:
-		    address (str): Address supplied by the caller and interpreted according to the method
-		        contract.
-		    days (int): Days supplied by the caller and interpreted according to the method
-		        contract.
-		    units_system (str): Units system supplied by the caller and interpreted according to
-		        the method contract.
-		    language_code (str): Code identifying the requested language value.
-		    time (int): Maximum request duration in seconds.
+		    address (str): Nonblank location or address to geocode.
+		    days (int): Forecast horizon from 1 through 10 days. Defaults to 5.
+		    units_system (str): Nonblank provider measurement-system setting. Defaults to 'METRIC'.
+		    language_code (str): Nonblank response language code. Defaults to 'en'.
+		    time (int): Weather HTTP request timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Response containing mode, endpoint URL, request parameters without the API
+		        key, and decoded weather data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when input validation, provider retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'address', address )
@@ -3105,29 +3072,24 @@ class GoogleWeather( Fetcher ):
 			raise exception
 	
 	def fetch_hourly_history( self, address: str, hours: int=24, units_system: str='METRIC', language_code: str='en', time: int=10 ) -> Dict[ str, Any ] | None:
-		"""Fetch hourly history.
+		"""Retrieve historical hourly weather.
 
 		Purpose:
-		    Retrieves hourly history from the configured provider and returns normalized response
-		    data.
+		    Validate the historical horizon, geocode the address, and request hourly weather history.
 
 		Args:
-		    address (str): Address supplied by the caller and interpreted according to the method
-		        contract.
-		    hours (int): Hours supplied by the caller and interpreted according to the method
-		        contract.
-		    units_system (str): Units system supplied by the caller and interpreted according to
-		        the method contract.
-		    language_code (str): Code identifying the requested language value.
-		    time (int): Maximum request duration in seconds.
+		    address (str): Nonblank location or address to geocode.
+		    hours (int): Historical horizon from 1 through 24 hours. Defaults to 24.
+		    units_system (str): Nonblank provider measurement-system setting. Defaults to 'METRIC'.
+		    language_code (str): Nonblank response language code. Defaults to 'en'.
+		    time (int): Weather HTTP request timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Response containing mode, endpoint URL, request parameters without the API
+		        key, and decoded weather data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when input validation, provider retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'address', address )
@@ -3166,24 +3128,22 @@ class GoogleWeather( Fetcher ):
 			raise exception
 	
 	def fetch_alerts( self, address: str, language_code: str='en', time: int=10 ) -> (Dict[ str, Any ] | None):
-		"""Fetch alerts.
+		"""Retrieve public weather alerts.
 
 		Purpose:
-		    Retrieves alerts from the configured provider and returns normalized response data.
+		    Resolve the address and request public alerts in the selected language.
 
 		Args:
-		    address (str): Address supplied by the caller and interpreted according to the method
-		        contract.
-		    language_code (str): Code identifying the requested language value.
-		    time (int): Maximum request duration in seconds.
+		    address (str): Nonblank location or address to geocode.
+		    language_code (str): Nonblank response language code. Defaults to 'en'.
+		    time (int): Weather HTTP request timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Response containing mode, endpoint URL, request parameters without the API
+		        key, and decoded weather data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when input validation, provider retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'address', address )
@@ -3215,29 +3175,28 @@ class GoogleWeather( Fetcher ):
 			raise exception
 
 class NavalObservatory( Fetcher ):
-	"""NavalObservatory component.
+	"""U.S. Naval Observatory celestial-navigation adapter.
 
 	Purpose:
-	    Retrieves U.S. Naval Observatory celestial-navigation data after validating observation
-	    date, time, and coordinates.
+	    Validate the observation date, time, and geographic coordinates, retrieve
+	    celestial-navigation data, and package the provider response with the submitted parameters.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    date_value (Optional[str]): Current date value retained by the NavalObservatory workflow
-	    between related operations.
-	    time_value (Optional[str]): Current time value retained by the NavalObservatory workflow
-	    between related operations.
-	    latitude (Optional[float]): Current latitude retained by the NavalObservatory workflow
-	    between related operations.
-	    longitude (Optional[float]): Current longitude retained by the NavalObservatory workflow
-	    between related operations.
-	    location_label (Optional[str]): Current location label retained by the NavalObservatory
-	    workflow between related operations.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    headers (Any): HTTP headers sent with the current request.
+	    base_url (Optional[str]): Base USNO API URL.
+	    url (Optional[str]): Latest celestial-navigation endpoint URL.
+	    params (Optional[Dict[str, Any]]): Submitted date, time, and coordinate parameters.
+	    date_value (Optional[str]): Validated observation date.
+	    time_value (Optional[str]): Validated observation time.
+	    latitude (Optional[float]): Observation latitude in decimal degrees.
+	    longitude (Optional[float]): Observation longitude in decimal degrees.
+	    location_label (Optional[str]): Descriptive location label included in the result.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    response (Optional[Response]): Latest HTTP response.
+	    payload (Dict[str, Any]): Decoded celestial-navigation JSON object assigned after
+	        retrieval.
+	    result (Optional[Dict[str, Any]]): Packaged celestial-navigation response.
 	"""
 	base_url: Optional[ str ]
 	url: Optional[ str ]
@@ -3250,15 +3209,14 @@ class NavalObservatory( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize celestial-navigation state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure the USNO API base URL and user-agent, initialize date and time placeholders, and
+		    set the initial coordinates to 38.9072 latitude and -77.0369 longitude.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.headers = { }
@@ -3276,34 +3234,31 @@ class NavalObservatory( Fetcher ):
 			self.headers[ 'User-Agent' ] = self.agents
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'url', 'params', 'date_value', 'time_value', 'latitude', 'longitude',
 				'location_label', 'fetch_celnav', 'fetch', 'create_schema' ]
 	
 	def validate_date( self, date_value: str ) -> str:
-		"""Validate date.
+		"""Validate an observation date.
 
 		Purpose:
-		    Validates the date against provider constraints and returns the accepted value.
+		    Parse the supplied date and enforce the supported year range of 1800 through 2050.
 
 		Args:
-		    date_value (str): Date value supplied by the caller and interpreted according to the
-		        method contract.
+		    date_value (str): Observation date parsed as YYYY-MM-DD, with year 1800 through 2050.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Original date string after validation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata,
-		        writes it to the application logger, and re-raises it.
+		    Error: Raised when the date is missing, invalid, or outside the supported year range.
 		"""
 		try:
 			throw_if( 'date_value', date_value )
@@ -3320,21 +3275,20 @@ class NavalObservatory( Fetcher ):
 			raise exception
 	
 	def validate_time( self, time_value: str ) -> str:
-		"""Validate time.
+		"""Validate an observation time.
 
 		Purpose:
-		    Validates the time against provider constraints and returns the accepted value.
+		    Match a 24-hour time with optional seconds and one to six fractional second digits.
 
 		Args:
-		    time_value (str): Time value supplied by the caller and interpreted according to the
-		        method contract.
+		    time_value (str): Observation time in UTC, formatted HH:MM or HH:MM:SS with optional one
+		        to six fractional second digits.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Original time string after validation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when the time is missing or does not match the accepted format.
 		"""
 		try:
 			throw_if( 'time_value', time_value )
@@ -3357,21 +3311,22 @@ class NavalObservatory( Fetcher ):
 			raise exception
 	
 	def validate_coordinates( self, latitude: float, longitude: float ) -> tuple[ float, float ]:
-		"""Validate coordinates.
+		"""Validate geographic coordinates.
 
 		Purpose:
-		    Validates the coordinates against provider constraints and returns the accepted value.
+		    Check that latitude and longitude are finite and within their respective geographic
+		    bounds.
 
 		Args:
-		    latitude (float): Geographic latitude expressed in decimal degrees.
-		    longitude (float): Geographic longitude expressed in decimal degrees.
+		    latitude (float): Finite latitude in decimal degrees, from -90 through 90.
+		    longitude (float): Finite longitude in decimal degrees, from -180 through 180.
 
 		Returns:
-		    tuple[float, float]: Ordered values or records produced by the operation.
+		    tuple[float, float]: Original latitude and longitude values in that order.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when either coordinate is missing, nonfinite, or outside its geographic
+		        bounds.
 		"""
 		try:
 			throw_if( 'latitude', latitude )
@@ -3392,29 +3347,28 @@ class NavalObservatory( Fetcher ):
 			raise exception
 	
 	def fetch_celnav( self, date_value: str, time_value: str, latitude: float, longitude: float, location_label: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch celnav.
+		"""Retrieve celestial-navigation data.
 
 		Purpose:
-		    Retrieves celnav from the configured provider and returns normalized response data.
+		    Validate observation inputs, send the date, time, and coordinate pair to the USNO celnav
+		    endpoint, check HTTP status and provider errors, and package the JSON object.
 
 		Args:
-		    date_value (str): Date value supplied by the caller and interpreted according to the
-		        method contract.
-		    time_value (str): Time value supplied by the caller and interpreted according to the
-		        method contract.
-		    latitude (float): Geographic latitude expressed in decimal degrees.
-		    longitude (float): Geographic longitude expressed in decimal degrees.
-		    location_label (str): Location label supplied by the caller and interpreted according
-		        to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    date_value (str): Observation date parsed as YYYY-MM-DD, with year 1800 through 2050.
+		    time_value (str): Observation time in UTC, formatted HH:MM or HH:MM:SS with optional one
+		        to six fractional second digits.
+		    latitude (float): Finite latitude in decimal degrees, from -90 through 90.
+		    longitude (float): Finite longitude in decimal degrees, from -180 through 180.
+		    location_label (str): Optional descriptive location label retained in the result. Defaults
+		        to an empty string.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, location label, and decoded
+		        celestial-navigation data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when input validation, provider retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'time', time )
@@ -3451,31 +3405,33 @@ class NavalObservatory( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='celnav', date_value: str='', time_value: str='', latitude: float=0.0, longitude: float=0.0, location_label: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a celestial-navigation request.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Normalize the mode to lowercase and delegate to fetch_celnav. Reject modes other than
+		    celnav.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    date_value (str): Date value supplied by the caller and interpreted according to the
-		        method contract.
-		    time_value (str): Time value supplied by the caller and interpreted according to the
-		        method contract.
-		    latitude (float): Geographic latitude expressed in decimal degrees.
-		    longitude (float): Geographic longitude expressed in decimal degrees.
-		    location_label (str): Location label supplied by the caller and interpreted according
-		        to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): Retrieval mode. Defaults to 'celnav'; a blank mode also selects celnav.
+		    date_value (str): Observation date parsed as YYYY-MM-DD, with year 1800 through 2050.
+		        Defaults to an empty string, which requires replacement for retrieval.
+		    time_value (str): Observation time in UTC, formatted HH:MM or HH:MM:SS with optional one
+		        to six fractional second digits. Defaults to an empty string, which requires
+		        replacement for retrieval.
+		    latitude (float): Finite latitude in decimal degrees, from -90 through 90. Defaults to
+		        0.0.
+		    longitude (float): Finite longitude in decimal degrees, from -180 through 180. Defaults to
+		        0.0.
+		    location_label (str): Optional descriptive location label retained in the result. Defaults
+		        to an empty string.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, location label, and decoded
+		        celestial-navigation data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, provider retrieval, or response processing fails.
 		"""
 		try:
 			active_mode = ( mode or 'celnav' ).strip( ).lower( )
@@ -3494,26 +3450,24 @@ class NavalObservatory( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a celestial-navigation function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function schema with a service-qualified description and
+		    object parameter definitions.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Function name, description, and nested parameter schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -3538,31 +3492,33 @@ class NavalObservatory( Fetcher ):
 			raise exception
 
 class SatelliteCenter( Fetcher ):
-	"""SatelliteCenter component.
+	"""NASA Satellite Situation Center retrieval adapter.
 
 	Purpose:
-	    Retrieves satellite observatory, ground-station, and location reference data from the
-	    configured space-science service.
+	    Retrieve observatory and ground-station inventories through SscWs and spacecraft location
+	    data through the SSC REST service, retaining the returned dictionaries and checking
+	    reported provider status.
 
 	Attributes:
-	    ssc (Optional[SscWs]): Current ssc retained by the SatelliteCenter workflow between
-	    related operations.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    observatories (Optional[List[Dict[str, Any]]]): Current observatories retained by the
-	    SatelliteCenter workflow between related operations.
-	    ground_stations (Optional[List[Dict[str, Any]]]): Current ground stations retained by the
-	    SatelliteCenter workflow between related operations.
-	    timeout (Optional[int]): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
-	    agents (Any): Configured user-agent string sent with web requests.
-	    observatory_ids (str): Comma-separated observatory identifiers.
-	    start_time (str): Beginning UTC timestamp.
-	    end_time (str): Ending UTC timestamp.
-	    coordinate_systems (str): Requested SSC coordinate systems.
+	    ssc (Optional[SscWs]): SscWs client used for inventory retrieval.
+	    url (Optional[str]): Base SSC REST service URL.
+	    params (Optional[Dict[str, Any]]): Latest spacecraft-location query parameters.
+	    observatories (Optional[List[Dict[str, Any]]]): Observatory records extracted from the
+	        latest observatory response.
+	    ground_stations (Optional[List[Dict[str, Any]]]): Ground-station records extracted from the
+	        latest station response.
+	    timeout (Optional[int]): Current request timeout in seconds.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    observatory_ids (str): Comma-separated SSC spacecraft identifiers.
+	    start_time (str): Beginning UTC timestamp for location retrieval.
+	    end_time (str): Ending UTC timestamp for location retrieval.
+	    coordinate_systems (str): Comma-separated SSC coordinate system identifiers.
 	    resolution_factor (int): Requested sampling resolution factor.
-	    request_url (str): Complete URL for the current location request.
+	    request_url (str): Complete spacecraft-location endpoint URL.
+	    response (Optional[Response]): Latest direct HTTP response from location retrieval.
+	    result (Optional[Dict[str, Any]]): Latest SSC inventory or spacecraft-location response
+	        dictionary.
 	"""
 	ssc: Optional[ SscWs ]
 	url: Optional[ str ]
@@ -3578,15 +3534,14 @@ class SatelliteCenter( Fetcher ):
 	request_url: str
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize SSC retrieval configuration.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure the SSC REST endpoint, JSON headers, twenty-second timeout, default GSE
+		    coordinate system, resolution factor of one, and empty inventory state.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.ssc = None
@@ -3611,32 +3566,29 @@ class SatelliteCenter( Fetcher ):
 			self.headers[ 'Accept' ] = 'application/json'
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'url', 'timeout', 'headers', 'fetch_observatories', 'fetch_ground_stations',
 				'fetch_locations', 'fetch', ]
 	
 	def fetch_observatories( self ) -> Dict[ str, Any ] | None:
-		"""Fetch observatories.
+		"""Retrieve the spacecraft observatory inventory.
 
 		Purpose:
-		    Retrieves observatories from the configured provider and returns normalized response
-		    data.
+		    Construct SscWs with the current user-agent and timeout, request observatory metadata,
+		    check the returned dictionary and status, and retain its Observatory records.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Complete SSC observatory response dictionary.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, provider retrieval, or response processing fails.
 		"""
 		try:
 			self.ssc = SscWs( user_agent=self.agents, timeout=self.timeout )
@@ -3657,19 +3609,17 @@ class SatelliteCenter( Fetcher ):
 			raise exception
 	
 	def fetch_ground_stations( self ) -> Dict[ str, Any ] | None:
-		"""Fetch ground stations.
+		"""Retrieve the ground-station inventory.
 
 		Purpose:
-		    Retrieves ground stations from the configured provider and returns normalized response
-		    data.
+		    Construct SscWs with the current user-agent and timeout, request ground-station metadata,
+		    check the returned dictionary and status, and retain its GroundStation records.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Complete SSC ground-station response dictionary.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, provider retrieval, or response processing fails.
 		"""
 		try:
 			self.ssc = SscWs( user_agent=self.agents, timeout=self.timeout )
@@ -3690,31 +3640,29 @@ class SatelliteCenter( Fetcher ):
 			raise exception
 	
 	def fetch_locations( self, observatories: str, start_time: str, end_time: str, coordinate_systems: str='gse', resolution_factor: int=1, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch locations.
+		"""Retrieve spacecraft location data.
 
 		Purpose:
-		    Retrieves locations from the configured provider and returns normalized response data.
+		    Validate SSC identifiers, coordinate systems, UTC interval, and resolution factor;
+		    construct the REST endpoint and return its decoded response after checking HTTP and
+		    provider status.
 
 		Args:
-		    observatories (str): Observatories supplied by the caller and interpreted according to
-		    the method contract.
-		    start_time (str): Start time supplied by the caller and interpreted according to the
-		    method contract.
-		    end_time (str): End time supplied by the caller and interpreted according to the
-		    method contract.
-		    coordinate_systems (str): Coordinate systems supplied by the caller and interpreted
-		    according to the method contract.
-		    resolution_factor (int): Resolution factor supplied by the caller and interpreted
-		    according to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    observatories (str): Nonblank comma-separated SSC identifiers containing letters, digits,
+		        underscores, or hyphens.
+		    start_time (str): Beginning UTC timestamp in YYYYMMDDTHHMMSSZ format, strictly before
+		        end_time.
+		    end_time (str): Ending UTC timestamp in YYYYMMDDTHHMMSSZ format.
+		    coordinate_systems (str): Comma-separated coordinate systems: geo, gm, gse, gsm, sm,
+		        geitod, or geij2000. Defaults to 'gse'.
+		    resolution_factor (int): Sampling resolution factor of at least 1. Defaults to 1.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Complete decoded SSC spacecraft-location response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, provider retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'observatories', observatories )
@@ -3773,32 +3721,32 @@ class SatelliteCenter( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='observatories', query: str='', start_time: str='', end_time: str = '', coordinate_systems: str='gse', resolution_factor: int=1, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch an SSC retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Normalize the requested mode and delegate to observatory, ground-station, or
+		    spacecraft-location retrieval. Inventory modes use the current instance timeout; location
+		    mode uses the supplied timeout.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    start_time (str): Start time supplied by the caller and interpreted according to the
-		    method contract.
-		    end_time (str): End time supplied by the caller and interpreted according to the
-		    method contract.
-		    coordinate_systems (str): Coordinate systems supplied by the caller and interpreted
-		    according to the method contract.
-		    resolution_factor (int): Resolution factor supplied by the caller and interpreted
-		    according to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): observatories, ground_stations, or locations. Defaults to 'observatories'; a
+		        blank mode selects observatories.
+		    query (str): Comma-separated SSC observatory identifiers for locations mode. Defaults to
+		        an empty string.
+		    start_time (str): Beginning UTC timestamp in YYYYMMDDTHHMMSSZ format, strictly before
+		        end_time. Defaults to an empty string; required in locations mode.
+		    end_time (str): Ending UTC timestamp in YYYYMMDDTHHMMSSZ format. Defaults to an empty
+		        string; required in locations mode.
+		    coordinate_systems (str): Comma-separated coordinate systems: geo, gm, gse, gsm, sm,
+		        geitod, or geij2000. Defaults to 'gse'.
+		    resolution_factor (int): Sampling resolution factor of at least 1. Defaults to 1.
+		    time (int): Location request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Complete SSC response for the selected operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, provider retrieval, or response processing fails.
 		"""
 		try:
 			active_mode = (mode or 'observatories').strip( ).lower( )
