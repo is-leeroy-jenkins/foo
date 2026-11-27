@@ -1865,10 +1865,17 @@ class TheNews( Fetcher ):
 		    List[str]: Ordered news retrieval member names.
 		"""
 		return [ 'api_key', 'url', 'timeout', 'headers', 'endpoint', 'limit', 'page', 'params',
-				'query', 'language', 'categories', 'exclude_categories', 'locale', 'domains', 'exclude_domains', 'source_ids', 'exclude_source_ids', 'published_after', 'published_before', 'published_on', 'sort', 'include_similar', 'headlines_per_category', 'request_url',
-				'fetch', ]
+				'query', 'language', 'categories', 'exclude_categories', 'locale', 'domains',
+				'exclude_domains', 'source_ids', 'exclude_source_ids', 'published_after',
+				'published_before', 'published_on', 'sort', 'include_similar',
+				'headlines_per_category', 'request_url', 'fetch', ]
 	
-	def fetch( self, endpoint: str='all', query: str='', language: str='en', categories: str='', exclude_categories: str='', locale: str='', domains: str='', exclude_domains: str='', source_ids: str='', exclude_source_ids: str='', published_after: str='', published_before: str='', published_on: str='', sort: str='published_at', limit: int=10, page: int=1, include_similar: bool=True, headlines_per_category: int=6, time: int=10 ) -> Dict[ str, Any ]:
+	def fetch( self, endpoint: str='all', query: str='', language: str='en', categories: str='',
+			exclude_categories: str='', locale: str='', domains: str='', exclude_domains: str='',
+			source_ids: str='', exclude_source_ids: str='', published_after: str='',
+			published_before: str='', published_on: str='', sort: str='published_at',
+			limit: int=10, page: int=1, include_similar: bool=True,
+			headlines_per_category: int=6, time: int=10 ) -> Dict[ str, Any ]:
 		"""Retrieve news articles, headlines, or sources.
 
 		Purpose:

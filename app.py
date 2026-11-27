@@ -7412,7 +7412,7 @@ elif mode == 'Geospatial':
 			
 			with mag_c2:
 				usgseq_max_magnitude = st.number_input( 'Max Magnitude', min_value=0.0,
-					ax_value=10.0, value=float( st.session_state.get(
+					max_value=10.0, value=float( st.session_state.get(
 						'usgsearthquakes_max_magnitude', 10.0 ) ), step=0.1,
 					key='usgsearthquakes_max_magnitude', disabled=( usgseq_mode != 'search') )
 			
@@ -7467,8 +7467,8 @@ elif mode == 'Geospatial':
 			if usgseq_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'USGS Earthquakes'
 		
-
 			render_source_processing_controls( 'USGS Earthquakes', 'api_usgs_earthquakes' )
+		
 		# ----------------------------
 		# ------ Expander NASA Earth Observatory
 		# ----------------------------
@@ -7563,8 +7563,8 @@ elif mode == 'Geospatial':
 			if earth_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'NASA Earth Observatory'
 		
-
 			render_source_processing_controls( 'NASA Earth Observatory', 'api_nasa_earth_observatory' )
+		
 		# ----------------------------
 		# ------ Expander The National Map
 		# ----------------------------
@@ -7652,22 +7652,23 @@ elif mode == 'Geospatial':
 				st.session_state[ 'usgstnm_timeout' ] = 20
 				st.session_state[ 'usgstnm_results' ] = { }
 				st.session_state[ 'usgstnm_clear_request' ] = False
-			
-			usgstnm_mode = st.selectbox( 'Mode', options=USGSTNM_MODES, index=USGSTNM_MODES.index( st.session_state.get( 'usgstnm_mode', 'products' ) ), key='usgstnm_mode' )
-			
-			usgstnm_dataset = st.text_input( 'Dataset', value=st.session_state.get( 'usgstnm_dataset', '' ), key='usgstnm_dataset', disabled=(
-						usgstnm_mode != 'products'), placeholder='Example: Digital Elevation Model (DEM) 1 meter' )
-			
-			usgstnm_q = st.text_input( 'Search Text', value=st.session_state.get( 'usgstnm_q', '' ), key='usgstnm_q', disabled=(
-						usgstnm_mode != 'products'), placeholder='Optional keyword search' )
-			
-			usgstnm_bbox = st.text_input( 'Bounding Box', value=st.session_state.get( 'usgstnm_bbox', '' ), key='usgstnm_bbox', disabled=(
-						usgstnm_mode != 'products'), placeholder='minx,miny,maxx,maxy' )
-			
-			usgstnm_prod_formats = st.multiselect( 'Product Formats', options=USGSTNM_PRODUCT_FORMATS, default=[
+			usgstnm_mode = st.selectbox( 'Mode', options=USGSTNM_MODES, index=USGSTNM_MODES.index(
+				st.session_state.get( 'usgstnm_mode', 'products' ) ), key='usgstnm_mode' )
+			usgstnm_dataset = st.text_input( 'Dataset', value=st.session_state.get(
+				'usgstnm_dataset', '' ), key='usgstnm_dataset', disabled=(
+					usgstnm_mode != 'products'), placeholder='Example: Digital Elevation Model ('
+			                                                 'DEM) 1 meter' )
+			usgstnm_q = st.text_input( 'Search Text', value=st.session_state.get( 'usgstnm_q',
+				'' ), key='usgstnm_q', disabled=(
+					usgstnm_mode != 'products'), placeholder='Optional keyword search' )
+			usgstnm_bbox = st.text_input( 'Bounding Box', value=st.session_state.get(
+				'usgstnm_bbox', '' ), key='usgstnm_bbox', disabled=(
+					usgstnm_mode != 'products'), placeholder='minx,miny,maxx,maxy' )
+			usgstnm_prod_formats = st.multiselect( 'Product Formats',
+				options=USGSTNM_PRODUCT_FORMATS, default=[
 					value for value in st.session_state.get( 'usgstnm_prod_formats', [ ] ) if
 					value in USGSTNM_PRODUCT_FORMATS ], key='usgstnm_prod_formats', disabled=(
-						usgstnm_mode != 'products'), help='Optional TNM product-format filter.' )
+					usgstnm_mode != 'products'), help='Optional TNM product-format filter.' )
 			
 			page_c1, page_c2 = st.columns( 2 )
 			
@@ -7694,8 +7695,8 @@ elif mode == 'Geospatial':
 			if usgstnm_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'The National Map'
 		
-
 			render_source_processing_controls( 'The National Map', 'api_the_national_map' )
+		
 		# ----------------------------
 		# ------ Expander USGS Science Base
 		# ----------------------------
@@ -7793,6 +7794,7 @@ elif mode == 'Geospatial':
 		
 
 			render_source_processing_controls( 'USGS Science Base', 'api_usgs_science_base' )
+		
 		# ----------------------------
 		# ------ Expander Open Sky
 		# ----------------------------
