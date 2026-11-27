@@ -116,6 +116,9 @@ class LocalGGUFEmbeddings( Embeddings ):
 
         Returns:
             None: This method initializes the local model client when needed.
+
+        Raises:
+            Error: Wraps and logs local model loading failures.
         """
         try:
             if self.client is not None:
@@ -154,6 +157,9 @@ class LocalGGUFEmbeddings( Embeddings ):
 
         Returns:
             List[List[float]]: One numeric vector for each supplied text value.
+
+        Raises:
+            Error: Wraps and logs embedding generation failures.
         """
         try:
             throw_if( 'texts', texts )
@@ -195,6 +201,9 @@ class LocalGGUFEmbeddings( Embeddings ):
 
         Returns:
             List[float]: Numeric embedding vector for the supplied query.
+
+        Raises:
+            Error: Propagates embedding generation failures from embed_documents.
         """
         return self.embed_documents( [ text ] )[ 0 ]
 
@@ -223,6 +232,9 @@ class EmbeddingFactory( ):
     def __init__( self ) -> None:
         """Initialize embedding provider state.
 
+        Purpose:
+            Initializes provider selections and credentials obtained from application configuration.
+
         Returns:
             None: This method initializes instance state.
         """
@@ -247,36 +259,38 @@ class EmbeddingFactory( ):
 
         Returns:
             Embeddings: Configured LangChain embedding implementation.
+
+        Raises:
+            Error: Wraps and logs provider initialization failures.
         """
         try:
             throw_if( 'provider', provider )
             self.provider = provider
+            if self.provider == 'Local GGUF':
+                throw_if( 'model_path', model_path )
+                self.model_path = model_path
+                self.model = model
+                return LocalGGUFEmbeddings( model_path=self.model_path )
+
+            throw_if( 'model', model )
             self.model = model
             self.model_path = model_path
 
             if self.provider == 'OpenAI':
-                throw_if( 'model', model )
                 from langchain_openai import OpenAIEmbeddings
                 return OpenAIEmbeddings( model=self.model, api_key=self.openai_api_key )
 
             if self.provider == 'Google Generative AI':
-                throw_if( 'model', model )
                 from langchain_google_genai import GoogleGenerativeAIEmbeddings
                 return GoogleGenerativeAIEmbeddings( model=self.model, google_api_key=self.google_api_key )
 
             if self.provider == 'Mistral AI':
-                throw_if( 'model', model )
                 from langchain_mistralai import MistralAIEmbeddings
                 return MistralAIEmbeddings( model=self.model, api_key=self.mistral_api_key )
 
             if self.provider == 'Hugging Face':
-                throw_if( 'model', model )
                 from langchain_huggingface import HuggingFaceEmbeddings
                 return HuggingFaceEmbeddings( model_name=self.model )
-
-            if self.provider == 'Local GGUF':
-                throw_if( 'model_path', model_path )
-                return LocalGGUFEmbeddings( model_path=self.model_path )
 
             raise ValueError( f'Unsupported embedding provider: {self.provider}' )
         except Error:
