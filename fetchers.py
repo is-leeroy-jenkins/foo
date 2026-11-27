@@ -1359,11 +1359,13 @@ class ArXiv( Fetcher ):
 	get_full_documents: bool
 	load_all_available_meta: bool
 	
-	def __init__( self, max_documents: int=5, full_documents: bool=False, include_metadata: bool=False ) -> None:
+	def __init__( self, max_documents: int=5, full_documents: bool=False,
+			include_metadata: bool=False ) -> None:
 		"""Initialize arXiv retrieval defaults.
 
 		Purpose:
-		    Store the default document limit, full-document and metadata options, and initialize retriever and response state without issuing a search.
+		    Store the default document limit, full-document and metadata options,
+		    and initialize retriever and response state without issuing a search.
 
 		Args:
 		    max_documents (int): Default maximum documents, 5.
@@ -1384,11 +1386,14 @@ class ArXiv( Fetcher ):
 		self.get_full_documents = self.full_documents
 		self.load_all_available_meta = self.include_metadata
 	
-	def fetch( self, question: str, max_documents: int | None=None, full_documents: bool | None=None, include_metadata: bool | None=None ) -> List[ Document ] | None:
+	def fetch( self, question: str, max_documents: int | None=None,
+			full_documents: bool | None=None,
+			include_metadata: bool | None=None ) -> List[ Document ] | None:
 		"""Retrieve scholarly documents from arXiv.
 
 		Purpose:
-		    Resolve optional overrides against constructor defaults, construct ArxivRetriever, invoke it with the query, and store the resulting documents.
+		    Resolve optional overrides against constructor defaults, construct ArxivRetriever,
+		    invoke it with the query, and store the resulting documents.
 
 		Args:
 		    question (str): Nonblank scholarly search query.
@@ -1405,7 +1410,6 @@ class ArXiv( Fetcher ):
 		try:
 			throw_if( 'question', question )
 			self.query = question
-			
 			if max_documents is None:
 				self.load_max_docs = self.max_documents
 			else:
@@ -1435,7 +1439,7 @@ class ArXiv( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'ArXiv'
-			exception.method = 'fetch( self, question: str, max_documents: int | None=None, full_documents: bool | None=None, include_metadata: bool | None=None ) -> List[ Document ] | None'
+			exception.method = 'fetch( self, **args ) -> List[ Document ] | None'
 			Logger( ).write( exception )
 			raise exception
 
@@ -1443,7 +1447,8 @@ class GoogleDrive( Fetcher ):
 	"""Google Drive document retriever.
 
 	Purpose:
-	    Construct and invoke LangChain GoogleDriveRetriever using configured credential paths, query templates, folder and MIME filters, and document or snippet mode.
+	    Construct and invoke LangChain GoogleDriveRetriever using configured credential paths,
+	    query templates, folder and MIME filters, and document or snippet mode.
 
 	Attributes:
 	    fetcher (Optional[GoogleDriveRetriever]): Active LangChain Google Drive retriever.
@@ -1476,7 +1481,8 @@ class GoogleDrive( Fetcher ):
 		"""Initialize Google Drive retrieval state.
 
 		Purpose:
-		    Load configured folder and credential paths, initialize a ten-result document search using the gdrive-query template, and prepare empty retriever state.
+		    Load configured folder and credential paths, initialize a ten-result document search
+		    using the gdrive-query template, and prepare empty retriever state.
 
 		Returns:
 		    None: Initializes instance state.
@@ -1552,11 +1558,15 @@ class GoogleDrive( Fetcher ):
 		"""
 		return [ 'documents', 'snippets' ]
 	
-	def fetch( self, question: str, folder_id: str='root', results: int=10, template: str='gdrive-query', mime_type: str=None, mode: str='documents' ) -> List[ Document ] | None:
+	def fetch( self, question: str, folder_id: str='root', results: int=10,
+			template: str='gdrive-query', mime_type: str=None,
+			mode: str='documents' ) -> List[ Document ] | None:
 		"""Retrieve matching Google Drive documents.
 
 		Purpose:
-		    Validate the selected template, mode, result range, and optional MIME filter. Use a wildcard for an empty query in supported folder or MIME templates, construct the retriever with configured credential paths, and invoke it.
+		    Validate the selected template, mode, result range, and optional MIME filter.
+		    Use a wildcard for an empty query in supported folder or MIME templates, construct the
+		    retriever with configured credential paths, and invoke it.
 
 		Args:
 		    question (str): Search text; may be empty for all-in-folder or MIME-only templates.
@@ -1623,7 +1633,7 @@ class GoogleDrive( Fetcher ):
 			exception = Error( e )
 			exception.module = 'fetchers'
 			exception.cause = 'GoogleDrive'
-			exception.method = "fetch( self, question: str, folder_id: str='root', results: int=10, template: str='gdrive-query', mime_type: str=None, mode: str='documents' ) -> List[ Document ] | None"
+			exception.method = "fetch( self, question: str, **args ) -> List[ Document ] | None"
 			Logger( ).write( exception )
 			raise exception
 
@@ -1631,7 +1641,8 @@ class Wikipedia( Fetcher ):
 	"""Wikipedia article retriever.
 
 	Purpose:
-	    Construct and invoke LangChain WikipediaRetriever to obtain article documents with configurable language, document limit, and metadata options.
+	    Construct and invoke LangChain WikipediaRetriever to obtain article documents with
+	    configurable language, document limit, and metadata options.
 
 	Attributes:
 	    fetcher (Optional[WikipediaRetriever]): Active LangChain Wikipedia retriever.
@@ -1654,7 +1665,8 @@ class Wikipedia( Fetcher ):
 	load_max_docs: int
 	load_all_available_meta: bool
 	
-	def __init__( self, language: str='en', max_documents: int=5, include_metadata: bool=False ) -> None:
+	def __init__( self, language: str='en', max_documents: int=5,
+			include_metadata: bool=False ) -> None:
 		"""Initialize Wikipedia retrieval defaults.
 
 		Purpose:
@@ -1679,11 +1691,13 @@ class Wikipedia( Fetcher ):
 		self.load_max_docs = self.max_documents
 		self.load_all_available_meta = self.include_metadata
 	
-	def fetch( self, question: str, language: str | None=None, max_documents: int | None=None, include_metadata: bool | None=None ) -> List[ Document ] | None:
+	def fetch( self, question: str, language: str | None=None, max_documents: int | None=None,
+			include_metadata: bool | None=None ) -> List[ Document ] | None:
 		"""Retrieve Wikipedia article documents.
 
 		Purpose:
-		    Resolve per-request overrides against constructor defaults, construct WikipediaRetriever, invoke it with the search text, and store the resulting documents.
+		    Resolve per-request overrides against constructor defaults, construct
+		    WikipediaRetriever, invoke it with the search text, and store the resulting documents.
 
 		Args:
 		    question (str): Nonblank Wikipedia search query.
@@ -1729,7 +1743,7 @@ class Wikipedia( Fetcher ):
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'Wikipedia'
-			exception.method = 'fetch( self, question: str, language: str | None=None, max_documents: int | None=None, include_metadata: bool | None=None ) -> List[ Document ] | None'
+			exception.method = 'fetch( self, **args ) -> List[ Document ] | None'
 			Logger( ).write( exception )
 			raise exception
 
