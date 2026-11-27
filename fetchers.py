@@ -4147,16 +4147,15 @@ class EarthObservatory( Fetcher ):
 		"""
 		try:
 
-			throw_if( 'limit', limit )
-
-
-			throw_if( 'days', days )
 
 			self.mode = 'events'
+			throw_if( 'status', status )
 			self.status = status
 			self.category = category
 			self.source = source
+			throw_if( 'limit', limit )
 			self.limit = limit
+			throw_if( 'days', days )
 			self.days = days
 			self.start_date = start_date
 			self.end_date = end_date
@@ -4361,6 +4360,7 @@ class EarthObservatory( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			throw_if( 'mode', mode )
 			self.mode = mode
 
 			throw_if( 'time', time )
@@ -4591,9 +4591,12 @@ class GlobalImagery( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			throw_if( 'projection', projection )
 			self.projection = projection.strip( ).lower( ).replace( ':', '' )
-			self.quality = quality.strip( ).lower( )
-			self.version = version.strip( )
+			throw_if( 'quality', quality )
+			self.quality = quality
+			throw_if( 'version', version )
+			self.version = version
 			if self.projection not in ( 'epsg4326', 'epsg3857', 'epsg3413', 'epsg3031' ):
 				raise ValueError( 'Unsupported NASA GIBS WMS projection.' )
 			if not re.fullmatch( r'[a-z0-9_-]+', self.quality ):
@@ -4651,14 +4654,21 @@ class GlobalImagery( Fetcher ):
 			throw_if( 'layer', layer )
 			throw_if( 'image_date', image_date )
 			throw_if( 'bbox', bbox )
-			self.layer = layer.strip( )
-			self.image_date = image_date.strip( )
+			self.layer = layer
+			self.image_date = image_date
+			throw_if( 'projection', projection )
 			self.projection = projection.strip( ).lower( ).replace( ':', '' )
-			self.quality = quality.strip( ).lower( )
-			self.version = version.strip( )
-			self.image_format = image_format.strip( ).lower( )
+			throw_if( 'quality', quality )
+			self.quality = quality
+			throw_if( 'version', version )
+			self.version = version
+			throw_if( 'image_format', image_format )
+			self.image_format = image_format
+			throw_if( 'width', width )
 			self.width = width
+			throw_if( 'height', height )
 			self.height = height
+			throw_if( 'transparent', transparent )
 			self.transparent = transparent
 			if self.projection not in ( 'epsg4326', 'epsg3857', 'epsg3413', 'epsg3031' ):
 				raise ValueError( 'Unsupported NASA GIBS WMS projection.' )
@@ -4668,7 +4678,7 @@ class GlobalImagery( Fetcher ):
 				raise ValueError( 'GIBS WMS version must be 1.1.1 or 1.3.0.' )
 			if len( bbox ) != 4:
 				raise ValueError( 'bbox must contain west, south, east, north.' )
-			self.bbox = tuple( float( value ) for value in bbox )
+			self.bbox = bbox
 			if not all( float( '-inf' ) < value < float( 'inf' ) for value in self.bbox ):
 				raise ValueError( 'bbox coordinates must be finite.' )
 			west, south, east, north = self.bbox
@@ -4750,14 +4760,14 @@ class GlobalImagery( Fetcher ):
 			throw_if( 'layer', layer )
 			throw_if( 'image_date', image_date )
 			throw_if( 'bbox', bbox )
-			self.layer = layer.strip( )
-			self.image_date = image_date.strip( )
+			self.layer = layer
+			self.image_date = image_date
 			self.bbox = bbox
 			self.mode = 'wms_map'
 
 			throw_if( 'time', time )
 			self.timeout = time
-			request_url = self.build_wms_url( layer=self.layer, image_date=self.image_date,
+			self.url = self.build_wms_url( layer=self.layer, image_date=self.image_date,
 				bbox=self.bbox,
 				width=width, height=height, projection=projection, quality=quality,
 				image_format=image_format, transparent=transparent )
@@ -4773,7 +4783,6 @@ class GlobalImagery( Fetcher ):
 				filename = f'{safe_layer}_{safe_date}{extension}'
 			
 			self.file_path = str( directory / filename )
-			self.url = request_url
 			self.response = requests.get( url=self.url, headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
 			content_type = self.response.headers.get( 'Content-Type', '' )
@@ -5073,7 +5082,7 @@ class NearbyObjects( Fetcher ):
 			self.dv = dv
 			self.dur = dur
 			self.stay = stay
-			self.launch = launch.strip( )
+			self.launch = launch
 			if self.dv not in range( 4, 13 ):
 				raise ValueError( 'NHATS dv must be an integer from 4 through 12.' )
 			if self.dur not in range( 60, 451, 30 ):
@@ -5126,11 +5135,11 @@ class NearbyObjects( Fetcher ):
 			throw_if( 'start_date', start_date )
 			throw_if( 'end_date', end_date )
 			self.mode = 'close_approaches'
-			self.start_date = start_date.strip( )
-			self.end_date = end_date.strip( )
-			self.dist_max = ( dist_max or '10LD' ).strip( )
-			self.body = ( body or 'Earth' ).strip( )
-			self.sort = ( sort or 'date' ).strip( )
+			self.start_date = start_date
+			self.end_date = end_date
+			self.dist_max = dist_max
+			self.body = body
+			self.sort = sort
 			self.limit = limit
 			self.start = dt.datetime.strptime( self.start_date, '%Y-%m-%d' ).date( )
 			self.end = dt.datetime.strptime( self.end_date, '%Y-%m-%d' ).date( )
@@ -5199,14 +5208,15 @@ class NearbyObjects( Fetcher ):
 
 			throw_if( 'query', query )
 			self.mode = 'object_lookup'
-			self.query = query.strip( )
-			self.query_type = query_type.strip( ).lower( )
+			self.query = query
+			throw_if( 'query_type', query_type )
+			self.query_type = query_type
 			if self.query_type not in ('sstr', 'spk', 'des'):
 				raise ValueError( 'query_type must be sstr, spk, or des.' )
 			self.include_physical = include_physical
 			self.include_close_approaches = include_close_approaches
 			self.include_discovery = include_discovery
-			self.ca_body = ( ca_body or '' ).strip( )
+			self.ca_body = ca_body
 			self.url = f'{self.base_url}/sbdb.api'
 			self.params = { self.query_type: self.query,
 				'phys-par': '1' if self.include_physical else '0',
@@ -5306,7 +5316,7 @@ class NearbyObjects( Fetcher ):
 			throw_if( 'designation', designation )
 			self.validate_nhats_options( dv=dv, dur=dur, stay=stay, launch=launch )
 			self.mode = 'nhats_object'
-			self.query = designation.strip( )
+			self.query = designation
 			self.url = f'{self.base_url}/nhats.api'
 			self.params = { 'des': self.query, 'dv': self.dv, 'dur': self.dur,
 				'stay': self.stay, 'launch': self.launch }
@@ -5349,7 +5359,7 @@ class NearbyObjects( Fetcher ):
 			self.limit = limit
 			if self.limit < 1:
 				raise ValueError( 'limit must be positive.' )
-			self.start_date = ( date_min or '' ).strip( )
+			self.start_date = date_min
 			if self.start_date:
 				dt.datetime.strptime( self.start_date, '%Y-%m-%d' )
 			self.mode = 'fireballs'
@@ -5418,27 +5428,28 @@ class NearbyObjects( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			active_mode = ( mode or 'close_approaches' ).strip( ).lower( )
+			throw_if( 'mode', mode )
+			self.mode = mode
 			
-			if active_mode == 'close_approaches':
+			if self.mode == 'close_approaches':
 				return self.fetch_close_approaches( start_date=start_date, end_date=end_date,
 					dist_max=dist_max, body=body, sort=sort, limit=limit, time=time )
 			
-			if active_mode == 'object_lookup':
+			if self.mode == 'object_lookup':
 				return self.fetch_object_lookup( query=query, query_type=query_type,
 					include_physical=include_physical,
 					include_close_approaches=include_close_approaches, ca_body=ca_body,
 					include_discovery=include_discovery, time=time )
 			
-			if active_mode == 'nhats_summary':
+			if self.mode == 'nhats_summary':
 				return self.fetch_nhats_summary( dv=dv, dur=dur, stay=stay, launch=launch, h=h,
 					occ=occ, time=time )
 			
-			if active_mode == 'nhats_object':
+			if self.mode == 'nhats_object':
 				return self.fetch_nhats_object( designation=query, dv=dv, dur=dur, stay=stay,
 					launch=launch, time=time )
 			
-			if active_mode == 'fireballs':
+			if self.mode == 'fireballs':
 				return self.fetch_fireballs( date_min=start_date, limit=limit, time=time )
 			
 			raise ValueError( "Unsupported mode." )
@@ -5518,6 +5529,7 @@ class OpenScience( Fetcher ):
 	    related operations.
 	    agents (Optional[str]): Configured user-agent string sent with web requests.
 	    headers (Any): HTTP headers sent with the current request.
+	    accession (str): Dataset accession identifier.
 	"""
 	base_url: Optional[ str ]
 	url: Optional[ str ]
@@ -5527,6 +5539,8 @@ class OpenScience( Fetcher ):
 	size: Optional[ int ]
 	endpoint: Optional[ str ]
 	agents: Optional[ str ]
+	
+	accession: str
 	
 	def __init__( self ) -> None:
 		"""Initialize the instance.
@@ -5552,6 +5566,7 @@ class OpenScience( Fetcher ):
 		
 		if 'User-Agent' not in self.headers:
 			self.headers[ 'User-Agent' ] = self.agents
+		self.accession = ''
 	
 	def __dir__( self ) -> List[ str ]:
 		"""Return visible member names.
@@ -5585,13 +5600,13 @@ class OpenScience( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			value = ( format_value or 'json' ).strip( ).lower( )
+			throw_if( 'format_value', format_value )
 			
 			allowed = { 'json', 'csv', 'tsv', 'browser' }
-			if value not in allowed:
+			if format_value not in allowed:
 				raise ValueError( "Unsupported format. Use one of: json, csv, tsv, browser." )
 			
-			return value
+			return format_value
 		
 		except Exception as e:
 			exception = Error( e )
@@ -5695,7 +5710,7 @@ class OpenScience( Fetcher ):
 		"""
 		try:
 			throw_if( 'accession', accession )
-			self.accession = accession.strip( )
+			self.accession = accession
 			if not re.fullmatch( r'[A-Za-z0-9_-]+', self.accession ):
 				raise ValueError( 'Invalid OSDR dataset accession.' )
 			self.endpoint = f'/v2/dataset/{self.accession}/'
@@ -5734,7 +5749,7 @@ to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'query', query )
-			self.query_text = query.strip( )
+			self.query_text = query
 			self.format_value = self.validate_format( format_value )
 			self.endpoint = '/v2/query/metadata/'
 			self.url = f'{self.base_url}{self.endpoint}'
@@ -5775,7 +5790,7 @@ to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'query', query )
-			self.query_text = query.strip( )
+			self.query_text = query
 			self.format_value = self.validate_format( format_value )
 			self.endpoint = '/v2/query/assays/'
 			self.url = f'{self.base_url}{self.endpoint}'
@@ -5816,7 +5831,7 @@ to the application logger, and re-raises it.
 		"""
 		try:
 			throw_if( 'query', query )
-			self.query_text = query.strip( )
+			self.query_text = query
 			self.format_value = self.validate_format( format_value )
 			self.endpoint = '/v2/query/data/'
 			self.url = f'{self.base_url}{self.endpoint}'
@@ -5958,6 +5973,13 @@ class SpaceWeather( Fetcher ):
 	    between related operations.
 	    agents (Optional[str]): Configured user-agent string sent with web requests.
 	    headers (Any): HTTP headers sent with the current request.
+	    most_accurate_only (bool): Restrict CME analyses to the most accurate entries.
+	    complete_entry_only (bool): Restrict CME analyses to complete entries.
+	    speed (int): Minimum CME speed filter.
+	    half_angle (int): CME half-angle filter.
+	    keyword (str): CME keyword filter.
+	    endpoint (str): Selected DONKI API endpoint.
+	    active_key (str): Configured NASA key or documented demo key.
 	"""
 	base_url: Optional[ str ]
 	api_key: Optional[ str ]
@@ -5971,6 +5993,14 @@ class SpaceWeather( Fetcher ):
 	notification_type: Optional[ str ]
 	limit_note: Optional[ str ]
 	agents: Optional[ str ]
+	
+	most_accurate_only: bool
+	complete_entry_only: bool
+	speed: int
+	half_angle: int
+	keyword: str
+	endpoint: str
+	active_key: str
 	
 	def __init__( self ) -> None:
 		"""Initialize the instance.
@@ -6000,6 +6030,13 @@ class SpaceWeather( Fetcher ):
 		
 		if 'User-Agent' not in self.headers:
 			self.headers[ 'User-Agent' ] = self.agents
+		self.most_accurate_only = True
+		self.complete_entry_only = True
+		self.speed = 0
+		self.half_angle = 0
+		self.keyword = ''
+		self.endpoint = ''
+		self.active_key = self.api_key or 'DEMO_KEY'
 	
 	def __dir__( self ) -> List[ str ]:
 		"""Return visible member names.
@@ -6054,20 +6091,22 @@ class SpaceWeather( Fetcher ):
 		"""
 		try:
 			throw_if( 'most_accurate_only', most_accurate_only )
+			self.most_accurate_only = most_accurate_only
 
 			throw_if( 'complete_entry_only', complete_entry_only )
+			self.complete_entry_only = complete_entry_only
 
 			throw_if( 'endpoint', endpoint )
 
 			throw_if( 'time', time )
 			self.timeout = time
-			self.endpoint = endpoint.strip( )
+			self.endpoint = endpoint
 			supported = { 'CME', 'CMEAnalysis', 'GST', 'IPS', 'FLR', 'SEP',
 				'MPC', 'RBE', 'HSS', 'WSAEnlilSimulations', 'notifications' }
 			if self.endpoint not in supported:
 				raise ValueError( 'Unsupported NASA DONKI endpoint.' )
-			self.start_date = ( start_date or '' ).strip( )
-			self.end_date = ( end_date or '' ).strip( )
+			self.start_date = start_date
+			self.end_date = end_date
 			if ( self.start_date != '' ) != ( self.end_date != '' ):
 				raise ValueError( 'start_date and end_date must be supplied together.' )
 			if self.start_date:
@@ -6076,15 +6115,14 @@ class SpaceWeather( Fetcher ):
 				if start > end:
 					raise ValueError( 'start_date must precede or equal end_date.' )
 			# NASA documents DEMO_KEY for limited unauthenticated use.
-			self.active_key = self.api_key or 'DEMO_KEY'
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { 'api_key': self.active_key }
 			if self.start_date:
 				self.params[ 'startDate' ] = self.start_date
 				self.params[ 'endDate' ] = self.end_date
-			self.location = ( location or '' ).strip( )
-			self.catalog = ( catalog or '' ).strip( )
-			self.notification_type = ( notification_type or '' ).strip( )
+			self.location = location
+			self.catalog = catalog
+			self.notification_type = notification_type
 			if self.endpoint == 'IPS':
 				if self.location:
 					self.params[ 'location' ] = self.location
@@ -6095,13 +6133,13 @@ class SpaceWeather( Fetcher ):
 				self.half_angle = half_angle
 				if self.speed < 0 or not 0 <= self.half_angle <= 180:
 					raise ValueError( 'CME speed and half_angle must be nonnegative; half_angle <= 180.' )
-				self.params[ 'mostAccurateOnly' ] = str( most_accurate_only ).lower( )
-				self.params[ 'completeEntryOnly' ] = str( complete_entry_only ).lower( )
+				self.params[ 'mostAccurateOnly' ] = str( self.most_accurate_only ).lower( )
+				self.params[ 'completeEntryOnly' ] = str( self.complete_entry_only ).lower( )
 				self.params[ 'speed' ] = self.speed
 				self.params[ 'halfAngle' ] = self.half_angle
 				if self.catalog:
 					self.params[ 'catalog' ] = self.catalog
-				self.keyword = ( keyword or '' ).strip( )
+				self.keyword = keyword
 				if self.keyword:
 					self.params[ 'keyword' ] = self.keyword
 			if self.endpoint == 'notifications' and self.notification_type:
@@ -6165,26 +6203,24 @@ class SpaceWeather( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			active_mode = ( mode or 'cme' ).strip( ).lower( )
-			self.mode = active_mode
+			throw_if( 'mode', mode )
+			self.mode = mode
 			
 			endpoint_map = { 'cme': 'CME', 'cme_analysis': 'CMEAnalysis', 'gst': 'GST',
 					'ips': 'IPS', 'flr': 'FLR', 'sep': 'SEP', 'mpc': 'MPC', 'rbe': 'RBE',
 					'hss': 'HSS', 'wsa_enlil': 'WSAEnlilSimulations',
 					'notifications': 'notifications' }
 			
-			if active_mode not in endpoint_map:
+			if self.mode not in endpoint_map:
 				raise ValueError( "Unsupported mode. Use 'cme', 'cme_analysis', 'gst', 'ips', "
 				                  "'flr', 'sep', 'mpc', 'rbe', 'hss', 'wsa_enlil', "
 				                  "or 'notifications'." )
 			
-			return self.fetch_endpoint( endpoint=endpoint_map[
-				active_mode ], start_date=start_date.strip( ), end_date=( end_date
-			).strip( ), time=time, location=( location or 'ALL' ).strip( ), catalog=(
-				catalog or 'ALL' ).strip( ), notification_type=( notification_type or 'all'
-			).strip( ), most_accurate_only=most_accurate_only, complete_entry_only=(
-				complete_entry_only ), speed=speed, half_angle=half_angle,
-				keyword=( keyword or '' ).strip( ) )
+			return self.fetch_endpoint( endpoint=endpoint_map[ self.mode ], start_date=start_date,
+				end_date=end_date, time=time, location=location, catalog=catalog,
+				notification_type=notification_type, most_accurate_only=most_accurate_only,
+				complete_entry_only=complete_entry_only, speed=speed, half_angle=half_angle,
+				keyword=keyword )
 		
 		except Exception as exc:
 			exception = Error( exc )
