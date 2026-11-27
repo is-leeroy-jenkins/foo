@@ -17350,6 +17350,8 @@ class AirNow( Fetcher ):
 			
 			self.endpoint = endpoint.strip( )
 			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			if params is not None and not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
@@ -17552,8 +17554,8 @@ class AirNow( Fetcher ):
 			if not re.fullmatch( r'\d{5}', self.zip_code ):
 				raise ValueError( 'zip_code must contain exactly five digits.' )
 			self.distance = distance
-			if self.distance < 1:
-				raise ValueError( 'distance must be greater than zero.' )
+			if type( self.distance ) is not int or self.distance < 1:
+				raise ValueError( 'distance must be a positive integer.' )
 			throw_if( 'time', time )
 			self.timeout = time
 			
@@ -17601,13 +17603,13 @@ class AirNow( Fetcher ):
 			self.mode = 'current-latlon'
 			self.latitude = latitude
 			self.longitude = longitude
-			if not (math.isfinite( self.latitude ) and -90 <= self.latitude <= 90):
+			if isinstance( self.latitude, bool ) or not (math.isfinite( self.latitude ) and -90 <= self.latitude <= 90):
 				raise ValueError( 'latitude must be finite and between -90 and 90.' )
-			if not (math.isfinite( self.longitude ) and -180 <= self.longitude <= 180):
+			if isinstance( self.longitude, bool ) or not (math.isfinite( self.longitude ) and -180 <= self.longitude <= 180):
 				raise ValueError( 'longitude must be finite and between -180 and 180.' )
 			self.distance = distance
-			if self.distance < 1:
-				raise ValueError( 'distance must be greater than zero.' )
+			if type( self.distance ) is not int or self.distance < 1:
+				raise ValueError( 'distance must be a positive integer.' )
 			throw_if( 'time', time )
 			self.timeout = time
 			
@@ -17660,8 +17662,8 @@ class AirNow( Fetcher ):
 				raise ValueError( 'zip_code must contain exactly five digits.' )
 			self.date = date.strip( )
 			self.distance = distance
-			if self.distance < 1:
-				raise ValueError( 'distance must be greater than zero.' )
+			if type( self.distance ) is not int or self.distance < 1:
+				raise ValueError( 'distance must be a positive integer.' )
 			throw_if( 'time', time )
 			self.timeout = time
 			
@@ -17712,14 +17714,14 @@ class AirNow( Fetcher ):
 			self.mode = 'forecast-latlon'
 			self.latitude = latitude
 			self.longitude = longitude
-			if not (math.isfinite( self.latitude ) and -90 <= self.latitude <= 90):
+			if isinstance( self.latitude, bool ) or not (math.isfinite( self.latitude ) and -90 <= self.latitude <= 90):
 				raise ValueError( 'latitude must be finite and between -90 and 90.' )
-			if not (math.isfinite( self.longitude ) and -180 <= self.longitude <= 180):
+			if isinstance( self.longitude, bool ) or not (math.isfinite( self.longitude ) and -180 <= self.longitude <= 180):
 				raise ValueError( 'longitude must be finite and between -180 and 180.' )
 			self.date = date.strip( )
 			self.distance = distance
-			if self.distance < 1:
-				raise ValueError( 'distance must be greater than zero.' )
+			if type( self.distance ) is not int or self.distance < 1:
+				raise ValueError( 'distance must be a positive integer.' )
 			throw_if( 'time', time )
 			self.timeout = time
 			
@@ -17960,7 +17962,7 @@ class ClimateData( Fetcher ):
 
 			throw_if( 'limit', limit )
 
-			if limit < 1 or limit > 500:
+			if type( limit ) is not int or limit < 1 or limit > 500:
 				raise ValueError( 'limit must be between 1 and 500.' )
 			
 			return limit
@@ -17994,7 +17996,7 @@ class ClimateData( Fetcher ):
 
 			throw_if( 'offset', offset )
 
-			if offset < 0 or offset > 10000:
+			if type( offset ) is not int or offset < 0 or offset > 10000:
 				raise ValueError( 'offset must be between 0 and 10000.' )
 			
 			return offset
@@ -18275,6 +18277,8 @@ class ClimateData( Fetcher ):
 			
 			self.url = url.strip( )
 			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { }
 			
@@ -18735,7 +18739,7 @@ related operations.
 
 			throw_if( 'limit', limit )
 
-			if limit < 1 or limit > 500:
+			if type( limit ) is not int or limit < 1 or limit > 500:
 				raise ValueError( 'limit must be between 1 and 500.' )
 			
 			return limit
@@ -18769,7 +18773,7 @@ related operations.
 			throw_if( 'days', days )
 			
 			value = days
-			if value < 1 or value > 3650:
+			if type( value ) is not int or value < 1 or value > 3650:
 				raise ValueError( 'days must be between 1 and 3650.' )
 			
 			return value
@@ -19095,6 +19099,8 @@ related operations.
 			
 			self.endpoint = self.validate_endpoint( endpoint )
 			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
@@ -19526,7 +19532,7 @@ to the application logger, and re-raises it.
 
 			throw_if( 'limit', limit )
 
-			if limit < 1 or limit > 500:
+			if type( limit ) is not int or limit < 1 or limit > 500:
 				raise ValueError( 'limit must be between 1 and 500.' )
 			
 			return limit
@@ -19740,6 +19746,8 @@ to the application logger, and re-raises it.
 			
 			self.url = url.strip( )
 			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			
@@ -20463,6 +20471,8 @@ metadata, or generated schema content.
 			
 			self.url = url.strip( )
 			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { }
 			
@@ -21166,6 +21176,8 @@ class UvIndex( Fetcher ):
 				raise ValueError( 'params must be a dictionary.' )
 			self.params = params
 			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			
@@ -21698,7 +21710,7 @@ class PurpleAir( Fetcher ):
 			throw_if( 'sensor_index', sensor_index )
 			
 			value = sensor_index
-			if value < 1:
+			if type( value ) is not int or value < 1:
 				raise ValueError( 'sensor_index must be greater than or equal to 1.' )
 			
 			return value
@@ -21733,7 +21745,7 @@ class PurpleAir( Fetcher ):
 			throw_if( name, value )
 			
 			number = value
-			if not math.isfinite( number ) or number < -180.0 or number > 180.0:
+			if isinstance( number, bool ) or not math.isfinite( number ) or number < -180.0 or number > 180.0:
 				raise ValueError( f'{name} must be between -180 and 180.' )
 			
 			return number
@@ -21768,7 +21780,7 @@ class PurpleAir( Fetcher ):
 			throw_if( name, value )
 			
 			number = value
-			if not math.isfinite( number ) or number < -90.0 or number > 90.0:
+			if isinstance( number, bool ) or not math.isfinite( number ) or number < -90.0 or number > 90.0:
 				raise ValueError( f'{name} must be between -90 and 90.' )
 			
 			return number
@@ -21848,7 +21860,7 @@ class PurpleAir( Fetcher ):
 			throw_if( 'location_type', location_type )
 			
 			value = location_type
-			if value not in (0, 1):
+			if type( value ) is not int or value not in (0, 1):
 				raise ValueError( 'location_type must be 0 or 1.' )
 			
 			return value
@@ -21882,11 +21894,10 @@ class PurpleAir( Fetcher ):
 		try:
 			throw_if( 'name', name )
 			
-			if value is None:
-				raise ValueError( f'{name} cannot be None.' )
+			throw_if( name, value )
 			
 			number = value
-			if number < 0:
+			if type( number ) is not int or number < 0:
 				raise ValueError( f'{name} must be greater than or equal to 0.' )
 			
 			return number
@@ -22162,6 +22173,8 @@ class PurpleAir( Fetcher ):
 				raise ValueError( 'params must be a dictionary.' )
 			
 			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
@@ -22667,9 +22680,11 @@ class OpenAQ( Fetcher ):
 
 			if maximum is not None:
 				throw_if( 'maximum', maximum )
+				if type( maximum ) is not int or maximum < 1:
+					raise ValueError( 'maximum must be a positive integer.' )
 
 			
-			if value < 1:
+			if type( value ) is not int or value < 1:
 				raise ValueError( f'{name} must be greater than or equal to 1.' )
 			
 			if maximum is not None and value > maximum:
@@ -22706,12 +22721,11 @@ class OpenAQ( Fetcher ):
 		try:
 			throw_if( 'name', name )
 			
-			if value is None:
-				raise ValueError( f'{name} cannot be None.' )
+			throw_if( name, value )
 			
-			number = int( value )
+			number = value
 			
-			if number < 0:
+			if type( number ) is not int or number < 0:
 				raise ValueError( f'{name} must be greater than or equal to 0.' )
 			
 			return number
@@ -23134,6 +23148,8 @@ class OpenAQ( Fetcher ):
 				raise ValueError( 'params must be a dictionary.' )
 			
 			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
@@ -23776,7 +23792,7 @@ class Firms( Fetcher ):
 		try:
 			throw_if( 'day_range', day_range )
 			value = day_range
-			if value < 1 or value > 5:
+			if type( value ) is not int or value < 1 or value > 5:
 				raise ValueError( 'day_range must be between 1 and 5.' )
 			
 			return value
@@ -24035,6 +24051,8 @@ class Firms( Fetcher ):
 
 			self.url = url.strip( )
 			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.response = requests.get( url=self.url, headers=self.headers,
@@ -24560,7 +24578,7 @@ class OpenSky( Fetcher ):
 			
 			throw_if( name, value )
 
-			if value < 0:
+			if type( value ) is not int or value < 0:
 				raise ValueError( f'{name} must be greater than or equal to 0.' )
 			
 			return value
@@ -24636,7 +24654,7 @@ class OpenSky( Fetcher ):
 			
 			throw_if( name, value )
 
-			if not math.isfinite( value ) or value < -90.0 or value > 90.0:
+			if isinstance( value, bool ) or not math.isfinite( value ) or value < -90.0 or value > 90.0:
 				raise ValueError( f'{name} must be between -90 and 90.' )
 			
 			return value
@@ -24675,7 +24693,7 @@ class OpenSky( Fetcher ):
 			
 			throw_if( name, value )
 
-			if not math.isfinite( value ) or value < -180.0 or value > 180.0:
+			if isinstance( value, bool ) or not math.isfinite( value ) or value < -180.0 or value > 180.0:
 				raise ValueError( f'{name} must be between -180 and 180.' )
 			
 			return value
@@ -25324,6 +25342,8 @@ metadata, or generated schema content.
 		"""
 		try:
 			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.mode = self.validate_mode( mode )
 			
