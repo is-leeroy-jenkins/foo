@@ -5998,29 +5998,37 @@ class SpaceWeather( Fetcher ):
 			raise exception
 
 class AstroCatalog( Fetcher ):
-	"""AstroCatalog component.
+	"""SIMBAD and VizieR astronomical catalog adapter.
 
 	Purpose:
-	    Queries astronomical catalogs by object identifier, coordinate cone, or provider-specific
-	    request arguments.
+	    Query named objects or ICRS coordinate regions through Astroquery, serialize Astropy
+	    tables into row dictionaries, and optionally retain CSV or TSV representations.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    format (Optional[str]): Current format retained by the AstroCatalog workflow between
-	    related operations.
-	    name (Optional[str]): Current name retained by the AstroCatalog workflow between related
-	    operations.
-	    declination (Optional[str]): Current declination retained by the AstroCatalog workflow
-	    between related operations.
-	    right_ascension (Optional[str]): Current right ascension retained by the AstroCatalog
-	    workflow between related operations.
-	    radius (Optional[int]): Current radius retained by the AstroCatalog workflow between
-	    related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    headers (Any): HTTP headers sent with the current request.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    agents (Any): Configured user-agent string sent with web requests.
+	    base_url (Optional[str]): Base service URL.
+	    provider (str): Selected Astroquery provider; transient is mapped to VizieR.
+	    catalog (str): VizieR catalog identifier or empty string.
+	    route (str): Normalized object route or catalog region selector.
+	    url (Optional[str]): Latest endpoint URL.
+	    response (Optional[Response]): Latest HTTP response.
+	    payload (Any): Latest raw Astroquery table or table collection.
+	    result (Dict[str, Any]): Latest serialized catalog response.
+	    client (Any): Active Simbad or Vizier client.
+	    coordinates (Optional[SkyCoord]): ICRS SkyCoord for the current cone search.
+	    search_radius (Optional[u.Quantity]): Astropy angular quantity in arcminutes.
+	    format (Optional[str]): Requested output representation.
+	    name (Optional[str]): Astronomical object name.
+	    right_ascension (Optional[str]): Latest right ascension value.
+	    declination (Optional[str]): Latest declination value.
+	    radius (Optional[int]): Latest search radius.
+	    params (Optional[Dict[str, Any]]): Latest provider request parameters.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    timeout (Optional[int]): Request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    mode (str): Selected retrieval operation.
+	    quantity (str): Legacy quantity path supplied to fetch.
+	    attributes (str): Legacy attribute path supplied to fetch.
+	    arguments (str): Provider-specific argument string supplied to fetch.
 	"""
 	base_url: Optional[ str ]
 	format: Optional[ str ]
@@ -6031,15 +6039,14 @@ class AstroCatalog( Fetcher ):
 	params: Optional[ Dict[ str, Any ] ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Initialize SIMBAD as the default provider, JSON output, a twenty-second timeout, and
+		    empty catalog, client, coordinate, and response state.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.base_url = 'https://simbad.cds.unistra.fr'
@@ -6070,14 +6077,13 @@ class AstroCatalog( Fetcher ):
 			self.headers[ 'Accept' ] = 'application/json'
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'timeout', 'headers', 'provider', 'catalog',
 				'route', 'format', 'name', 'right_ascension', 'declination', 'radius',
@@ -6085,20 +6091,19 @@ class AstroCatalog( Fetcher ):
 				'fetch_object', 'cone_search', 'fetch' ]
 	
 	def normalize_attribute_path( self, quantity: str='', attributes: str='' ) -> str:
-		"""Normalize attribute path.
+		"""Assemble a legacy attribute path.
 
 		Purpose:
-		    Normalizes attribute path into the canonical representation expected by the
-		    surrounding workflow.
+		    Strip nonblank quantity and comma-separated attribute components and join them with
+		    slashes.
 
 		Args:
-		    quantity (str): Quantity supplied by the caller and interpreted according to the
-		    method contract.
-		    attributes (str): Attributes supplied by the caller and interpreted according to the
-		    method contract.
+		    quantity (str): Optional quantity path component. Defaults to an empty string.
+		    attributes (str): Optional comma-separated attribute components. Defaults to an empty
+		        string.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Slash-separated path, or an empty string when no components are supplied.
 		"""
 		parts: list[ str ] = [ ]
 		if quantity and quantity.strip( ):
@@ -6111,18 +6116,17 @@ class AstroCatalog( Fetcher ):
 		return '/'.join( parts )
 	
 	def parse_argument( self, argument_string: str ) -> Dict[ str, Any ]:
-		"""Parse argument.
+		"""Parse provider argument text.
 
 		Purpose:
-		    Parses argument into the typed representation expected by the provider request.
+		    Split text on commas and newlines, trim tokens, split each key/value pair on its first
+		    equals sign, and use an empty value for bare keys.
 
 		Args:
-		    argument_string (str): Argument string supplied by the caller and interpreted
-		    according to the method contract.
+		    argument_string (str): Provider option text; blank text returns an empty dictionary.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Parsed option names mapped to string values.
 		"""
 		params: Dict[ str, Any ] = { }
 		
@@ -6142,20 +6146,21 @@ class AstroCatalog( Fetcher ):
 		return params
 	
 	def serialize_table( self, table: Table, catalog: str ) -> Dict[ str, Any ]:
-		"""Convert an Astropy table into JSON-compatible catalog rows.
+		"""Serialize an Astropy catalog table.
 
 		Purpose:
-		    Preserves column names, provider catalog provenance, and masked values while
-		    returning plain Python values for downstream model tools.
+		    Convert table rows to dictionaries, replace masked cells with None, unwrap NumPy
+		    scalars, decode bytes as UTF-8, and stringify other unsupported cell values.
 
 		Args:
-		    table (Table): Astroquery result table.
-		    catalog (str): Source catalog identifier.
+		    table (Table): Astropy table to serialize.
+		    catalog (str): Nonblank catalog label.
 
 		Returns:
-		    Dict[str, Any]: Catalog name, columns, rows, and number of records.
+		    Dict[str, Any]: Catalog label, column names, serialized rows, and row count.
+
 		Raises:
-		    Error: Wraps and logs validation or table serialization failures.
+		    Error: Raised when validation or table serialization fails.
 		"""
 		try:
 			throw_if( 'table', table )
@@ -6188,24 +6193,28 @@ class AstroCatalog( Fetcher ):
 			raise exception
 
 	def request( self, route: str, params: Dict[ str, Any ] | None=None, time: int=20 ) -> Any:
-		"""Retrieve catalog data from SIMBAD or a named VizieR catalog.
+		"""Execute an astronomical catalog query.
 
 		Purpose:
-		    Replaces the retired Open Astronomy Catalog endpoint with Astroquery.
-		    'catalog' selects a region query; an object name selects an object lookup.
-		    The optional parameters 'provider', 'catalog', and 'row_limit' allow
-		    retrieval from published VizieR catalogs, including transient catalogs.
+		    Select SIMBAD or VizieR (including the transient alias), resolve the object or cone
+		    route, query Astroquery, serialize returned tables, and optionally produce delimited
+		    text.
 
 		Args:
-		    route: Encoded object name or 'catalog' for a cone search.
-		    params: Provider selection and query arguments.
-		    time: Positive provider timeout in seconds.
+		    route (str): Nonblank object route or the literal 'catalog' for a cone query.
+		    params (Dict[str, Any] | None): Provider options; None uses an empty dictionary.
+		        Supports format (json/csv/tsv), provider (simbad/vizier/transient), catalog
+		        (required for VizieR), ra and dec (degrees, required for cones), radius (positive
+		        arcminutes, default 2), and VizieR row_limit (default 50).
+		    time (int): Request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Any: JSON-compatible catalog records or formatted CSV/TSV tables.
+		    Dict[str, Any]: Provider, catalog, retrieval mode, serialized tables, total row count,
+		        and formatted_tables for CSV or TSV output.
 
 		Raises:
-		    Error: Wraps provider or response-processing errors.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'route', route )
@@ -6286,29 +6295,30 @@ class AstroCatalog( Fetcher ):
 			raise exception
 
 	def fetch_object( self, name: str, quantity: str='', attributes: str='', arguments: str='', data_format: str='json', time: int=20 ) -> Any:
-		"""Fetch object.
+		"""Query an astronomical object by name.
 
 		Purpose:
-		    Retrieves object from the configured provider and returns normalized response data.
+		    Encode the object name, reject unsupported legacy quantity and attribute paths, parse
+		    provider options, and delegate to request.
 
 		Args:
-		    name (str): Argument name included in validation error messages.
-		    quantity (str): Quantity supplied by the caller and interpreted according to the
-		        method contract.
-		    attributes (str): Attributes supplied by the caller and interpreted according to the
-		        method contract.
-		    arguments (str): Arguments supplied by the caller and interpreted according to the
-		        method contract.
-		    data_format (str): Data format supplied by the caller and interpreted according to the
-		        method contract.
-		    time (int): Maximum request duration in seconds.
+		    name (str): Nonblank astronomical object name or identifier.
+		    quantity (str): Legacy quantity path; nonblank content is rejected. Defaults to an empty
+		        string.
+		    attributes (str): Legacy comma-separated attribute path; nonblank parsed content is
+		        rejected. Defaults to an empty string.
+		    arguments (str): Comma- or newline-separated provider options, such as provider,
+		        catalog, and row_limit. Defaults to an empty string.
+		    data_format (str): json, csv, or tsv. Defaults to 'json'.
+		    time (int): Request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Any: Provider, loader, or normalized application value produced by the operation.
+		    Dict[str, Any]: Provider, catalog, retrieval mode, serialized tables, total row count,
+		        and formatted_tables for CSV or TSV output.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'name', name )
@@ -6340,33 +6350,32 @@ class AstroCatalog( Fetcher ):
 			raise exception
 	
 	def cone_search( self, ra: str, dec: str, radius: int=2, quantity: str='', attributes: str='', arguments: str='', data_format: str='json', time: int=20 ) -> Any:
-		"""Cone search.
+		"""Query an astronomical coordinate cone.
 
 		Purpose:
-		    Cone search using the class state and returns data required by the surrounding
-		    workflow.
+		    Validate coordinates, radius and format, reject unsupported legacy paths, and delegate
+		    to request using the catalog route.
 
 		Args:
-		    ra (str): Ra supplied by the caller and interpreted according to the method contract.
-		    dec (str): Dec supplied by the caller and interpreted according to the method contract.
-		    radius (int): Radius supplied by the caller and interpreted according to the method
-		        contract.
-		    quantity (str): Quantity supplied by the caller and interpreted according to the
-		        method contract.
-		    attributes (str): Attributes supplied by the caller and interpreted according to the
-		        method contract.
-		    arguments (str): Arguments supplied by the caller and interpreted according to the
-		        method contract.
-		    data_format (str): Data format supplied by the caller and interpreted according to the
-		        method contract.
-		    time (int): Maximum request duration in seconds.
+		    ra (str): Nonblank right ascension interpreted in degrees.
+		    dec (str): Nonblank declination interpreted in degrees.
+		    radius (int): Positive cone radius in arcminutes. Defaults to 2.
+		    quantity (str): Legacy quantity path; nonblank content is rejected. Defaults to an empty
+		        string.
+		    attributes (str): Legacy comma-separated attribute path; nonblank parsed content is
+		        rejected. Defaults to an empty string.
+		    arguments (str): Comma- or newline-separated provider options, such as provider,
+		        catalog, and row_limit. Defaults to an empty string.
+		    data_format (str): json, csv, or tsv. Defaults to 'json'.
+		    time (int): Request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Any: Provider, loader, or normalized application value produced by the operation.
+		    Dict[str, Any]: Provider, catalog, retrieval mode, serialized tables, total row count,
+		        and formatted_tables for CSV or TSV output.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'ra', ra )
@@ -6405,35 +6414,37 @@ class AstroCatalog( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='object_query', query: str='', quantity: str='', attributes:str='', arguments: str='', ra: str='', dec: str='', radius: int=2, data_format: str='json', time: int=20 ) -> Any:
-		"""Fetch.
+		"""Dispatch a catalog query.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select object_query or cone_search and delegate with the corresponding name or
+		    coordinate arguments.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    quantity (str): Quantity supplied by the caller and interpreted according to the
-		        method contract.
-		    attributes (str): Attributes supplied by the caller and interpreted according to the
-		        method contract.
-		    arguments (str): Arguments supplied by the caller and interpreted according to the
-		        method contract.
-		    ra (str): Ra supplied by the caller and interpreted according to the method contract.
-		    dec (str): Dec supplied by the caller and interpreted according to the method contract.
-		    radius (int): Radius supplied by the caller and interpreted according to the method
-		        contract.
-		    data_format (str): Data format supplied by the caller and interpreted according to the
-		        method contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): object_query or cone_search. Defaults to 'object_query'.
+		    query (str): Object name for object_query. Defaults to an empty string; required in
+		        object mode.
+		    quantity (str): Legacy quantity path; nonblank content is rejected. Defaults to an empty
+		        string.
+		    attributes (str): Legacy comma-separated attribute path; nonblank parsed content is
+		        rejected. Defaults to an empty string.
+		    arguments (str): Comma- or newline-separated provider options, such as provider,
+		        catalog, and row_limit. Defaults to an empty string.
+		    ra (str): Nonblank right ascension interpreted in degrees. Defaults to an empty string;
+		        required in cone mode.
+		    dec (str): Nonblank declination interpreted in degrees. Defaults to an empty string;
+		        required in cone mode.
+		    radius (int): Positive cone radius in arcminutes. Defaults to 2.
+		    data_format (str): json, csv, or tsv. Defaults to 'json'.
+		    time (int): Request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Any: Provider, loader, or normalized application value produced by the operation.
+		    Dict[str, Any]: Provider, catalog, retrieval mode, serialized tables, total row count,
+		        and formatted_tables for CSV or TSV output.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -6472,28 +6483,24 @@ class AstroCatalog( Fetcher ):
 			raise exception
 
 class AstroQuery( Fetcher ):
-	"""AstroQuery component.
+	"""SIMBAD object and region retrieval adapter.
 
 	Purpose:
-	    Uses Astroquery services to resolve astronomical objects, identifiers, and sky regions
-	    into record-oriented results.
+	    Use Astroquery Simbad to retrieve object records, alternate identifiers, and sky regions,
+	    converting returned Astropy table cells to strings.
 
 	Attributes:
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    radius (Optional[float]): Current radius retained by the AstroQuery workflow between
-	        related operations.
-	    name (Optional[str]): Current name retained by the AstroQuery workflow between related
-	        operations.
-	    declination (Optional[str]): Current declination retained by the AstroQuery workflow
-	        between related operations.
-	    right_ascension (Optional[str]): Current right ascension retained by the AstroQuery
-	        workflow between related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	        provider call.
-	    row_limit (Optional[int]): Current row limit retained by the AstroQuery workflow between
-	        related operations.
-	    agents (Any): Configured user-agent string sent with web requests.
-	    radius_unit (str): Angular unit selected for region queries.
+	    url (Optional[str]): Reserved URL state, initialized to None.
+	    radius (Optional[float]): Latest search radius.
+	    name (Optional[str]): Astronomical object name.
+	    right_ascension (Optional[str]): Latest right ascension value.
+	    declination (Optional[str]): Latest declination value.
+	    params (Optional[Dict[str, Any]]): Reserved parameter dictionary, initialized empty.
+	    row_limit (Optional[int]): Requested SIMBAD row limit.
+	    radius_unit (str): Angular unit used for region retrieval.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): Inherited HTTP header state consulted during
+	        initialization.
 	"""
 	url: Optional[ str ]
 	radius: Optional[ float ]
@@ -6505,15 +6512,14 @@ class AstroQuery( Fetcher ):
 	radius_unit: str
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Initialize object and coordinate placeholders, a row limit of 100, degree radius units,
+		    and configured user-agent state.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		        value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.url = None
@@ -6530,35 +6536,31 @@ class AstroQuery( Fetcher ):
 			self.headers[ 'User-Agent' ] = self.agents
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'headers', 'row_limit', 'object_search', 'object_ids', 'region_search', 'fetch', ]
 	
 	def table_to_records( self, table: Table | None ) -> List[ Dict[ str, Any ] ]:
-		"""Table to records.
+		"""Convert an Astropy table to text records.
 
 		Purpose:
-		    Table to records using the class state and returns data required by the surrounding
-		    workflow.
+		    Convert each cell to a string, substituting an empty string for individual conversion
+		    failures; return no records for None.
 
 		Args:
-		    table (Table | None): Table supplied by the caller and interpreted according to the
-		        method contract.
+		    table (Table | None): Astropy table or None.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    List[Dict[str, Any]]: Row dictionaries containing string values.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when table-level conversion fails.
 		"""
 		try:
 			if table is None:
@@ -6586,24 +6588,23 @@ class AstroQuery( Fetcher ):
 			raise exception
 	
 	def object_search( self, name: str, row_limit: int=100 ) -> Dict[ str, Any ] | None:
-		"""Object search.
+		"""Retrieve SIMBAD object records.
 
 		Purpose:
-		    Object search using the class state and returns data required by the surrounding
-		    workflow.
+		    Set the SIMBAD row limit, query the named object, and convert the result table to text
+		    records.
 
 		Args:
-		    name (str): Argument name included in validation error messages.
-		    row_limit (int): Row limit supplied by the caller and interpreted according to the
-		        method contract.
+		    name (str): Nonblank object name.
+		    row_limit (int): SIMBAD row limit. Defaults to 100.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Mode, object query, row limit, column names, and string-valued row
+		        dictionaries; empty columns and rows if no table is returned.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'name', name )
@@ -6627,23 +6628,23 @@ class AstroQuery( Fetcher ):
 			raise exception
 	
 	def object_ids( self, name: str, row_limit: int=100 ) -> Dict[ str, Any ] | None:
-		"""Object ids.
+		"""Retrieve alternate SIMBAD identifiers.
 
 		Purpose:
-		    Object ids using the class state and returns data required by the surrounding workflow.
+		    Set the SIMBAD row limit, query identifiers for the named object, and convert the result
+		    table to text records.
 
 		Args:
-		    name (str): Argument name included in validation error messages.
-		    row_limit (int): Row limit supplied by the caller and interpreted according to the
-		        method contract.
+		    name (str): Nonblank object name.
+		    row_limit (int): SIMBAD row limit. Defaults to 100.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Mode, object query, row limit, column names, and string-valued row
+		        dictionaries; empty columns and rows if no table is returned.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'name', name )
@@ -6668,29 +6669,26 @@ class AstroQuery( Fetcher ):
 			raise exception
 	
 	def region_search( self, ra: str, dec: str, radius: float=0.5, radius_unit: str='deg',row_limit: int=100 ) -> Dict[ str, Any ] | None:
-		"""Region search.
+		"""Retrieve SIMBAD objects in a sky region.
 
 		Purpose:
-		    Region search using the class state and returns data required by the surrounding
-		    workflow.
+		    Construct a SkyCoord with hour-angle right ascension and degree declination, resolve the
+		    radius unit, and query SIMBAD around the coordinate.
 
 		Args:
-		    ra (str): Ra supplied by the caller and interpreted according to the method contract.
-		    dec (str): Dec supplied by the caller and interpreted according to the method contract.
-		    radius (float): Radius supplied by the caller and interpreted according to the method
-		        contract.
-		    radius_unit (str): Radius unit supplied by the caller and interpreted according to the
-		        method contract.
-		    row_limit (int): Row limit supplied by the caller and interpreted according to the
-		        method contract.
+		    ra (str): Nonblank right ascension interpreted as hour angle.
+		    dec (str): Nonblank declination interpreted in degrees.
+		    radius (float): Angular search radius. Defaults to 0.5.
+		    radius_unit (str): deg, arcmin, or arcsec. Defaults to 'deg'.
+		    row_limit (int): SIMBAD row limit. Defaults to 100.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Mode, coordinate values, radius, radius unit, row limit, column names,
+		        and string-valued rows.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, 
-		        writes itto the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'ra', ra )
@@ -6729,31 +6727,30 @@ class AstroQuery( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='object_search', query: str='', ra: str='', dec: str='', radius: float=0.5, radius_unit: str='deg', row_limit: int=100 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a SIMBAD retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Normalize mode and select object_search, object_ids, or region_search.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    ra (str): Ra supplied by the caller and interpreted according to the method contract.
-		    dec (str): Dec supplied by the caller and interpreted according to the method contract.
-		    radius (float): Radius supplied by the caller and interpreted according to the method
-		        contract.
-		    radius_unit (str): Radius unit supplied by the caller and interpreted according to the
-		        method contract.
-		    row_limit (int): Row limit supplied by the caller and interpreted according to the
-		        method contract.
+		    mode (str): object_search, object_ids, or region_search. Defaults to 'object_search';
+		        blank selects the same mode.
+		    query (str): Object name for object operations. Defaults to an empty string.
+		    ra (str): Nonblank right ascension interpreted as hour angle. Defaults to an empty
+		        string; required for region mode.
+		    dec (str): Nonblank declination interpreted in degrees. Defaults to an empty string;
+		        required for region mode.
+		    radius (float): Angular search radius. Defaults to 0.5.
+		    radius_unit (str): deg, arcmin, or arcsec. Defaults to 'deg'.
+		    row_limit (int): SIMBAD row limit. Defaults to 100.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Query metadata, column names, and string-valued rows for the selected
+		        operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			active_mode = (mode or 'object_search').strip( ).lower( )
@@ -6780,36 +6777,31 @@ class AstroQuery( Fetcher ):
 			raise exception
 
 class StarMap( Fetcher ):
-	"""StarMap component.
+	"""Sky-Map interactive page and snapshot adapter.
 
 	Purpose:
-	    Resolves astronomical objects or coordinates and retrieves linked sky-map snapshots for
-	    visualization.
+	    Request interactive sky-map pages by object or coordinates and retrieve snapshot pages
+	    containing links to available image formats.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    snapshot_url (Optional[str]): URL associated with the current snapshot resource or
-	        endpoint.
-	    image_source (Optional[str]): Current image source retained by the StarMap workflow
-	        between related operations.
-	    object (Optional[str]): Current object retained by the StarMap workflow between related
-	        operations.
-	    right_ascension (Optional[float]): Current right ascension retained by the StarMap
-	        workflow between related operations.
-	    declination (Optional[float]): Current declination retained by the StarMap workflow.
-	    box_color (Optional[str]): Current box color retained by the StarMap workflow.
-	    show_box (Optional[bool]): Current show box retained by the StarMap workflow.
-	    show_grid (Optional[bool]): Current show grid retained by the StarMap workflow.
-	    show_lines (Optional[bool]): Current show lines retained by the StarMap workflow.
-	    show_boundaries (Optional[bool]): Current show boundaries retained by the StarMap workflow.
-	    show_const_names (Optional[bool]): Current show const names retained by the StarMap
-	        workflow between related operations.
-	    zoom (Optional[int]): Current zoom retained by the StarMap workflow.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	        provider call.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
-	    agents (Any): Configured user-agent string sent with web requests.
+	    base_url (Optional[str]): Interactive Sky-Map page URL.
+	    snapshot_url (Optional[str]): Sky-Map snapshot page URL.
+	    image_source (Optional[str]): Requested sky imagery source.
+	    object (Optional[str]): Latest named object.
+	    right_ascension (Optional[float]): Latest right ascension value.
+	    declination (Optional[float]): Latest declination value.
+	    box_color (Optional[str]): Marker box color.
+	    show_box (Optional[bool]): Marker box visibility flag.
+	    show_grid (Optional[bool]): Coordinate grid visibility flag.
+	    show_lines (Optional[bool]): Constellation line visibility flag.
+	    show_boundaries (Optional[bool]): Constellation boundary visibility flag.
+	    show_const_names (Optional[bool]): Constellation name visibility flag.
+	    zoom (Optional[int]): Requested map zoom level.
+	    params (Optional[Dict[str, Any]]): Latest provider request parameters.
+	    timeout (Optional[int]): Request timeout in seconds.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    response (Optional[Response]): Latest HTTP response.
 	"""
 	base_url: Optional[ str ]
 	snapshot_url: Optional[ str ]
@@ -6827,15 +6819,14 @@ class StarMap( Fetcher ):
 	params: Optional[ Dict[ str, Any ] ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure interactive and snapshot URLs, DSS2 imagery, yellow marker box, grid and
+		    constellation overlays, zoom level five, and a twenty-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		        value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.base_url = 'https://www.sky-map.org/'
@@ -6864,14 +6855,13 @@ class StarMap( Fetcher ):
 				'Accept' ] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'snapshot_url', 'object', 'right_ascension', 'declination',
 				'image_source', 'zoom', 'show_box', 'show_grid', 'show_lines', 'show_boundaries',
@@ -6879,18 +6869,20 @@ class StarMap( Fetcher ):
 				'fetch_coordinate_link', 'fetch_snapshot', 'fetch', ]
 	
 	def normalize( self, value: bool ) -> str:
-		"""Normalize.
+		"""Encode a display flag.
 
 		Purpose:
-		    Normalize using the class state and returns data required by the surrounding workflow.
+		    Convert a truthy value to the string '1' and a falsey value to '0' after checking for a
+		    missing argument.
 
 		Args:
-		    value (bool): Candidate value to validate or normalize.
+		    value (bool): Display flag.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: '1' or '0'.
+
 		Raises:
-		    Error: Wraps and logs invalid boolean arguments.
+		    Error: Raised when validation or conversion fails.
 		"""
 		try:
 
@@ -6906,22 +6898,21 @@ class StarMap( Fetcher ):
 			raise exception
 
 	def extract_links( self, html: str, base_url: str ) -> Dict[ str, str ]:
-		"""Extract links.
+		"""Extract image-format links from HTML.
 
 		Purpose:
-		    Collects unique, normalized hyperlinks from an HTML document in source order.
+		    Match anchor elements labeled JPEG, PNG, GIF, BMP, or TIFF, resolve their references
+		    against the base URL, and retain the last link for each lowercase format.
 
 		Args:
-		    html (str): Raw HTML document content to parse or convert.
-		    base_url (str): Base URL used to resolve relative references.
+		    html (str): Snapshot HTML; empty or non-string content returns no links.
+		    base_url (str): Base URL for relative references.
 
 		Returns:
-		    Dict[str, str]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, str]: Image-format labels mapped to resolved URLs.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when link extraction fails.
 		"""
 		try:
 			links: Dict[ str, str ] = { }
@@ -6947,28 +6938,26 @@ class StarMap( Fetcher ):
 			raise exception
 	
 	def fetch_object_link( self, name: str, zoom: int=5, box_color: str='yellow', show_box: bool=True, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch object link.
+		"""Retrieve an interactive object map page.
 
 		Purpose:
-		    Retrieves object link from the configured provider and returns normalized response
-		    data.
+		    Construct a named-object URL with marker and zoom options, issue a GET request, and
+		    return metadata and an HTML preview.
 
 		Args:
-		    name (str): Argument name included in validation error messages.
-		    zoom (int): Zoom supplied by the caller and interpreted according to the method
-		    contract.
-		    box_color (str): Box color supplied by the caller and interpreted according to the
-		    method contract.
-		    show_box (bool): Whether show box behavior is enabled for the operation.
-		    time (int): Maximum request duration in seconds.
+		    name (str): Nonblank astronomical object name.
+		    zoom (int): Map zoom level. Defaults to 5.
+		    box_color (str): Marker box color. Defaults to 'yellow'.
+		    show_box (bool): Display the marker box. Defaults to True.
+		    time (int): Request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, target, zoom, submitted parameters, interactive URL, HTTP status,
+		        and first 2000 characters of HTML.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'show_box', show_box )
@@ -7007,33 +6996,30 @@ class StarMap( Fetcher ):
 			raise exception
 	
 	def fetch_coordinate_link( self, ra: float, dec: float, zoom: int=5, box_color: str = 'yellow', show_box: bool=True, show_grid: bool=True, show_lines: bool=True, show_boundaries: bool=True, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch coordinate link.
+		"""Retrieve an interactive coordinate map page.
 
 		Purpose:
-		    Retrieves coordinate link from the configured provider and returns normalized response
-		    data.
+		    Construct a coordinate-centered URL with marker, grid, and constellation options, issue
+		    a GET request, and return metadata and an HTML preview.
 
 		Args:
-		    ra (float): Ra supplied by the caller and interpreted according to the method contract.
-		    dec (float): Dec supplied by the caller and interpreted according to the method
-		    contract.
-		    zoom (int): Zoom supplied by the caller and interpreted according to the method
-		contract.
-		    box_color (str): Box color supplied by the caller and interpreted according to the
-		    method contract.
-		    show_box (bool): Whether show box behavior is enabled for the operation.
-		    show_grid (bool): Whether show grid behavior is enabled for the operation.
-		    show_lines (bool): Whether show lines behavior is enabled for the operation.
-		    show_boundaries (bool): Whether show boundaries behavior is enabled for the operation.
-		    time (int): Maximum request duration in seconds.
+		    ra (float): Right ascension value passed to Sky-Map.
+		    dec (float): Declination value passed to Sky-Map.
+		    zoom (int): Map zoom level. Defaults to 5.
+		    box_color (str): Marker box color. Defaults to 'yellow'.
+		    show_box (bool): Display the marker box. Defaults to True.
+		    show_grid (bool): Display the coordinate grid. Defaults to True.
+		    show_lines (bool): Display constellation lines. Defaults to True.
+		    show_boundaries (bool): Display constellation boundaries. Defaults to True.
+		    time (int): Request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, target, zoom, submitted parameters, interactive URL, HTTP status,
+		        and first 2000 characters of HTML.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'show_box', show_box )
@@ -7086,33 +7072,30 @@ class StarMap( Fetcher ):
 			raise exception
 	
 	def fetch_snapshot( self, ra: float, dec: float, zoom: int=10, image_source: str='DSS2', show_grid: bool=True, show_lines: bool=True, show_boundaries: bool=True, show_const_names: bool=False, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch snapshot.
+		"""Retrieve snapshot image links.
 
 		Purpose:
-		    Retrieves snapshot from the configured provider and returns normalized response data.
+		    Request the coordinate-centered snapshot page, extract image-format links, and prefer
+		    PNG over JPEG without downloading the linked images.
 
 		Args:
-		    ra (float): Ra supplied by the caller and interpreted according to the method contract.
-		    dec (float): Dec supplied by the caller and interpreted according to the method
-		    contract.
-		    zoom (int): Zoom supplied by the caller and interpreted according to the method
-		    contract.
-		    image_source (str): Image source supplied by the caller and interpreted according to
-		    the method contract.
-		    show_grid (bool): Whether show grid behavior is enabled for the operation.
-		    show_lines (bool): Whether show lines behavior is enabled for the operation.
-		    show_boundaries (bool): Whether show boundaries behavior is enabled for the operation.
-		    show_const_names (bool): Whether show const names behavior is enabled for the
-		    operation.
-		    time (int): Maximum request duration in seconds.
+		    ra (float): Right ascension value passed to Sky-Map.
+		    dec (float): Declination value passed to Sky-Map.
+		    zoom (int): Map zoom level. Defaults to 10.
+		    image_source (str): Sky imagery source identifier. Defaults to 'DSS2'.
+		    show_grid (bool): Display the coordinate grid. Defaults to True.
+		    show_lines (bool): Display constellation lines. Defaults to True.
+		    show_boundaries (bool): Display constellation boundaries. Defaults to True.
+		    show_const_names (bool): Display constellation names. Defaults to False.
+		    time (int): Request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Coordinates, zoom, imagery source, parameters, snapshot page URL, image
+		        links, preferred image URL, HTTP status, and HTML preview.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'show_grid', show_grid )
@@ -7170,39 +7153,32 @@ class StarMap( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='object_link', query: str='', ra: float=0.0, dec: float = 0.0, zoom: int=5, image_source: str='DSS2', box_color: str='yellow', show_box: bool = True, show_grid: bool=True, show_lines: bool=True, show_boundaries: bool=True, show_const_names: bool=False, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a Sky-Map retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select object_link, coordinate_link, or snapshot and forward applicable map options.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    ra (float): Ra supplied by the caller and interpreted according to the method contract.
-		    dec (float): Dec supplied by the caller and interpreted according to the method
-		    contract.
-		    zoom (int): Zoom supplied by the caller and interpreted according to the method
-		    contract.
-		    image_source (str): Image source supplied by the caller and interpreted according to
-		    the method contract.
-		    box_color (str): Box color supplied by the caller and interpreted according to the
-		    method contract.
-		    show_box (bool): Whether show box behavior is enabled for the operation.
-		    show_grid (bool): Whether show grid behavior is enabled for the operation.
-		    show_lines (bool): Whether show lines behavior is enabled for the operation.
-		    show_boundaries (bool): Whether show boundaries behavior is enabled for the operation.
-		    show_const_names (bool): Whether show const names behavior is enabled for the
-		    operation.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): object_link, coordinate_link, or snapshot. Defaults to 'object_link'.
+		    query (str): Object name for object_link. Defaults to an empty string.
+		    ra (float): Right ascension value passed to Sky-Map. Defaults to 0.0.
+		    dec (float): Declination value passed to Sky-Map. Defaults to 0.0.
+		    zoom (int): Map zoom level. Defaults to 5.
+		    image_source (str): Sky imagery source identifier. Defaults to 'DSS2'.
+		    box_color (str): Marker box color. Defaults to 'yellow'.
+		    show_box (bool): Display the marker box. Defaults to True.
+		    show_grid (bool): Display the coordinate grid. Defaults to True.
+		    show_lines (bool): Display constellation lines. Defaults to True.
+		    show_boundaries (bool): Display constellation boundaries. Defaults to True.
+		    show_const_names (bool): Display constellation names. Defaults to False.
+		    time (int): Request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Interactive page or snapshot link metadata for the selected operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -7234,41 +7210,33 @@ class StarMap( Fetcher ):
 			raise exception
 
 class GovData( Fetcher ):
-	"""GovData component.
+	"""U.S. Government Publishing Office GovInfo API adapter.
 
 	Purpose:
-	    Searches Data.gov catalog resources and retrieves package or collection metadata with
-	    validated paging and sorting controls.
+	    Search GovInfo publications, retrieve package summaries, and list collection packages
+	    using the configured API key and provider pagination controls.
 
 	Attributes:
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Dict[str, Any]]): Current payload retained by the GovData workflow
-	    between related operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    mode (Optional[str]): Current mode retained by the GovData workflow between related
-	    operations.
-	    query (Optional[str]): Most recent search text or model prompt submitted by the instance.
-	    page_size (Optional[int]): Current page size retained by the GovData workflow between
-	    related operations.
-	    offset_mark (Optional[str]): Current offset mark retained by the GovData workflow between
-	    related operations.
-	    sort_field (Optional[str]): Current sort field retained by the GovData workflow between
-	    related operations.
-	    sort_order (Optional[str]): Current sort order retained by the GovData workflow between
-	    related operations.
-	    package_id (Optional[str]): Identifier of the current package resource.
-	    collection (Optional[str]): Current collection retained by the GovData workflow between
-	    related operations.
-	    start_date (Optional[str]): Current start date retained by the GovData workflow between
-	    related operations.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    headers (Any): HTTP headers sent with the current request.
+	    api_key (Optional[str]): GovInfo API key loaded from configuration.
+	    base_url (Optional[str]): Base service URL.
+	    url (Optional[str]): Latest endpoint URL.
+	    params (Optional[Dict[str, Any]]): Latest query parameters, including the API key.
+	    payload (Optional[Dict[str, Any]]): Latest search POST body or empty dictionary for GET
+	        requests.
+	    result (Optional[Dict[str, Any]]): Latest packaged GovInfo response.
+	    mode (Optional[str]): Selected retrieval operation.
+	    query (Optional[str]): Latest search query.
+	    page_size (Optional[int]): Requested page size.
+	    offset_mark (Optional[str]): Provider pagination cursor.
+	    sort_field (Optional[str]): Search sort field.
+	    sort_order (Optional[str]): Search sort direction.
+	    package_id (Optional[str]): Requested GovInfo package identifier.
+	    collection (Optional[str]): Requested GovInfo collection code.
+	    start_date (Optional[str]): Collection start-date path value.
+	    response (Optional[Response]): Latest HTTP response.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    timeout (Optional[int]): Request timeout in seconds.
 	"""
 	api_key: Optional[ str ]
 	base_url: Optional[ str ]
@@ -7288,15 +7256,14 @@ class GovData( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the GovInfo API key from configuration and initialize JSON headers, search
+		    defaults, pagination cursor, and empty request state.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.api_key = cfg.GOVINFO_API_KEY
@@ -7320,14 +7287,13 @@ class GovData( Fetcher ):
 		self.agents = cfg.AGENTS
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'api_key', 'base_url', 'url', 'params', 'payload', 'result', 'mode', 'query',
 				'page_size', 'offset_mark', 'sort_field', 'sort_order', 'package_id', 'collection',
@@ -7336,20 +7302,19 @@ class GovData( Fetcher ):
 				'fetch_package_summary', 'fetch_collection', 'fetch', 'create_schema' ]
 	
 	def validate_page_size( self, page_size: int ) -> int:
-		"""Validate page size.
+		"""Validate the requested page size.
 
 		Purpose:
-		    Validates the page size against provider constraints and returns the accepted value.
+		    Check the requested page size against the inclusive range from 1 to 1000.
 
 		Args:
-		    page_size (int): Maximum number of records requested per page.
+		    page_size (int): Requested page size, from 1 through 1000.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted page size.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the page size is missing or outside the range.
 		"""
 		try:
 			
@@ -7370,21 +7335,19 @@ class GovData( Fetcher ):
 			raise exception
 	
 	def validate_sort_field( self, sort_field: str ) -> str:
-		"""Validate sort field.
+		"""Validate a GovInfo search sort field.
 
 		Purpose:
-		    Validates the sort field against provider constraints and returns the accepted value.
+		    Accept only score or lastModified.
 
 		Args:
-		    sort_field (str): Sort field supplied by the caller and interpreted according to the
-		    method contract.
+		    sort_field (str): score or lastModified.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Original accepted sort field.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the field is missing or unsupported.
 		"""
 		try:
 			throw_if( 'sort_field', sort_field )
@@ -7405,21 +7368,19 @@ class GovData( Fetcher ):
 			raise exception
 	
 	def validate_sort_order( self, sort_order: str ) -> str:
-		"""Validate sort order.
+		"""Validate a GovInfo search sort direction.
 
 		Purpose:
-		    Validates the sort order against provider constraints and returns the accepted value.
+		    Accept only ASC or DESC.
 
 		Args:
-		    sort_order (str): Sort order supplied by the caller and interpreted according to the
-		    method contract.
+		    sort_order (str): ASC or DESC.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Original accepted sort direction.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the direction is missing or unsupported.
 		"""
 		try:
 			throw_if( 'sort_order', sort_order )
@@ -7440,29 +7401,27 @@ class GovData( Fetcher ):
 			raise exception
 	
 	def fetch_search( self, query: str, page_size: int=10, offset_mark: str='*', sort_field: str = 'score', sort_order: str='DESC', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch search.
+		"""Search GovInfo publications.
 
 		Purpose:
-		    Retrieves search from the configured provider and returns normalized response data.
+		    Validate query, paging and sorting options, submit a JSON POST to the search endpoint,
+		    and package the decoded response.
 
 		Args:
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    page_size (int): Maximum number of records requested per page.
-		    offset_mark (str): Offset mark supplied by the caller and interpreted according to the
-		    method contract.
-		    sort_field (str): Sort field supplied by the caller and interpreted according to the
-		    method contract.
-		    sort_order (str): Sort order supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    query (str): Nonblank GovInfo search expression.
+		    page_size (int): Requested page size from 1 through 1000. Defaults to 10.
+		    offset_mark (str): Nonblank pagination cursor. Defaults to '*'.
+		    sort_field (str): score or lastModified. Defaults to 'score'.
+		    sort_order (str): ASC or DESC. Defaults to 'DESC'.
+		    time (int): Request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, query parameters (including the API key), request payload,
+		        and decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'query', query )
@@ -7504,23 +7463,23 @@ class GovData( Fetcher ):
 			raise exception
 	
 	def fetch_package_summary( self, package_id: str, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch package summary.
+		"""Retrieve a GovInfo package summary.
 
 		Purpose:
-		    Retrieves package summary from the configured provider and returns normalized response
-		    data.
+		    Request the package summary endpoint by package identifier and package its decoded
+		    response.
 
 		Args:
-		    package_id (str): Provider identifier of the target package resource.
-		    time (int): Maximum request duration in seconds.
+		    package_id (str): Nonblank GovInfo package identifier.
+		    time (int): Request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, query parameters (including the API key), request payload,
+		        and decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'package_id', package_id )
@@ -7552,27 +7511,26 @@ class GovData( Fetcher ):
 			raise exception
 	
 	def fetch_collection( self, collection: str, start_date: str, page_size: int=10, offset_mark: str='*', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch collection.
+		"""Retrieve GovInfo collection packages.
 
 		Purpose:
-		    Retrieves collection from the configured provider and returns normalized response data.
+		    Build the collection endpoint using the collection code and start-date path value,
+		    attach pagination parameters, and package the decoded response.
 
 		Args:
-		    collection (str): Collection supplied by the caller and interpreted according to the
-		    method contract.
-		    start_date (str): Date boundary or date value used by the request.
-		    page_size (int): Maximum number of records requested per page.
-		    offset_mark (str): Offset mark supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    collection (str): Nonblank collection code.
+		    start_date (str): Nonblank start-date path value passed to GovInfo.
+		    page_size (int): Requested page size from 1 through 1000. Defaults to 10.
+		    offset_mark (str): Nonblank pagination cursor. Defaults to '*'.
+		    time (int): Request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-			metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, query parameters (including the API key), request payload,
+		        and decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'collection', collection )
@@ -7610,35 +7568,33 @@ class GovData( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='search', query: str='', page_size: int=10, offset_mark: str = '*', sort_field: str='score', sort_order: str='DESC', package_id: str='', collection: str = '', start_date: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a GovInfo retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select search, package_summary, or collection and delegate with applicable arguments.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    page_size (int): Maximum number of records requested per page.
-		    offset_mark (str): Offset mark supplied by the caller and interpreted according to the
-		    method contract.
-		    sort_field (str): Sort field supplied by the caller and interpreted according to the
-method contract.
-		    sort_order (str): Sort order supplied by the caller and interpreted according to the
-		    method contract.
-		    package_id (str): Provider identifier of the target package resource.
-		    collection (str): Collection supplied by the caller and interpreted according to the
-		    method contract.
-		    start_date (str): Date boundary or date value used by the request.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): search, package_summary, or collection. Defaults to 'search'.
+		    query (str): Search expression. Defaults to an empty string; required in search mode.
+		    page_size (int): Requested page size from 1 through 1000. Defaults to 10.
+		    offset_mark (str): Nonblank pagination cursor. Defaults to '*'.
+		    sort_field (str): score or lastModified. Defaults to 'score'.
+		    sort_order (str): ASC or DESC. Defaults to 'DESC'.
+		    package_id (str): Package identifier. Defaults to an empty string; required in
+		        package_summary mode.
+		    collection (str): Collection code. Defaults to an empty string; required in collection
+		        mode.
+		    start_date (str): Collection start-date path value. Defaults to an empty string;
+		        required in collection mode.
+		    time (int): Request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, query parameters (including the API key), request payload,
+		        and decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -7671,26 +7627,25 @@ method contract.
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -7716,49 +7671,37 @@ method contract.
 			raise exception
 
 class StarChart( Fetcher ):
-	"""StarChart component.
+	"""Sky-Map object search and chart URL adapter.
 
 	Purpose:
-	    Builds and retrieves astronomical charts for named objects or explicit sky coordinates.
+	    Resolve named astronomical objects through the XML search endpoint and construct
+	    interactive or static chart URLs with configurable imagery and overlays.
 
 	Attributes:
-	    search_url (Optional[str]): URL associated with the current search resource or endpoint.
-	    link_url (Optional[str]): URL associated with the current link resource or endpoint.
-	    image_url (Optional[str]): URL associated with the current image resource or endpoint.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    mode (Optional[str]): Current mode retained by the StarChart workflow between related
-	    operations.
-	    query (Optional[str]): Most recent search text or model prompt submitted by the instance.
-	    ra (Optional[float]): Current ra retained by the StarChart workflow between related
-	    operations.
-	    dec (Optional[float]): Current dec retained by the StarChart workflow between related
-	    operations.
-	    zoom (Optional[int]): Current zoom retained by the StarChart workflow between related
-	    operations.
-	    image_source (Optional[str]): Current image source retained by the StarChart workflow
-	    between related operations.
-	    box_color (Optional[str]): Current box color retained by the StarChart workflow between
-	    related operations.
-	    show_box (Optional[bool]): Current show box retained by the StarChart workflow between
-	    related operations.
-	    show_grid (Optional[bool]): Current show grid retained by the StarChart workflow between
-	    related operations.
-	    show_lines (Optional[bool]): Current show lines retained by the StarChart workflow between
-	    related operations.
-	    show_boundaries (Optional[bool]): Current show boundaries retained by the StarChart
-	    workflow between related operations.
-	    show_const_names (Optional[bool]): Current show const names retained by the StarChart
-	    workflow between related operations.
-	    width (Optional[int]): Current width retained by the StarChart workflow between related
-	    operations.
-	    height (Optional[int]): Current height retained by the StarChart workflow between related
-	    operations.
-	    magnitude (Optional[float]): Current magnitude retained by the StarChart workflow between
-	    related operations.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    headers (Any): HTTP headers sent with the current request.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    search_url (Optional[str]): Sky-Map XML object-search endpoint.
+	    link_url (Optional[str]): Interactive chart base URL.
+	    image_url (Optional[str]): Static chart image endpoint.
+	    url (Optional[str]): Latest endpoint URL.
+	    params (Optional[Dict[str, Any]]): Latest provider request parameters.
+	    mode (Optional[str]): Selected retrieval operation.
+	    query (Optional[str]): Latest search query.
+	    ra (Optional[float]): Right ascension supplied or returned by Sky-Map.
+	    dec (Optional[float]): Declination supplied or returned by Sky-Map.
+	    zoom (Optional[int]): Requested map zoom level.
+	    image_source (Optional[str]): Requested sky imagery source.
+	    box_color (Optional[str]): Marker box color.
+	    show_box (Optional[bool]): Marker box visibility flag.
+	    show_grid (Optional[bool]): Coordinate grid visibility flag.
+	    show_lines (Optional[bool]): Constellation line visibility flag.
+	    show_boundaries (Optional[bool]): Constellation boundary visibility flag.
+	    show_const_names (Optional[bool]): Constellation name visibility flag.
+	    width (Optional[int]): Requested static image width in pixels.
+	    height (Optional[int]): Requested static image height in pixels.
+	    magnitude (Optional[float]): Requested stellar magnitude threshold.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    timeout (Optional[int]): Request timeout in seconds.
+	    response (Optional[Response]): Latest HTTP response.
 	"""
 	search_url: Optional[ str ]
 	link_url: Optional[ str ]
@@ -7783,15 +7726,14 @@ class StarChart( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure XML search, interactive chart and static image endpoints, DSS2 imagery,
+		    display defaults, and 900 by 450 static image dimensions.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.headers = { }
@@ -7821,14 +7763,13 @@ class StarChart( Fetcher ):
 			self.headers[ 'User-Agent' ] = self.agents
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'search_url', 'link_url', 'image_url', 'url', 'params', 'mode', 'query', 'ra',
 				'dec', 'zoom', 'image_source', 'box_color', 'show_box', 'show_grid', 'show_lines',
@@ -7837,19 +7778,21 @@ class StarChart( Fetcher ):
 				'fetch_static_chart', 'fetch', 'create_schema' ]
 	
 	def flag( self, value: bool, invert: bool=False ) -> int:
-		"""Flag.
+		"""Encode a Sky-Map display flag.
 
 		Purpose:
-		    Flag using the class state and returns data required by the surrounding workflow.
+		    Return an integer flag based on the value's truthiness, reversing the mapping when
+		    invert is enabled.
 
 		Args:
-		    value (bool): Candidate value to validate or normalize.
-		    invert (bool): Whether invert behavior is enabled for the operation.
+		    value (bool): Display flag.
+		    invert (bool): Reverse the numeric flag mapping. Defaults to False.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: 1 for truthy values and 0 for falsey values, reversed when invert is enabled.
+
 		Raises:
-		    Error: Wraps and logs invalid boolean arguments.
+		    Error: Raised when validation or flag conversion fails.
 		"""
 		try:
 
@@ -7870,23 +7813,23 @@ class StarChart( Fetcher ):
 			raise exception
 
 	def search_object( self, name: str, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Search object.
+		"""Search for an astronomical object.
 
 		Purpose:
-		    Search object using the class state and returns data required by the surrounding
-		    workflow.
+		    Request the XML search endpoint, parse status and star metadata, and retain returned
+		    coordinates when a star element exists.
 
 		Args:
-		    name (str): Argument name included in validation error messages.
-		    time (int): Maximum request duration in seconds.
+		    name (str): Nonblank astronomical object name.
+		    time (int): Request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Search mode, endpoint, parameters, status, verbiage, and object metadata
+		        or an empty data dictionary.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 
@@ -7935,30 +7878,28 @@ class StarChart( Fetcher ):
 			raise exception
 	
 	def fetch_object_chart( self, name: str, zoom: int=5, box_color: str='yellow', show_box: bool = True, image_source: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch object chart.
+		"""Construct an interactive object chart and search for the object.
 
 		Purpose:
-		    Retrieves object chart from the configured provider and returns normalized response
-		    data.
+		    Prepare the chart URL without fetching the chart page, then execute the XML object
+		    search. The search updates instance URL and parameters before packaging the result.
 
 		Args:
-		    name (str): Argument name included in validation error messages.
-		    zoom (int): Zoom supplied by the caller and interpreted according to the method
-		    contract.
-		    box_color (str): Box color supplied by the caller and interpreted according to the
-		    method contract.
-		    show_box (bool): Whether show box behavior is enabled for the operation.
-		    image_source (str): Image source supplied by the caller and interpreted according to
-		    the method contract.
-		    time (int): Maximum request duration in seconds.
+		    name (str): Nonblank astronomical object name.
+		    zoom (int): Map zoom level. Defaults to 5.
+		    box_color (str): Marker box color. Defaults to 'yellow'.
+		    show_box (bool): Display the marker box. Defaults to True.
+		    image_source (str): Optional imagery source identifier; omitted from the query when
+		        blank. Defaults to an empty string.
+		    time (int): Request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, latest search URL and parameters, prepared chart URL, and object
+		        search result.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'show_box', show_box )
@@ -7994,34 +7935,29 @@ class StarChart( Fetcher ):
 			raise exception
 	
 	def fetch_coordinate_chart( self, ra: float, dec: float, zoom: int=5, box_color: str = 'yellow', show_box: bool=True, show_grid: bool=True, show_lines: bool=True, show_boundaries: bool=True, image_source: str='' ) -> Dict[ str, Any ] | None:
-		"""Fetch coordinate chart.
+		"""Construct an interactive coordinate chart URL.
 
 		Purpose:
-		    Retrieves coordinate chart from the configured provider and returns normalized
-		    response data.
+		    Prepare a coordinate chart URL with marker and overlay settings; grid, line and boundary
+		    flags use inverted numeric encoding. No HTTP request is issued.
 
 		Args:
-		    ra (float): Ra supplied by the caller and interpreted according to the method contract.
-		    dec (float): Dec supplied by the caller and interpreted according to the method
-		    contract.
-		    zoom (int): Zoom supplied by the caller and interpreted according to the method
-		    contract.
-		    box_color (str): Box color supplied by the caller and interpreted according to the
-		    method contract.
-		    show_box (bool): Whether show box behavior is enabled for the operation.
-		    show_grid (bool): Whether show grid behavior is enabled for the operation.
-		    show_lines (bool): Whether show lines behavior is enabled for the operation.
-		    show_boundaries (bool): Whether show boundaries behavior is enabled for the operation.
-		    image_source (str): Image source supplied by the caller and interpreted according to
-		    the method contract.
+		    ra (float): Right ascension value passed to Sky-Map.
+		    dec (float): Declination value passed to Sky-Map.
+		    zoom (int): Map zoom level. Defaults to 5.
+		    box_color (str): Marker box color. Defaults to 'yellow'.
+		    show_box (bool): Display the marker box. Defaults to True.
+		    show_grid (bool): Display the coordinate grid. Defaults to True.
+		    show_lines (bool): Display constellation lines. Defaults to True.
+		    show_boundaries (bool): Display constellation boundaries. Defaults to True.
+		    image_source (str): Optional imagery source identifier; omitted from the query when
+		        blank. Defaults to an empty string.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, base URL, chart parameters, and prepared interactive chart URL.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or URL construction fails.
 		"""
 		try:
 			throw_if( 'show_box', show_box )
@@ -8067,39 +8003,30 @@ class StarChart( Fetcher ):
 			raise exception
 	
 	def fetch_static_chart( self, ra: float, dec: float, zoom: int=5, image_source: str = 'DSS2', show_grid: bool=True, show_lines: bool=True, show_boundaries: bool=True, show_const_names: bool=False, width: int=900, height: int=450, magnitude: float = 7.5 ) -> Dict[ str, Any ] | None:
-		"""Fetch static chart.
+		"""Construct a static chart image URL.
 
 		Purpose:
-		    Retrieves static chart from the configured provider and returns normalized response
-		    data.
+		    Prepare a static image URL with coordinates, dimensions, magnitude threshold, imagery
+		    source, and overlays without downloading the image.
 
 		Args:
-		    ra (float): Ra supplied by the caller and interpreted according to the method contract.
-		    dec (float): Dec supplied by the caller and interpreted according to the method
-		    contract.
-		    zoom (int): Zoom supplied by the caller and interpreted according to the method
-		    contract.
-		    image_source (str): Image source supplied by the caller and interpreted according to
-		    the method contract.
-		    show_grid (bool): Whether show grid behavior is enabled for the operation.
-		    show_lines (bool): Whether show lines behavior is enabled for the operation.
-		    show_boundaries (bool): Whether show boundaries behavior is enabled for the operation.
-		    show_const_names (bool): Whether show const names behavior is enabled for the
-		    operation.
-		    width (int): Width supplied by the caller and interpreted according to the method
-		    contract.
-		    height (int): Height supplied by the caller and interpreted according to the method
-		    contract.
-		    magnitude (float): Magnitude supplied by the caller and interpreted according to the
-		    method contract.
+		    ra (float): Right ascension value passed to Sky-Map.
+		    dec (float): Declination value passed to Sky-Map.
+		    zoom (int): Map zoom level. Defaults to 5.
+		    image_source (str): Sky imagery source identifier. Defaults to 'DSS2'.
+		    show_grid (bool): Display the coordinate grid. Defaults to True.
+		    show_lines (bool): Display constellation lines. Defaults to True.
+		    show_boundaries (bool): Display constellation boundaries. Defaults to True.
+		    show_const_names (bool): Display constellation names. Defaults to False.
+		    width (int): Requested static image width in pixels. Defaults to 900.
+		    height (int): Requested static image height in pixels. Defaults to 450.
+		    magnitude (float): Requested stellar magnitude threshold. Defaults to 7.5.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, image parameters, and prepared image URL.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or URL construction fails.
 		"""
 		try:
 			throw_if( 'show_grid', show_grid )
@@ -8147,45 +8074,38 @@ class StarChart( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='object_chart', query: str='', ra: float=0.0, dec: float = 0.0, zoom: int=5, image_source: str='DSS2', box_color: str='yellow', show_box: bool = True, show_grid: bool=True, show_lines: bool=True, show_boundaries: bool=True, show_const_names: bool=False, width: int=900, height: int=450, magnitude: float = 7.5, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a Sky-Map chart operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Normalize mode and select XML object search, object chart, coordinate chart, or static
+		    chart. The default DSS2 source is omitted from interactive chart requests.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    ra (float): Ra supplied by the caller and interpreted according to the method contract.
-		    dec (float): Dec supplied by the caller and interpreted according to the method
-		    contract.
-		    zoom (int): Zoom supplied by the caller and interpreted according to the method
-		    contract.
-		    image_source (str): Image source supplied by the caller and interpreted according to
-		    the method contract.
-		    box_color (str): Box color supplied by the caller and interpreted according to the
-		    method contract.
-		    show_box (bool): Whether show box behavior is enabled for the operation.
-		    show_grid (bool): Whether show grid behavior is enabled for the operation.
-		    show_lines (bool): Whether show lines behavior is enabled for the operation.
-		    show_boundaries (bool): Whether show boundaries behavior is enabled for the operation.
-		    show_const_names (bool): Whether show const names behavior is enabled for the
-		    operation.
-		    width (int): Width supplied by the caller and interpreted according to the method
-		    contract.
-		    height (int): Height supplied by the caller and interpreted according to the method
-		    contract.
-		    magnitude (float): Magnitude supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): object_search, object_chart, coordinate_chart, or static_chart. Defaults to
+		        'object_chart'; blank selects the same mode.
+		    query (str): Object name for object modes. Defaults to an empty string.
+		    ra (float): Right ascension value passed to Sky-Map. Defaults to 0.0.
+		    dec (float): Declination value passed to Sky-Map. Defaults to 0.0.
+		    zoom (int): Map zoom level. Defaults to 5.
+		    image_source (str): Sky imagery source identifier. Defaults to 'DSS2'.
+		    box_color (str): Marker box color. Defaults to 'yellow'.
+		    show_box (bool): Display the marker box. Defaults to True.
+		    show_grid (bool): Display the coordinate grid. Defaults to True.
+		    show_lines (bool): Display constellation lines. Defaults to True.
+		    show_boundaries (bool): Display constellation boundaries. Defaults to True.
+		    show_const_names (bool): Display constellation names. Defaults to False.
+		    width (int): Requested static image width in pixels. Defaults to 900.
+		    height (int): Requested static image height in pixels. Defaults to 450.
+		    magnitude (float): Requested stellar magnitude threshold. Defaults to 7.5.
+		    time (int): HTTP timeout for object search or object chart mode. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Search metadata or prepared chart URL and parameters for the selected
+		        mode.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			active_mode = (mode or 'object_chart').strip( ).lower( )
@@ -8219,26 +8139,25 @@ class StarChart( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
