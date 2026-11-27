@@ -2232,10 +2232,8 @@ class GithubLoader( Loader ):
 			self.github_url = url
 			self.repo = repo
 			self.branch = branch
-			self.access_token = access_token.strip( ) if isinstance( access_token,
-				str ) and access_token.strip( ) else None
-			self.pattern = filetype.strip( ) if isinstance( filetype,
-				str ) and filetype.strip( ) else '.md'
+			self.access_token = access_token
+			self.pattern = filetype
 			self.file_filter = lambda file_path: file_path.endswith( self.pattern )
 			
 			kwargs = { 'repo': self.repo, 'branch': self.branch, 'github_api_url': self.github_url,
@@ -3901,6 +3899,10 @@ class GoogleCloudFileLoader( Loader ):
 			raise exception
 
 class AwsFileLoader( Loader ):
+	    api_version (Optional[str]): S3 API version.
+	    use_ssl (bool): Whether SSL is enabled.
+	    verify (str | bool | None): SSL certificate verification setting.
+	    endpoint_url (Optional[str]): Custom S3 endpoint URL.
 	"""AwsFileLoader component.
 
 	Purpose:
@@ -3924,6 +3926,10 @@ class AwsFileLoader( Loader ):
 	aws_secret_access_key: Optional[ str ]
 	aws_session_token: Optional[ str ]
 	region_name: Optional[ str ]
+		api_version: Optional[ str ]
+		use_ssl: bool
+		verify: str | bool | None
+		endpoint_url: Optional[ str ]
 	
 	def __init__( self ) -> None:
 		"""Initialize the instance.
@@ -3943,6 +3949,10 @@ class AwsFileLoader( Loader ):
 		self.aws_secret_access_key = None
 		self.aws_session_token = None
 		self.region_name = None
+		self.api_version = None
+		self.use_ssl = True
+		self.verify = None
+		self.endpoint_url = None
 	
 	def __dir__( self ) -> List[ str ]:
 		"""Return visible member names.
@@ -4305,6 +4315,9 @@ class GoogleBucketLoader( Loader ):
 			raise exception
 
 class AwsBucketLoader( Loader ):
+	    api_version (Optional[str]): S3 API version.
+	    use_ssl (bool): Whether SSL is enabled.
+	    verify (str | bool | None): SSL certificate verification setting.
 	"""AwsBucketLoader component.
 
 	Purpose:
@@ -4330,6 +4343,9 @@ class AwsBucketLoader( Loader ):
 	aws_session_token: Optional[ str ]
 	region_name: Optional[ str ]
 	endpoint_url: Optional[ str ]
+		api_version: Optional[ str ]
+		use_ssl: bool
+		verify: str | bool | None
 	
 	def __init__( self ) -> None:
 		"""Initialize the instance.
@@ -4350,6 +4366,9 @@ class AwsBucketLoader( Loader ):
 		self.aws_session_token = None
 		self.region_name = None
 		self.endpoint_url = None
+		self.api_version = None
+		self.use_ssl = True
+		self.verify = None
 	
 	def __dir__( self ) -> List[ str ]:
 		"""Return visible member names.
