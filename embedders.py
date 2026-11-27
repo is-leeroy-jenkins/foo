@@ -265,6 +265,7 @@ class EmbeddingFactory( ):
         """
         try:
             throw_if( 'provider', provider )
+            throw_if( 'model', model )
             self.provider = provider
             if self.provider == 'Local GGUF':
                 throw_if( 'model_path', model_path )
@@ -272,10 +273,8 @@ class EmbeddingFactory( ):
                 self.model = model
                 return LocalGGUFEmbeddings( model_path=self.model_path )
 
-            throw_if( 'model', model )
             self.model = model
             self.model_path = model_path
-
             if self.provider == 'OpenAI':
                 from langchain_openai import OpenAIEmbeddings
                 return OpenAIEmbeddings( model=self.model, api_key=self.openai_api_key )

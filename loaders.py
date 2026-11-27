@@ -170,7 +170,7 @@ class Loader( ):
 		    str | None: Normalized text produced by the operation, or ``None`` when no text is available.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+		    Error: Wraps the source exception
 		"""
 		try:
 			throw_if( 'path', path )
@@ -259,8 +259,8 @@ class Loader( ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split_documents( self, docs: List[ Document ], chunk: int=1000,
-		overlap: int=200 ) -> List[ Document ]:
+	def split_documents( self, docs: List[ Document ], chunk: int=800,
+		overlap: int=50 ) -> List[ Document ]:
 		"""Split documents.
 
 		Purpose:
@@ -386,7 +386,7 @@ class TextLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split_tokens( self, size: int=1000, amount: int=200 ) -> List[ Document ] | None:
+	def split_tokens( self, size: int=800, amount: int=50 ) -> List[ Document ] | None:
 		"""Split tokens.
 
 		Purpose:
@@ -427,12 +427,11 @@ class TextLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'TextLoader'
-			exception.method = ('split_tokens( self, size: int=1000, amount: int=200 ) -> List[ '
-			                    'Document ] | None')
+			exception.method = ('split_tokens( self, **args ) -> List[ Document ] | None')
 			Logger( ).write( exception )
 			raise exception
 	
-	def split_chars( self, size: int=1000, amount: int=200, seps: str="\n\n" ) -> List[ Document ]:
+	def split_chars( self, size: int=1000, amount: int=100, seps: str="\n\n" ) -> List[ Document ]:
 		"""Split chars.
 
 		Purpose:
@@ -447,7 +446,7 @@ class TextLoader( Loader ):
 		    List[Document]: LangChain documents produced or transformed by the operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+		    Error: Wraps the source exception.
 		"""
 		try:
 			if not isinstance( self.raw_text, str ) or not self.raw_text:
@@ -577,14 +576,11 @@ class CsvLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'CsvLoader'
-			exception.method = ('load( self, filepath: str, columns: Optional[ List[ str ] '
-			                    ']=None, '
-			                    'delimiter: str=",", quotechar: str=\'"\' ) -> List[ Document ] | '
-			                    'None')
+			exception.method = ('load( self, **args ) -> List[ Document ]')
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, size: int=1000, amount: int=200 ) -> List[ Document ] | None:
+	def split( self, size: int=800, amount: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -598,7 +594,7 @@ class CsvLoader( Loader ):
 		    List[Document] | None: LangChain documents produced or transformed by the operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+		    Error: Wraps the source exception.
 		"""
 		try:
 			if self.documents is None:
@@ -612,7 +608,6 @@ class CsvLoader( Loader ):
 				overlap=self.overlap_amount )
 			
 			return self.documents
-		
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'loaders'
@@ -699,7 +694,7 @@ class XmlLoader( Loader ):
 		    List[Document] | None: LangChain documents produced or transformed by the operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+		    Error: Wraps the source exception.
 		"""
 		try:
 			self.file_path = self.verify_exists( filepath )
@@ -714,7 +709,7 @@ class XmlLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, size: int=1000, amount: int=200 ) -> List[ Document ] | None:
+	def split( self, size: int=800, amount: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -770,8 +765,7 @@ class XmlLoader( Loader ):
 			self.xml_tree = etree.parse( self.file_path, parser )
 			self.xml_root = self.xml_tree.getroot( )
 			self.xml_namespaces = { prefix if prefix is not None else 'default': uri for prefix,
-			uri
-				in (self.xml_root.nsmap or { }).items( ) }
+			uri in (self.xml_root.nsmap or { }).items( ) }
 			
 			return self.xml_tree
 		except Exception as e:
@@ -795,7 +789,7 @@ class XmlLoader( Loader ):
 		    List[etree._Element] | None: Ordered values or records produced by the operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+		    Error: Wraps the source exception.
 		"""
 		try:
 			throw_if( 'xpath', xpath )
@@ -864,6 +858,12 @@ class WebLoader( Loader ):
 		    None: This method updates instance state or validates input and does not return a value.
 		"""
 		super( ).__init__( )
+		self.max_depth = max_depth
+		self.timeout = timeout
+		self.ignore = ignore
+		self.with_progress = progress
+		self.recursive = recursive
+		self.prevent_outside = prevent_outside
 		self.file_path = None
 		self.documents = None
 		self.chunk_size = None
@@ -871,12 +871,6 @@ class WebLoader( Loader ):
 		self.loader = None
 		self.url = None
 		self.web_paths = None
-		self.max_depth = max_depth
-		self.timeout = timeout
-		self.ignore = ignore
-		self.with_progress = progress
-		self.recursive = recursive
-		self.prevent_outside = prevent_outside
 	
 	def __dir__( self ) -> list[ str ]:
 		"""Return visible member names.
@@ -911,7 +905,7 @@ class WebLoader( Loader ):
 		    List[Document] | None: LangChain documents produced or transformed by the operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+		    Error: Wraps the source exception.
 		"""
 		try:
 			if self.recursive:
@@ -959,7 +953,6 @@ class WebLoader( Loader ):
 			
 			self.documents = self.loader.load( )
 			return self.documents
-		
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'loaders'
@@ -986,7 +979,7 @@ class WebLoader( Loader ):
 		    List[Document] | None: LangChain documents produced or transformed by the operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+		    Error: Wraps the source exception.
 		"""
 		try:
 			throw_if( 'urls', urls )
@@ -1010,7 +1003,7 @@ class WebLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -1024,7 +1017,7 @@ class WebLoader( Loader ):
 		    List[Document] | None: LangChain documents produced or transformed by the operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+		    Error: Wraps the source exception with module, class, and method metadata.
 		"""
 		try:
 			if self.documents is None:
@@ -1074,7 +1067,7 @@ class PdfLoader( Loader ):
 	custom_delimiter: Optional[ str ]
 	image_parser: Optional[ RapidOCRBlobParser ]
 	
-	def __init__( self, size: int=1000, overlap: int=150, has_tables: bool=True,
+	def __init__( self, size: int=800, overlap: int=50, has_tables: bool=False,
 		include: bool=True ) -> None:
 		"""Initialize the instance.
 
@@ -1091,13 +1084,13 @@ class PdfLoader( Loader ):
 		    None: This method updates instance state or validates input and does not return a value.
 		"""
 		super( ).__init__( )
+		self.chunk_size = size
+		self.overlap_amount = overlap
 		self.enable_tables = has_tables
 		self.include_images = include
 		self.file_path = None
 		self.documents = [ ]
 		self.pattern = None
-		self.chunk_size = size
-		self.overlap_amount = overlap
 		self.loader = None
 		self.mode = None
 		self.extraction = None
@@ -1156,9 +1149,6 @@ class PdfLoader( Loader ):
 		"""
 		return [ 'html-img', 'markdown-img', 'text-img' ]
 	
-
-
-
 	def load( self, filepath: str, mode: str='single', extract: str='plain',
 		include: bool=False, format: str='markdown-img' ) -> List[ Document ]:
 		"""Load.
@@ -1209,7 +1199,7 @@ class PdfLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -1323,19 +1313,16 @@ class ExcelLoader( Loader ):
 		    List[Document]: LangChain documents produced or transformed by the operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+		    Error: Wraps the source exception.
 		"""
 		try:
 			throw_if( 'path', path )
 			self.file_path = self.verify_exists( path )
-			throw_if( 'mode', mode )
 			self.mode = mode
-			throw_if( 'has_headers', has_headers )
 			self.has_headers = has_headers
 			self.loader = UnstructuredExcelLoader( file_path=self.file_path, mode=self.mode )
 			self.documents = self.loader.load( )
 			return self.documents
-		
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'loaders'
@@ -1456,7 +1443,7 @@ class WordLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -1566,7 +1553,7 @@ class MarkdownLoader( Loader ):
 		    List[Document] | None: LangChain documents produced or transformed by the operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+		    Error: The source exception.
 		"""
 		try:
 			throw_if( 'path', path )
@@ -1581,12 +1568,11 @@ class MarkdownLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'MarkdownLoader'
-			exception.method = ('load( self, path: str, mode: str="single" ) -> '
-			                    'List[ Document ] | None')
+			exception.method = ('load( self, **args ) -> List[ Document ]')
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -1682,7 +1668,7 @@ class HtmlLoader( Loader ):
 		    List[Document] | None: LangChain documents produced or transformed by the operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+		    Error: Wraps the source exception.
 		"""
 		try:
 			throw_if( 'path', path )
@@ -1698,7 +1684,7 @@ class HtmlLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -1726,8 +1712,7 @@ class HtmlLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'HtmlLoader'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> List[ '
-			                    'Document ]')
+			exception.method = ('split( self, **args ) -> List[ Document ]')
 			Logger( ).write( exception )
 			raise exception
 
@@ -1810,7 +1795,7 @@ class JsonLoader( Loader ):
 		    List[Document] | None: LangChain documents produced or transformed by the operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+		    Error: Wraps the source exception.
 		"""
 		try:
 			throw_if( 'filepath', filepath )
@@ -1833,7 +1818,6 @@ class JsonLoader( Loader ):
 			self.loader = JSONLoader( **kwargs )
 			self.documents = self.loader.load( )
 			return self.documents
-		
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'loaders'
@@ -1842,7 +1826,7 @@ class JsonLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
