@@ -54,7 +54,9 @@ from __future__ import annotations
 import string
 
 import docx
-from pymupdf import Page, Document
+from pymupdf import Page
+from docx.document import Document
+from nltk.tree import Tree
 from sklearn.feature_extraction.text import TfidfVectorizer
 from boogr import Error, Logger
 from bs4 import BeautifulSoup
@@ -120,9 +122,21 @@ except LookupError:
 	nltk.download( 'omw-1.4' )
 	nltk.download( 'words' )
 
-def throw_if( name: str, value: object ):
+def throw_if( name: str, value: object ) -> None:
+	"""Validate a required processing argument.
+
+	Purpose:
+		Rejects missing values while allowing empty text produced by cleanup operations.
+
+	Args:
+		name (str): Argument name.
+		value (object): Argument value.
+
+	Raises:
+		ValueError: Raised when the value is None.
+	"""
 	if value is None:
-		raise Exception( f'Argument "{name}" cannot be empty!' )
+		raise ValueError( f'Argument "{name}" cannot be empty!' )
 
 class Processor( ):
 	"""Processor processing component.
@@ -188,13 +202,17 @@ class Processor( ):
 	removed: Optional[ List[ str ] ]
 	frequency_distribution: Optional[ DataFrame ]
 	
-	def __init__( self ):
+	def __init__( self ) -> None:
+		"""Initialize shared parser state.
+
+		Purpose:
+			Creates reusable linguistic helpers and empty processing buffers.
+		"""
 		self.lemmatizer = WordNetLemmatizer( )
 		self.stemmer = PorterStemmer( )
 		self.files = [ ]
 		self.lines = [ ]
 		self.tokens = [ ]
-		self.lines = [ ]
 		self.pages = [ ]
 		self.ids = [ ]
 		self.chunks = [ ]
@@ -1441,13 +1459,13 @@ class TextParser( Processor ):
 				_sourcepath = filepath
 				_text = open( _sourcepath, 'r', encoding='utf-8', errors='ignore' ).read( )
 				_collapsed = self.collapse_whitespace( _text )
-				_compressed = self.compress_whitespace( _collapsed )
+				_compressed = _collapsed
 				_normalized = self.normalize_text( _compressed )
 				_encoded = self.remove_encodings( _normalized )
 				_special = self.remove_symbols( _encoded )
 				_cleaned = self.remove_fragments( _special )
-				_recompress = self.compress_whitespace( _cleaned )
-				_lemmatized = self.lemmatize_text( _recompress )
+				_recompress = self.collapse_whitespace( _cleaned )
+				_lemmatized = ' '.join( self.lemmatizer.lemmatize( token ) for token in _recompress.split( ) )
 				_stops = self.remove_stopwords( _lemmatized )
 				return _stops
 		except Exception as e:
@@ -1494,13 +1512,13 @@ class TextParser( Processor ):
 					_sourcepath = _source + '\\' + _filename
 					_text = open( _sourcepath, 'r', encoding='utf-8', errors='ignore' ).read( )
 					_collapsed = self.collapse_whitespace( _text )
-					_compressed = self.compress_whitespace( _collapsed )
+					_compressed = _collapsed
 					_normalized = self.normalize_text( _compressed )
 					_encoded = self.remove_encodings( _normalized )
 					_special = self.remove_symbols( _encoded )
 					_cleaned = self.remove_fragments( _special )
-					_recompress = self.compress_whitespace( _cleaned )
-					_lemmatized = self.lemmatize_text( _recompress )
+					_recompress = self.collapse_whitespace( _cleaned )
+					_lemmatized = ' '.join( self.lemmatizer.lemmatize( token ) for token in _recompress.split( ) )
 					_stops = self.remove_stopwords( _lemmatized )
 					_sentences = self.split_sentences( _stops )
 					_destination = _destpath + '\\' + _filename
@@ -1591,6 +1609,7 @@ class TextParser( Processor ):
 			Error: Raised when validation or processing fails.
 		"""
 		try:
+			throw_if( 'size', size )
 			throw_if( 'filepath', filepath )
 			if not os.path.exists( filepath ):
 				raise FileNotFoundError( f'File not found: {filepath}' )
@@ -1620,7 +1639,7 @@ class TextParser( Processor ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def chunk_datasets( self, source: str, destination: str, size: int=10 ) -> DataFrame:
+	def chunk_datasets( self, source: str, destination: str, size: int=10 ) -> None:
 		"""Chunk datasets.
 		
 		Purpose:
@@ -1634,12 +1653,13 @@ class TextParser( Processor ):
 			size: Size value used by the processing operation. Defaults to `10`.
 		
 		Returns:
-			DataFrame: Result produced by the processing operation.
+			None: Writes one Excel dataset per source file.
 		
 		Raises:
 			Error: Raised when validation or processing fails.
 		"""
 		try:
+			throw_if( 'size', size )
 			throw_if( 'filepath', source )
 			throw_if( 'destination', destination )
 			if not os.path.exists( source ):
@@ -1657,13 +1677,13 @@ class TextParser( Processor ):
 					_sourcepath = _src + '\\' + _filename
 					_text = open( _sourcepath, 'r', encoding='utf-8', errors='ignore' ).read( )
 					_collapsed = self.collapse_whitespace( _text )
-					_compressed = self.compress_whitespace( _collapsed )
+					_compressed = _collapsed
 					_normalized = self.normalize_text( _compressed )
 					_encoded = self.remove_encodings( _normalized )
 					_special = self.remove_symbols( _encoded )
 					_cleaned = self.remove_fragments( _special )
-					_recompress = self.compress_whitespace( _cleaned )
-					_lemmatized = self.lemmatize_text( _recompress )
+					_recompress = self.collapse_whitespace( _cleaned )
+					_lemmatized = ' '.join( self.lemmatizer.lemmatize( token ) for token in _recompress.split( ) )
 					_stops = self.remove_stopwords( _lemmatized )
 					_tokens = _stops.split( None )
 					_chunks = [ _tokens[ i: i + size ] for i in range( 0, len( _tokens ), size ) ]
@@ -1684,7 +1704,7 @@ class TextParser( Processor ):
 			exception = Error( e )
 			exception.module = 'processors'
 			exception.cause = 'TextParser'
-			exception.method = 'chunk_data( self, filepath: str, size: int=15  ) -> DataFrame'
+			exception.method = 'chunk_datasets( self, source: str, destination: str, size: int=10 ) -> None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -1710,6 +1730,7 @@ class TextParser( Processor ):
 			Error: Raised when validation or processing fails.
 		"""
 		try:
+			throw_if( 'size', size )
 			throw_if( 'source', source )
 			throw_if( 'destination', destination )
 			if not os.path.exists( source ):
@@ -1730,7 +1751,7 @@ class TextParser( Processor ):
 					_chunks = [ _tokens[ i: i + size ] for i in range( 0, len( _tokens ), size ) ]
 					_datamap = [ ]
 					for i, c in enumerate( _chunks ):
-						_value = '{ ' + f' {i} : [ ' + ' '.join( c ) + ' ] }, ' + "\n"
+						_value = json.dumps( { i: c }, ensure_ascii=False ) + '\n'
 						_datamap.append( _value )
 					
 					for s in _datamap:
@@ -1773,7 +1794,8 @@ class TextParser( Processor ):
 			_transformer = SentenceTransformer( model )
 			_tokens = [ self.lemmatizer.lemmatize( t ) for t in tokens ]
 			_encoding = _transformer.encode( _tokens, show_progress_bar=True )
-			return (self.cleaned_tokens, np.array( _encoding ))
+			self.cleaned_tokens = _tokens
+			return self.cleaned_tokens, _encoding
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'processors'
@@ -1912,7 +1934,7 @@ class NltkParser( Processor ):
 					nltk.download( resource_name )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'processing'
+			exception.module = 'processors'
 			exception.cause = 'NltkParser'
 			exception.method = 'NltkParser._ensure_nltk_resources( self ) -> None'
 			Logger( ).write( exception )
@@ -1943,7 +1965,7 @@ class NltkParser( Processor ):
 			return words
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'processing'
+			exception.module = 'processors'
 			exception.cause = 'NltkParser'
 			exception.method = 'word_tokenizer( self, text: str ) -> List[ str ]'
 			Logger( ).write( exception )
@@ -1973,7 +1995,7 @@ class NltkParser( Processor ):
 			return self.sentence_tokens
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'processing'
+			exception.module = 'processors'
 			exception.cause = 'NltkParser'
 			exception.method = 'tokenize_sentences( self, text: str ) -> str'
 			Logger( ).write( exception )
@@ -2006,7 +2028,7 @@ class NltkParser( Processor ):
 			return self.stemmed_tokens
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'processing'
+			exception.module = 'processors'
 			exception.cause = 'NltkParser'
 			exception.method = 'stemmer( self, text: str ) -> str'
 			Logger( ).write( exception )
@@ -2039,7 +2061,7 @@ class NltkParser( Processor ):
 			return self.lemmatized_tokens
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'processing'
+			exception.module = 'processors'
 			exception.cause = 'NltkParser'
 			exception.method = 'lemmatizer( self, text: str ) -> str'
 			Logger( ).write( exception )
@@ -2070,7 +2092,7 @@ class NltkParser( Processor ):
 			return self.tagged_tokens
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'processing'
+			exception.module = 'processors'
 			exception.cause = 'NltkParser'
 			exception.method = 'pos_tagger( self, text: str ) -> str'
 			Logger( ).write( exception )
@@ -2095,13 +2117,13 @@ class NltkParser( Processor ):
 		"""
 		try:
 			throw_if( 'text', text )
-			_text = text.lower( )
+			_text = text
 			self.word_tokens = word_tokenize( _text )
 			self.tagged_tokens = nltk.pos_tag( self.word_tokens )
 			tree = nltk.ne_chunk( self.tagged_tokens )
 			self.named_entities = [ ]
 			for node in tree:
-				if hasattr( node, 'label' ):
+				if isinstance( node, Tree ):
 					label = node.label( )
 					entity_text = ' '.join( token for token, _ in node.leaves( ) if
 						isinstance( token, str ) and token.strip( ) )
@@ -2112,9 +2134,9 @@ class NltkParser( Processor ):
 			return self.named_entities
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'processing'
+			exception.module = 'processors'
 			exception.cause = 'NltkParser'
-			exception.method = 'named_entity_recogniztion( self, text: str ) -> str'
+			exception.method = 'named_entity_recognition( self, text: str ) -> List[ Tuple[ str, str ] ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -2235,7 +2257,7 @@ class WordParser( Processor ):
 		"""
 		super( ).__init__( )
 		self.file_path = filepath
-		self.document = Document( open( self.file_path, 'rt+' ) )
+		self.document = docx.Document( self.file_path )
 		self.page_text = ''
 		self.paragraphs = [ ]
 		self.sentences = [ ]
@@ -2265,7 +2287,7 @@ class WordParser( Processor ):
 			loading, processing, analysis, tokenization, or embedding steps.
 		
 		Args:
-			num: Num value used by the processing operation. Defaults to ``1``.
+			num: One-based paragraph number. Defaults to ``1``. Word documents do not expose rendered page boundaries.
 		
 		Returns:
 			str | None: Result produced by the processing operation.
@@ -2274,7 +2296,9 @@ class WordParser( Processor ):
 			Error: Raised when validation or processing fails.
 		"""
 		try:
-			self.page_text = self.document.get_page_text( pno=num )
+			throw_if( 'num', num )
+			self.paragraphs = [ paragraph.text for paragraph in self.document.paragraphs ]
+			self.page_text = self.paragraphs[ num - 1 ]
 			return self.page_text
 		except Exception as e:
 			exception = Error( e )
@@ -2325,6 +2349,7 @@ class WordParser( Processor ):
 			Error: Raised when validation or processing fails.
 		"""
 		try:
+			self.cleaned_sentences = [ ]
 			for _sent in self.sentences:
 				_sent = re.sub( r'[\r\n\t]+', ' ', _sent )
 				_sent = re.sub( r"[^a-zA-Z0-9\s']", '', _sent )
@@ -3097,7 +3122,7 @@ class PdfParser( Processor ):
 						break
 					
 					tables = page.find_tables( )
-					for table in getattr( tables, 'tables', [ ] ):
+					for table in tables.tables:
 						self.tables.append( pd.DataFrame( table.extract( ) ) )
 			
 			return self.tables
@@ -3203,7 +3228,7 @@ class PdfParser( Processor ):
 			self.tables = tables
 			self.file_path = path
 			
-			with pd.ExcelWriter( self.file_path, engine='xlsxwriter' ) as writer:
+			with pd.ExcelWriter( self.file_path, engine='openpyxl' ) as writer:
 				for index, df_table in enumerate( self.tables ):
 					sheet = f'Table_{index + 1}'
 					df_table.to_excel( writer, sheet_name=sheet, index=False )

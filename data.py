@@ -118,6 +118,7 @@ class DB( ):
 		self.provider = None
 		self.source = None
 		self.table_name = None
+		self.column_names = [ ]
 		self.path = None
 		self.driver = None
 	
@@ -413,10 +414,13 @@ class SQLite( DB ):
 			throw_if( 'table', table )
 			throw_if( 'columns', columns )
 			throw_if( 'values', values )
-			self.placeholders = ', '.join( '?' for _ in values )
-			col_names = ', '.join( columns )
-			self.sql = f'INSERT INTO {table} ({col_names}) VALUES ({self.placeholders})'
-			self.cursor.execute( self.sql, values )
+			self.table_name = table
+			self.column_names = columns
+			self.params = values
+			self.placeholders = ', '.join( '?' for _ in self.params )
+			col_names = ', '.join( self.column_names )
+			self.sql = f'INSERT INTO {self.table_name} ({col_names}) VALUES ({self.placeholders})'
+			self.cursor.execute( self.sql, self.params )
 			self.connection.commit( )
 		except Exception as e:
 			exception = Error( e )
@@ -449,7 +453,7 @@ class SQLite( DB ):
 			records = [ (source_file, i, chunks[ i ], json.dumps( vectors[ i ].tolist( ) ))
 			            for i in range( len( chunks ) ) ]
 			
-			self.sql = f''' INSERT INTO {self.table_name} ({self.file_name}, chunk_index,
+			self.sql = f''' INSERT INTO {self.table_name or 'embeddings'} (source_file, chunk_index,
 					chunk_text, embedding) VALUES (?, ?, ?, ?) '''
 			self.cursor.executemany( self.sql, records )
 			self.connection.commit( )
@@ -659,10 +663,28 @@ class Chroma:
 		collection operations.
 	
 	Attributes:
+		path (str): Persistence directory.
+		collection_name (str): Collection identifier.
+		ids (List[str]): Active record identifiers.
+		texts (List[str]): Active document content.
+		embeddings (List[List[float]]): Active document vectors.
+		metadatas (Optional[List[dict]]): Active record metadata.
+		query_text (List[str]): Active query texts.
+		num (int): Requested result count.
+		where (Optional[dict]): Active metadata filter.
 		client (Optional[chromadb.Client]): Instantiated ChromaDB client.
 		collection (Optional[chromadb.Collection]): Vector collection used for add, query,
 			delete, count, clear, and persistence operations.
 	"""
+	path: str
+	collection_name: str
+	ids: List[ str ]
+	texts: List[ str ]
+	embeddings: List[ List[ float ] ]
+	metadatas: Optional[ List[ dict ] ]
+	query_text: List[ str ]
+	num: int
+	where: Optional[ dict ]
 	client: Optional[ chromadb.Client ]
 	collection: Optional[ chromadb.Collection ]
 	
@@ -678,9 +700,18 @@ class Chroma:
 			path (str): Directory used by ChromaDB for persistent storage.
 			collection (str): Name of the ChromaDB collection to retrieve or create.
 		"""
-		self.client = chromadb.Client(
-			Settings( persist_directory=path, anonymized_telemetry=False ) )
-		self.collection = self.client.get_or_create_collection( name=collection )
+		self.path = path
+		self.collection_name = collection
+		self.ids = [ ]
+		self.texts = [ ]
+		self.embeddings = [ ]
+		self.metadatas = None
+		self.query_text = [ ]
+		self.num = 5
+		self.where = None
+		self.client = chromadb.PersistentClient( path=self.path,
+			settings=Settings( anonymized_telemetry=False ) )
+		self.collection = self.client.get_or_create_collection( name=self.collection_name )
 	
 	def add( self, ids: List[ str ], texts: List[ str ], embeddings: List[ List[ float ] ],
 			metadatas: Optional[ List[ dict ] ] = None ) -> None:
@@ -701,11 +732,18 @@ class Chroma:
 			Error: Re-raised after the exception is wrapped and written to the application logger.
 		"""
 		try:
-			self.collection.add( documents=texts, embeddings=embeddings, ids=ids,
-				metadatas=metadatas )
+			throw_if( 'ids', ids )
+			throw_if( 'texts', texts )
+			throw_if( 'embeddings', embeddings )
+			self.ids = ids
+			self.texts = texts
+			self.embeddings = embeddings
+			self.metadatas = metadatas
+			self.collection.add( documents=self.texts, embeddings=self.embeddings, ids=self.ids,
+				metadatas=self.metadatas )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Foo'
+			exception.module = 'data'
 			exception.cause = 'Chroma'
 			exception.method = 'add( self, **kwargs )'
 			Logger( ).write( exception )
@@ -732,11 +770,16 @@ class Chroma:
 			Error: Re-raised after the exception is wrapped and written to the application logger.
 		"""
 		try:
-			result = self.collection.query( query_texts=text, n_results=num, where=where or { } )
-			return result.get( 'documents', [ ] )[ 0 ]
+			throw_if( 'text', text )
+			self.query_text = text
+			self.num = num
+			self.where = where
+			result = self.collection.query( query_texts=self.query_text, n_results=self.num, where=self.where )
+			documents = result[ 'documents' ]
+			return documents[ 0 ] if documents else [ ]
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Foo'
+			exception.module = 'data'
 			exception.cause = 'Chroma'
 			exception.method = 'query( )'
 			Logger( ).write( exception )
@@ -756,10 +799,12 @@ class Chroma:
 			Error: Re-raised after the exception is wrapped and written to the application logger.
 		"""
 		try:
-			self.collection.delete( ids=ids )
+			throw_if( 'ids', ids )
+			self.ids = ids
+			self.collection.delete( ids=self.ids )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Foo'
+			exception.module = 'data'
 			exception.cause = 'Chroma'
 			exception.method = 'delete( )'
 			Logger( ).write( exception )
@@ -782,7 +827,7 @@ class Chroma:
 			return self.collection.count( )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Foo'
+			exception.module = 'data'
 			exception.cause = 'Chroma'
 			exception.method = 'count( )'
 			Logger( ).write( exception )
@@ -793,17 +838,21 @@ class Chroma:
 		
 		Purpose:
 			Deletes all documents from the configured ChromaDB collection using the existing
-			collection-wide delete behavior. This supports resetting local vector-store state
+			record identifiers. This supports resetting local vector-store state
 			for rebuild or testing workflows.
 		
 		Raises:
 			Error: Re-raised after the exception is wrapped and written to the application logger.
 		"""
 		try:
-			self.collection.delete( where={ } )
+			ids = self.collection.get( include=[ ] )[ 'ids' ]
+			if ids:
+				throw_if( 'ids', ids )
+			self.ids = ids
+			self.collection.delete( ids=self.ids )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Foo'
+			exception.module = 'data'
 			exception.cause = 'Chroma'
 			exception.method = 'clear( )'
 			Logger( ).write( exception )
@@ -813,19 +862,10 @@ class Chroma:
 		"""Persist vector-store state.
 		
 		Purpose:
-			Calls the ChromaDB client persistence operation to save the current collection
-			state to disk. This preserves vector-store changes for later application runs.
+			Preserves the public interface for callers. The persistent client writes changes
+			automatically; no explicit persistence operation is required.
 		
-		Raises:
-			Error: Re-raised after the exception is wrapped and written to the application logger.
+		Returns:
+			None: Persistence is automatic.
 		"""
-		try:
-			self.client.persist( )
-		except Exception as e:
-			exception = Error( e )
-			exception.module = 'Foo'
-			exception.cause = 'Chroma'
-			exception.method = 'persist'
-			Logger( ).write( exception )
-			raise exception
-			
+		return None

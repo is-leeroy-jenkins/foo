@@ -48,6 +48,7 @@
 	</summary>
 	******************************************************************************************
 '''
+import json
 from pathlib import Path
 from typing import Optional
 from core import Result
@@ -62,10 +63,10 @@ def throw_if( name: str, value: object ) -> None:
 
 	Args:
 	    name (str): Argument name included in validation error messages.
-	    value (object): Candidate value to validate or normalize.
+	    value (object): Candidate value to validate.
 
 	Returns:
-	    None: This method updates instance state or validates input and does not return a value.
+	    None: Returns after successful validation.
 
 	Raises:
 	    ValueError: Raised when the method cannot satisfy its documented value requirement.
@@ -155,9 +156,9 @@ class Writer( ):
 			Error: Re-raised after the source exception is wrapped with structured diagnostic metadata.
 		"""
 		try:
-			throw_if( 'text', text if isinstance( text, str ) else None )
-			throw_if( 'filename', filename if isinstance( filename, str ) else None )
-			throw_if( 'directory', directory if isinstance( directory, str ) else None )
+			throw_if( 'text', text )
+			throw_if( 'filename', filename )
+			throw_if( 'directory', directory )
 			self.text = text
 			self.filename = filename
 			self.directory = directory
@@ -170,7 +171,7 @@ class Writer( ):
 			exception = Error( exc )
 			exception.module = 'writers'
 			exception.cause = 'Writer'
-			exception.method = 'write( self, **kwargs ) -> Path | None'
+			exception.method = "write( self, text: str, filename: str, directory: str='output' ) -> Path | None"
 			Logger( ).write( exception )
 			raise exception
 
@@ -244,14 +245,14 @@ class MarkdownWriter( Writer ):
 		"""
 		try:
 			throw_if( 'result', result )
-			throw_if( 'path', path if isinstance( path, str ) else None )
+			throw_if( 'path', path )
 			self.result = result
 			self.path = path
 			self.file_path = Path( self.path ).resolve( )
 			self.output_path = self.file_path.parent
 			self.output_path.mkdir( parents=True, exist_ok=True )
 			self.front_matter = (
-					'---\n' + f'source_url: {self.result.url}\n' + f'status_code: '
+					'---\n' + f'source_url: {json.dumps( self.result.url, ensure_ascii=False )}\n' + f'status_code: '
 					                                               f'{self.result.status_code}\n'
 					+ '---\n\n')
 			self.body = (
