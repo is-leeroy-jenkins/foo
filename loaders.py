@@ -3899,10 +3899,6 @@ class GoogleCloudFileLoader( Loader ):
 			raise exception
 
 class AwsFileLoader( Loader ):
-	    api_version (Optional[str]): S3 API version.
-	    use_ssl (bool): Whether SSL is enabled.
-	    verify (str | bool | None): SSL certificate verification setting.
-	    endpoint_url (Optional[str]): Custom S3 endpoint URL.
 	"""AwsFileLoader component.
 
 	Purpose:
@@ -3917,6 +3913,10 @@ class AwsFileLoader( Loader ):
 	    aws_secret_access_key (Optional[str]): Current aws secret access key retained by the AwsFileLoader workflow between related operations.
 	    aws_session_token (Optional[str]): Current aws session token retained by the AwsFileLoader workflow between related operations.
 	    region_name (Optional[str]): Current region name retained by the AwsFileLoader workflow between related operations.
+	    api_version (Optional[str]): S3 API version.
+	    use_ssl (bool): Whether SSL is enabled.
+	    verify (str | bool | None): SSL certificate verification setting.
+	    endpoint_url (Optional[str]): Custom S3 endpoint URL.
 	"""
 	loader: Optional[ S3FileLoader ]
 	documents: Optional[ List[ Document ] ]
@@ -3926,10 +3926,10 @@ class AwsFileLoader( Loader ):
 	aws_secret_access_key: Optional[ str ]
 	aws_session_token: Optional[ str ]
 	region_name: Optional[ str ]
-		api_version: Optional[ str ]
-		use_ssl: bool
-		verify: str | bool | None
-		endpoint_url: Optional[ str ]
+	api_version: Optional[ str ]
+	use_ssl: bool
+	verify: str | bool | None
+	endpoint_url: Optional[ str ]
 	
 	def __init__( self ) -> None:
 		"""Initialize the instance.
@@ -3971,8 +3971,8 @@ class AwsFileLoader( Loader ):
 		aws_secret_access_key: Optional[ str ] = None,
 		aws_session_token: Optional[ str ] = None,
 		region_name: Optional[ str ] = None, api_version: Optional[ str ] = None,
-		use_ssl: bool = True, verify: str | bool | None = None,
-		endpoint_url: Optional[ str ] = None ) -> List[ Document ] | None:
+	use_ssl: bool = True, verify: str | bool | None = None,
+	endpoint_url: Optional[ str ] = None ) -> List[ Document ] | None:
 		"""Load an Amazon S3 object.
 
 		Purpose:
@@ -4315,9 +4315,6 @@ class GoogleBucketLoader( Loader ):
 			raise exception
 
 class AwsBucketLoader( Loader ):
-	    api_version (Optional[str]): S3 API version.
-	    use_ssl (bool): Whether SSL is enabled.
-	    verify (str | bool | None): SSL certificate verification setting.
 	"""AwsBucketLoader component.
 
 	Purpose:
@@ -4333,6 +4330,9 @@ class AwsBucketLoader( Loader ):
 	    aws_session_token (Optional[str]): Current aws session token retained by the AwsBucketLoader workflow between related operations.
 	    region_name (Optional[str]): Current region name retained by the AwsBucketLoader workflow between related operations.
 	    endpoint_url (Optional[str]): URL associated with the current endpoint resource or endpoint.
+	    api_version (Optional[str]): S3 API version.
+	    use_ssl (bool): Whether SSL is enabled.
+	    verify (str | bool | None): SSL certificate verification setting.
 	"""
 	loader: Optional[ S3DirectoryLoader ]
 	documents: Optional[ List[ Document ] ]
@@ -4343,9 +4343,9 @@ class AwsBucketLoader( Loader ):
 	aws_session_token: Optional[ str ]
 	region_name: Optional[ str ]
 	endpoint_url: Optional[ str ]
-		api_version: Optional[ str ]
-		use_ssl: bool
-		verify: str | bool | None
+	api_version: Optional[ str ]
+	use_ssl: bool
+	verify: str | bool | None
 	
 	def __init__( self ) -> None:
 		"""Initialize the instance.
@@ -4388,8 +4388,8 @@ class AwsBucketLoader( Loader ):
 		aws_secret_access_key: Optional[ str ] = None,
 		aws_session_token: Optional[ str ] = None,
 		region_name: Optional[ str ] = None, endpoint_url: Optional[ str ] = None,
-		api_version: Optional[ str ] = None, use_ssl: bool = True,
-		verify: str | bool | None = None ) -> List[ Document ] | None:
+	api_version: Optional[ str ] = None, use_ssl: bool = True,
+	verify: str | bool | None = None ) -> List[ Document ] | None:
 		"""Load an Amazon S3 directory.
 
 		Purpose:
