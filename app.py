@@ -7810,8 +7810,6 @@ elif mode == 'Geospatial':
 				st.session_state[ 'opensky_lamax' ] = 40.5
 				st.session_state[ 'opensky_lomax' ] = -75.0
 				st.session_state[ 'opensky_extended' ] = False
-				st.session_state[ 'opensky_client_id' ] = ''
-				st.session_state[ 'opensky_client_secret' ] = ''
 				st.session_state[ 'opensky_timeout' ] = 20
 			
 			def _coerce_opensky_time_value( mode_value: str, raw_value: int ) -> int | None:
@@ -7865,11 +7863,7 @@ elif mode == 'Geospatial':
 			if 'opensky_extended' not in st.session_state:
 				st.session_state[ 'opensky_extended' ] = False
 			
-			if 'opensky_client_id' not in st.session_state:
-				st.session_state[ 'opensky_client_id' ] = ''
 			
-			if 'opensky_client_secret' not in st.session_state:
-				st.session_state[ 'opensky_client_secret' ] = ''
 			
 			if 'opensky_timeout' not in st.session_state:
 				st.session_state[ 'opensky_timeout' ] = 20
@@ -7902,9 +7896,9 @@ elif mode == 'Geospatial':
 			lomax = st.number_input( 'Max Longitude', value=-75.0, key='opensky_lomax' )
 			extended = st.checkbox( 'Extended Aircraft Categories', value=False, key='opensky_extended', help='Only applies to states_bbox.' )
 			
-			client_id = st.text_input( 'Client ID (Optional)', value='', key='opensky_client_id' )
+			st.text_input( 'Client ID (Environment)', value='', disabled=True, help='Configured through OPENSKY_API_CLIENT_ID.' )
 			
-			client_secret = st.text_input( 'Client Secret (Optional)', value='', type='password', key='opensky_client_secret' )
+			st.text_input( 'Client Secret (Environment)', value='', type='password', disabled=True, help='Configured through OPENSKY_API_CLIENT_SECRET.' )
 			
 			timeout = st.slider( 'Timeout (seconds)', min_value=5, max_value=60, value=20, step=1, key='opensky_timeout' )
 			
@@ -8815,8 +8809,7 @@ elif mode == 'Geospatial':
 						lomin=float( lomin ) if lomin is not None else None,
 						lamax=float( lamax ) if lamax is not None else None,
 						lomax=float( lomax ) if lomax is not None else None,
-						extended=bool( extended ), client_id=client_id.strip( ) or None,
-						client_secret=client_secret.strip( ) or None, time=int( timeout ), )
+						extended=extended, time=timeout, )
 					st.session_state[ 'opensky_results' ] = result or { }
 				except Exception as exc:
 					st.error( 'OpenSky request failed.' )
