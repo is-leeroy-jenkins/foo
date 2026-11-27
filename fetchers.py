@@ -130,11 +130,11 @@ def encode_image( path: str ) -> str:
 	Raises:
 	    ValueError: Raised when the method cannot satisfy its documented value requirement.
 	"""
-	if path is None:
-		raise ValueError( f"Argument '{path}' cannot be empty!" )
-	else:
-		data = Path( path ).read_bytes( )
-		return base64.b64encode( data ).decode( "utf-8" )
+	throw_if( 'path', path )
+	if not isinstance( path, str ):
+		raise ValueError( 'path must be a string.' )
+	data = Path( path ).read_bytes( )
+	return base64.b64encode( data ).decode( "utf-8" )
 
 class Fetcher:
 	"""Fetcher component.
@@ -319,7 +319,12 @@ class WebFetcher( Fetcher ):
 		"""
 		try:
 			throw_if( 'url', url )
-			self.url = url.strip( )
+			if not isinstance( url, str ):
+				raise ValueError( 'url must be a string.' )
+			self.url = url
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.response = requests.get( url=self.url, headers=self.headers,
 				timeout=self.timeout )
@@ -1126,6 +1131,9 @@ class WebCrawler( WebFetcher ):
 			throw_if( 'url', url )
 			if self.use_playwright:
 				self.url = url.strip( )
+				throw_if( 'time', time )
+				if type( time ) is not int or time < 1:
+					raise ValueError( 'time must be a positive integer.' )
 				self.timeout = time
 				self.raw_url = self.url
 				self.raw_html = self.render_with_playwright( self.url, timeout=self.timeout )
@@ -1163,11 +1171,18 @@ class WebCrawler( WebFetcher ):
 		"""
 		try:
 			throw_if( 'url', url )
+			throw_if( 'timeout', timeout )
+			if not isinstance( url, str ):
+				raise ValueError( 'url must be a string.' )
+			if type( timeout ) is not int or timeout < 1:
+				raise ValueError( 'timeout must be a positive integer.' )
+			self.url = url
+			self.timeout = timeout
 			with sync_playwright( ) as p:
 				browser = p.chromium.launch( )
 				page = browser.new_page( )
-				page.goto( url, timeout=timeout * 1000 )
-				page.wait_for_load_state( 'networkidle', timeout=timeout * 1000 )
+				page.goto( self.url, timeout=self.timeout * 1000 )
+				page.wait_for_load_state( 'networkidle', timeout=self.timeout * 1000 )
 				html = page.content( )
 				browser.close( )
 				return html
@@ -1898,6 +1913,9 @@ class TheNews( Fetcher ):
 		"""
 		try:
 			self.endpoint = endpoint
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.limit = limit
 			self.page = page
@@ -2220,6 +2238,8 @@ class GoogleSearch( Fetcher ):
 			if cse_id:
 				self.cse_id = cse_id.strip( )
 			
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.keywords = keywords.strip( )
 			self.results = results
@@ -2884,10 +2904,11 @@ class GoogleWeather( Fetcher ):
 			if not isinstance( params, dict ):
 				raise TypeError( 'params must be a dictionary.' )
 			self.path = path.strip( ).lstrip( '/' )
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { }
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			for key, value in params.items( ):
 				if value is None:
@@ -2991,6 +3012,8 @@ class GoogleWeather( Fetcher ):
 			self.mode = 'current'
 			self.units_system = units_system.strip( )
 			self.language_code = language_code.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.latitude, self.longitude = self.resolve_coordinates( address )
 			
@@ -3048,6 +3071,8 @@ class GoogleWeather( Fetcher ):
 			self.hours = hours
 			self.units_system = units_system.strip( )
 			self.language_code = language_code.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			if self.hours < 1 or self.hours > 240:
 				raise ValueError( 'hours must be between 1 and 240.' )
@@ -3107,6 +3132,8 @@ class GoogleWeather( Fetcher ):
 			self.days = days
 			self.units_system = units_system.strip( )
 			self.language_code = language_code.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			if self.days < 1 or self.days > 10:
 				raise ValueError( 'days must be between 1 and 10.' )
@@ -3166,6 +3193,8 @@ class GoogleWeather( Fetcher ):
 			self.hours = hours
 			self.units_system = units_system.strip( )
 			self.language_code = language_code.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			if self.hours < 1 or self.hours > 24:
 				raise ValueError( 'hours must be between 1 and 24 for hourly history.' )
@@ -3217,6 +3246,8 @@ class GoogleWeather( Fetcher ):
 			
 			self.mode = 'alerts'
 			self.language_code = language_code.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.latitude, self.longitude = self.resolve_coordinates( address )
 			self.params = { 'location.latitude': self.latitude,
@@ -3446,9 +3477,10 @@ class NavalObservatory( Fetcher ):
 			throw_if( 'time_value', time_value )
 			throw_if( 'latitude', latitude )
 			throw_if( 'longitude', longitude )
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 
 			self.date_value = self.validate_date( date_value )
 			self.time_value = self.validate_time( time_value )
@@ -3737,9 +3769,10 @@ class SatelliteCenter( Fetcher ):
 			self.end_time = end_time.strip( )
 			self.coordinate_systems = coordinate_systems.strip( ).lower( )
 			self.resolution_factor = resolution_factor
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			if self.resolution_factor < 1:
 				raise ValueError( 'resolution_factor must be greater than or equal to 1.' )
 			if not re.fullmatch( r'[A-Za-z0-9_-]+(?:,[A-Za-z0-9_-]+)*',
@@ -3940,9 +3973,10 @@ class EarthObservatory( Fetcher ):
 		    Error: Reports request and response validation failures.
 		"""
 		try:
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			self.response = requests.get( url=self.url, params=self.params,
 				headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -4199,6 +4233,9 @@ class EarthObservatory( Fetcher ):
 		"""
 		try:
 			self.mode = mode
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			if self.mode == 'events':
 				self.status = status
@@ -4589,9 +4626,10 @@ class GlobalImagery( Fetcher ):
 			self.image_date = image_date.strip( )
 			self.bbox = bbox
 			self.mode = 'wms_map'
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			request_url = self.build_wms_url( layer=self.layer, image_date=self.image_date,
 				bbox=self.bbox,
 				width=width, height=height, projection=projection, quality=quality,
@@ -4861,9 +4899,10 @@ class NearbyObjects( Fetcher ):
 		    Error: If an invalid timeout, request failure or provider error occurs.
 		"""
 		try:
-			self.timeout = time
-			if self.timeout < 1:
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
 				raise ValueError( 'time must be a positive integer.' )
+			self.timeout = time
 			self.response = requests.get( url=self.url, params=self.params,
 				headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -5478,9 +5517,10 @@ class OpenScience( Fetcher ):
 		    Error: If the request, timeout or provider response fails.
 		"""
 		try:
-			self.timeout = time
-			if self.timeout < 1:
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
 				raise ValueError( 'time must be a positive integer.' )
+			self.timeout = time
 			self.response = requests.get( url=self.url, params=self.params,
 				headers=self.headers, timeout=self.timeout )
 			self.response.raise_for_status( )
@@ -5877,9 +5917,10 @@ class SpaceWeather( Fetcher ):
 		"""
 		try:
 			throw_if( 'endpoint', endpoint )
-			self.timeout = time
-			if self.timeout < 1:
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
 				raise ValueError( 'time must be a positive integer.' )
+			self.timeout = time
 			self.endpoint = endpoint.strip( )
 			supported = { 'CME', 'CMEAnalysis', 'GST', 'IPS', 'FLR', 'SEP',
 				'MPC', 'RBE', 'HSS', 'WSAEnlilSimulations', 'notifications' }
@@ -6270,9 +6311,10 @@ class AstroCatalog( Fetcher ):
 		"""
 		try:
 			throw_if( 'route', route )
-			self.timeout = time
-			if self.timeout < 1:
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
 				raise ValueError( 'time must be a positive integer.' )
+			self.timeout = time
 			self.route = route.strip( ).lstrip( '/' )
 			self.params = params if params is not None else { }
 			self.format = str( self.params.get( 'format', 'json' ) ).strip( ).lower( )
@@ -6387,6 +6429,9 @@ class AstroCatalog( Fetcher ):
 			self.params = self.parse_argument( arguments )
 			if self.format:
 				self.params[ 'format' ] = self.format
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			return self.request( route=self.route, params=self.params, time=self.timeout )
 		except Exception as exc:
@@ -6449,6 +6494,9 @@ class AstroCatalog( Fetcher ):
 			self.params[ 'radius' ] = str( self.radius )
 			if self.format:
 				self.params[ 'format' ] = self.format
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			return self.request( route=self.route, params=self.params, time=self.timeout )
 		except Exception as exc:
@@ -6496,6 +6544,9 @@ class AstroCatalog( Fetcher ):
 			self.attributes = attributes
 			self.arguments = arguments
 			self.format = data_format
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			if self.mode == 'object_query':
 				throw_if( 'query', query )
@@ -7007,6 +7058,9 @@ class StarMap( Fetcher ):
 			self.zoom = zoom
 			self.box_color = box_color
 			self.show_box = show_box
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.params = { 'object': self.object, 'show_box': self.normalize( self.show_box ),
@@ -7073,6 +7127,9 @@ class StarMap( Fetcher ):
 			self.show_grid = show_grid
 			self.show_lines = show_lines
 			self.show_boundaries = show_boundaries
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.params = { 'ra': f'{self.right_ascension}', 'de': f'{self.declination}',
@@ -7142,6 +7199,9 @@ class StarMap( Fetcher ):
 			self.show_lines = show_lines
 			self.show_boundaries = show_boundaries
 			self.show_const_names = show_const_names
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.params = { 'ra': f'{self.right_ascension}', 'de': f'{self.declination}',
@@ -7477,6 +7537,8 @@ class GovData( Fetcher ):
 			self.offset_mark = ( offset_mark or '*' ).strip( )
 			self.sort_field = self.validate_sort_field( sort_field )
 			self.sort_order = self.validate_sort_order( sort_order )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/search'
 			self.params = { 'api_key': self.api_key }
@@ -7529,6 +7591,8 @@ class GovData( Fetcher ):
 			
 			self.mode = 'package_summary'
 			self.package_id = package_id.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/packages/{self.package_id}/summary'
 			self.params = { 'api_key': self.api_key }
@@ -7585,6 +7649,8 @@ class GovData( Fetcher ):
 			self.start_date = start_date.strip( )
 			self.page_size = self.validate_page_size( page_size )
 			self.offset_mark = ( offset_mark or '*' ).strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/collections/{self.collection}/{self.start_date}'
 			self.params = { 'pageSize': self.page_size, 'offsetMark': self.offset_mark,
@@ -7874,12 +7940,18 @@ class StarChart( Fetcher ):
 		"""
 		try:
 			throw_if( 'name', name )
-			self.query = name.strip( )
+			throw_if( 'time', time )
+			if not isinstance( name, str ):
+				raise ValueError( 'name must be a string.' )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
+			self.query = name
+			self.timeout = time
 			self.url = self.search_url
 			self.params = { 'star': self.query }
 			
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
-				timeout=time )
+				timeout=self.timeout )
 			self.response.raise_for_status( )
 			
 			root = ET.fromstring( self.response.text )
@@ -8594,6 +8666,8 @@ class Congress( Fetcher ):
 			
 			self.mode = mode.strip( )
 			self.url = url.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = params
 			
@@ -9312,6 +9386,9 @@ class InternetArchive( Fetcher ):
 			self.keywords = keywords.strip( )
 			throw_if( 'keywords', self.keywords )
 			
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.rows = self.validate_rows( rows )
 			self.page = self.validate_page( page )
@@ -10574,9 +10651,9 @@ class GoogleGeocoding( Fetcher ):
 			
 			
 			
-			self.timeout = time
-			if self.timeout < 1:
+			if type( time ) is not int or time < 1:
 				raise ValueError( 'time must be a positive integer.' )
+			self.timeout = time
 			if not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
 			self.params = { }
@@ -10654,6 +10731,8 @@ class GoogleGeocoding( Fetcher ):
 			self.query = query.strip( )
 			self.language = ( language or 'en' ).strip( )
 			self.region = ( region or '' ).strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { 'address': self.query, 'language': self.language }
 			
@@ -10711,6 +10790,8 @@ class GoogleGeocoding( Fetcher ):
 			self.language = ( language or 'en' ).strip( )
 			self.result_type = ( result_type or '' ).strip( )
 			self.location_type = ( location_type or '' ).strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { 'latlng': f'{self.latitude},{self.longitude}',
 					'language': self.language }
@@ -10765,6 +10846,8 @@ class GoogleGeocoding( Fetcher ):
 			self.place_id = place_id.strip( )
 			self.language = ( language or 'en' ).strip( )
 			self.region = ( region or '' ).strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { 'place_id': self.place_id, 'language': self.language }
 			if self.region:
@@ -11141,13 +11224,13 @@ class CensusData( Fetcher ):
 			self.mode = 'variables'
 			self.year = year.strip( )
 			self.dataset = dataset.strip( ).strip( '/' )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			if not re.fullmatch( r'\d{4}', self.year ):
 				raise ValueError( 'year must be a four-digit Census vintage.' )
 			if not re.fullmatch( r'[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*', self.dataset ):
 				raise ValueError( 'dataset must contain valid Census dataset path segments.' )
-			if self.timeout < 1:
-				raise ValueError( 'time must be a positive integer.' )
 			self.url = f'{self.base_url}/{self.year}/{self.dataset}/variables.json'
 			self.params = { }
 			
@@ -11214,13 +11297,13 @@ class CensusData( Fetcher ):
 			self.geography_for = ( geography_for or '' ).strip( )
 			self.geography_in = ( geography_in or '' ).strip( )
 			self.predicates = self.parse_predicates( predicates )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			if not re.fullmatch( r'\d{4}', self.year ):
 				raise ValueError( 'year must be a four-digit Census vintage.' )
 			if not re.fullmatch( r'[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*', self.dataset ):
 				raise ValueError( 'dataset must contain valid Census dataset path segments.' )
-			if self.timeout < 1:
-				raise ValueError( 'time must be a positive integer.' )
 			self.url = f'{self.base_url}/{self.year}/{self.dataset}'
 			self.params = { 'get': self.normalize_fields( fields ), 'for': self.geography_for, }
 			
@@ -11627,12 +11710,12 @@ class Socrata( Fetcher ):
 			self.mode = 'metadata'
 			self.domain = self.normalize_domain( domain )
 			self.dataset_id = self.normalize_dataset_id( dataset_id )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = self.metadata_url.format( domain=self.domain, dataset=self.dataset_id )
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			if self.api_key:
 				self.headers[ 'X-App-Token' ] = self.api_key
@@ -11697,10 +11780,10 @@ class Socrata( Fetcher ):
 			self.group_clause = ( group or '' ).strip( )
 			self.limit_value = self.validate_limit( limit )
 			self.offset_value = self.validate_offset( offset )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			self.url = self.base_url.format( domain=self.domain, dataset=self.dataset_id )
 			self.params = { '$limit': self.limit_value, '$offset': self.offset_value, }
@@ -12114,12 +12197,12 @@ class HealthData( Fetcher ):
 			self.mode = 'metadata'
 			self.domain = self.normalize_domain( domain )
 			self.dataset_id = self.normalize_dataset_id( dataset_id )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = self.metadata_url.format( domain=self.domain, dataset=self.dataset_id )
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			if self.api_key:
 				self.headers[ 'X-App-Token' ] = self.api_key
@@ -12184,10 +12267,10 @@ class HealthData( Fetcher ):
 			self.group_clause = ( group or '' ).strip( )
 			self.limit_value = self.validate_limit( limit )
 			self.offset_value = self.validate_offset( offset )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			self.url = self.base_url.format( domain=self.domain, dataset=self.dataset_id )
 			self.params = { '$limit': self.limit_value, '$offset': self.offset_value, }
@@ -12473,12 +12556,12 @@ class GlobalHealthData( Fetcher ):
 			throw_if( 'time', time )
 			
 			self.mode = 'indicator_registry'
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/indicator-metadata-registry'
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			if self.api_key:
 				self.headers[ 'X-API-Key' ] = self.api_key
@@ -12534,12 +12617,12 @@ method contract.
 			self.mode = 'athena'
 			self.query_path = self.normalize_query_path( query_path )
 			self.fmt = ( fmt or 'json' ).strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.athena_base_url}/{self.query_path}'
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			if self.fmt:
 				self.params[ '$format' ] = self.fmt
@@ -12796,12 +12879,12 @@ class UnitedNations( Fetcher ):
 			throw_if( 'time', time )
 			
 			self.mode = 'datasets'
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = self.catalog_url
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
@@ -12852,10 +12935,10 @@ class UnitedNations( Fetcher ):
 			
 			self.mode = 'sdmx_query'
 			self.query_path = self.normalize_query_path( query_path )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			self.url = f'{self.base_url}/{self.query_path}'
 			self.params = { }
@@ -13186,12 +13269,12 @@ class WorldPopulation( Fetcher ):
 			throw_if( 'time', time )
 			
 			self.mode = 'catalog'
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = self.base_url
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
@@ -13246,12 +13329,12 @@ class WorldPopulation( Fetcher ):
 			self.query_text = ( query or '' ).strip( )
 			self.page = self.validate_page( page )
 			self.page_size = self.validate_page_size( page_size )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/search'
 			self.params = { 'q': self.query_text, 'page': self.page, 'page_size': self.page_size }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
@@ -13303,12 +13386,12 @@ class WorldPopulation( Fetcher ):
 			
 			self.mode = 'raster_metadata'
 			self.asset_path = self.normalize_asset_path( asset_path )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.asset_path}'
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
@@ -13658,13 +13741,13 @@ class Wonder( Fetcher ):
 			self.mode = 'query_xml'
 			self.dataset_id = self.normalize_dataset_id( dataset_id )
 			self.request_xml = request_xml.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.dataset_id}'
 			self.params = { 'request_xml': self.request_xml,
 					'accept_datause_restrictions': 'true', }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			self.response = requests.post( url=self.url, data=self.params, headers=self.headers,
 				timeout=self.timeout )
@@ -14364,12 +14447,12 @@ class USGSEarthquakes( Fetcher ):
 			
 			self.mode = 'feed'
 			self.feed = self.validate_feed( feed )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { }
 			self.url = f'{self.feed_url}/{self.feed}'
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			self.response = requests.get( url=self.url, headers=self.headers,
 				timeout=self.timeout )
@@ -14450,14 +14533,14 @@ class USGSEarthquakes( Fetcher ):
 			self.limit = self.validate_limit( limit )
 			self.order_by = self.validate_order_by( order_by )
 			self.event_type = event_type.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = self.search_url
 			
 			if self.min_magnitude > self.max_magnitude:
 				raise ValueError( 'min_magnitude must be less than or equal to max_magnitude.' )
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			self.params = { 'format': 'geojson', 'starttime': self.start_date,
 					'endtime': self.end_date, 'minmagnitude': self.min_magnitude,
@@ -15158,12 +15241,12 @@ value.
 			if not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
 			self.collection = self.validate_collection( collection )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.collection}/items'
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			for key, value in params.items( ):
 				if value is None:
@@ -15234,6 +15317,8 @@ value.
 			self.county_code = ( county_code or '' ).strip( )
 			self.site_type = ( site_type or '' ).strip( )
 			self.limit = self.validate_limit( limit )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( collection='monitoring-locations', params={
@@ -15285,6 +15370,8 @@ value.
 			self.monitoring_location_id = monitoring_location_id.strip( )
 			self.parameter_code = self.validate_parameter_code( parameter_code )
 			self.limit = self.validate_limit( limit )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( collection='time-series-metadata', params={
@@ -15336,6 +15423,8 @@ value.
 			self.monitoring_location_id = monitoring_location_id.strip( )
 			self.parameter_code = self.validate_parameter_code( parameter_code )
 			self.limit = self.validate_limit( limit )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( collection='latest-continuous', params={
@@ -15387,6 +15476,8 @@ value.
 			self.monitoring_location_id = monitoring_location_id.strip( )
 			self.parameter_code = self.validate_parameter_code( parameter_code )
 			self.limit = self.validate_limit( limit )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( collection='latest-daily', params={
@@ -16019,12 +16110,12 @@ class USGSTheNationalMap( Fetcher ):
 				raise ValueError( 'params must be a dictionary.' )
 			
 			self.endpoint = self.validate_endpoint( endpoint )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			for key, value in params.items( ):
 				if value is None:
@@ -16076,6 +16167,8 @@ class USGSTheNationalMap( Fetcher ):
 			throw_if( 'time', time )
 			
 			self.mode = 'datasets'
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint='datasets', params={ }, time=self.timeout )
@@ -16132,6 +16225,8 @@ class USGSTheNationalMap( Fetcher ):
 			self.prod_formats = ( prod_formats or '' ).strip( )
 			self.max_items = self.validate_max_items( max_items )
 			self.offset = self.validate_offset( offset )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint='products', params={ 'datasets': self.dataset,
@@ -16682,12 +16777,12 @@ class USGSScienceBase( Fetcher ):
 			throw_if( 'time', time )
 			
 			self.endpoint = self.validate_endpoint( endpoint )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			if params is not None and not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
@@ -16753,6 +16848,8 @@ class USGSScienceBase( Fetcher ):
 			self.max_items = self.validate_max_items( max_items )
 			self.offset = self.validate_offset( offset )
 			self.fields = ( fields or '' ).strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint='items', params={ 'q': self.query_text, 'max': self.max_items,
@@ -16792,6 +16889,8 @@ class USGSScienceBase( Fetcher ):
 			throw_if( 'time', time )
 			self.mode = 'item'
 			self.item_id = item_id.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.request( endpoint=f'item/{self.item_id}', params={ }, time=self.timeout )
 			detail = self.shape_single_item( self.payload or { } )
@@ -17018,9 +17117,9 @@ class AirNow( Fetcher ):
 			throw_if( 'time', time )
 			
 			self.endpoint = endpoint.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than zero.' )
 			if params is not None and not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
 			self.url = f'{self.base_url}/{self.endpoint}'
@@ -17224,6 +17323,8 @@ class AirNow( Fetcher ):
 			self.distance = distance
 			if self.distance < 1:
 				raise ValueError( 'distance must be greater than zero.' )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint='observation/zipCode/current/', params={
@@ -17277,6 +17378,8 @@ class AirNow( Fetcher ):
 			self.distance = distance
 			if self.distance < 1:
 				raise ValueError( 'distance must be greater than zero.' )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint='observation/latLong/current/', params={
@@ -17330,6 +17433,8 @@ class AirNow( Fetcher ):
 			self.distance = distance
 			if self.distance < 1:
 				raise ValueError( 'distance must be greater than zero.' )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint='forecast/zipCode/', params={ 'zipCode': self.zip_code,
@@ -17387,6 +17492,8 @@ class AirNow( Fetcher ):
 			self.distance = distance
 			if self.distance < 1:
 				raise ValueError( 'distance must be greater than zero.' )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint='forecast/latLong/', params={ 'latitude': self.latitude,
@@ -17939,11 +18046,11 @@ class ClimateData( Fetcher ):
 				raise ValueError( 'params must be a dictionary.' )
 			
 			self.url = url.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			for key, value in params.items( ):
 				if value is None:
@@ -18012,6 +18119,8 @@ class ClimateData( Fetcher ):
 			self.end_date = ( end_date or '' ).strip( )
 			self.limit = self.validate_limit( limit )
 			self.offset = self.validate_offset( offset )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			if self.start_date and self.end_date:
 				self.start_date, self.end_date = self.validate_date_range( self.start_date,
@@ -18078,6 +18187,8 @@ class ClimateData( Fetcher ):
 			self.stations = ( stations or '' ).strip( )
 			self.data_types = ( data_types or '' ).strip( )
 			self.limit = self.validate_limit( limit )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( url=self.data_url, params={ 'dataset': self.dataset,
@@ -18757,12 +18868,12 @@ related operations.
 				raise ValueError( 'params must be a dictionary.' )
 			
 			self.endpoint = self.validate_endpoint( endpoint )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			for key, value in (params or { }).items( ):
 				if value is None:
@@ -18841,6 +18952,8 @@ related operations.
 			self.start_date, self.end_date = self.validate_date_pair( start_date=start_date,
 				end_date=end_date )
 			self.bbox = self.validate_bbox( bbox )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint='events', params={ 'source': self.source,
@@ -18883,6 +18996,8 @@ related operations.
 			throw_if( 'time', time )
 			
 			self.mode = 'categories'
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint='categories', params={ }, time=self.timeout )
@@ -19400,10 +19515,10 @@ to the application logger, and re-raises it.
 			throw_if( 'time', time )
 			
 			self.url = url.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			self.response = requests.get( url=self.url, headers=self.headers,
 				timeout=self.timeout )
@@ -20124,11 +20239,11 @@ metadata, or generated schema content.
 			throw_if( 'time', time )
 			
 			self.url = url.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			if params is not None and not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
@@ -20193,6 +20308,8 @@ metadata, or generated schema content.
 			
 			self.mode = 'station'
 			self.station_id = self.validate_station_id( station_id )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( url=f'{self.metadata_url}/stations/{self.station_id}.json', params={ },
@@ -20249,6 +20366,8 @@ metadata, or generated schema content.
 			self.datum = self.validate_datum( datum )
 			self.units = self.validate_units( units )
 			self.time_zone = self.validate_time_zone( time_zone )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( url=self.data_url, params={ 'product': 'water_level',
@@ -20311,6 +20430,8 @@ metadata, or generated schema content.
 			self.units = self.validate_units( units )
 			self.time_zone = self.validate_time_zone( time_zone )
 			self.interval = self.validate_interval( interval )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( url=self.data_url, params={ 'product': 'predictions',
@@ -20825,10 +20946,10 @@ class UvIndex( Fetcher ):
 			if not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
 			self.params = params
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			self.response = requests.get( url=self.url, headers=self.headers,
 				timeout=self.timeout )
@@ -20873,6 +20994,8 @@ class UvIndex( Fetcher ):
 			self.mode = 'daily-zip'
 			self.zip_code = self.validate_zip_code( zip_code )
 			self.endpoint = 'getEnvirofactsUVDAILY'
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { 'zip_code': self.zip_code }
 			self.url = (f'{self.base_url}/{self.endpoint}/ZIP/'
@@ -20924,6 +21047,8 @@ class UvIndex( Fetcher ):
 			self.city = self.validate_city( city )
 			self.state = self.validate_state( state )
 			self.endpoint = 'getEnvirofactsUVDAILY'
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { 'city': self.city, 'state': self.state }
 			self.url = (f'{self.base_url}/{self.endpoint}/CITY/'
@@ -20970,6 +21095,8 @@ class UvIndex( Fetcher ):
 			self.mode = 'hourly-zip'
 			self.zip_code = self.validate_zip_code( zip_code )
 			self.endpoint = 'getEnvirofactsUVHOURLY'
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { 'zip_code': self.zip_code }
 			self.url = (f'{self.base_url}/{self.endpoint}/ZIP/'
@@ -21021,6 +21148,8 @@ class UvIndex( Fetcher ):
 			self.city = self.validate_city( city )
 			self.state = self.validate_state( state )
 			self.endpoint = 'getEnvirofactsUVHOURLY'
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { 'city': self.city, 'state': self.state }
 			self.url = (f'{self.base_url}/{self.endpoint}/CITY/'
@@ -21818,12 +21947,12 @@ class PurpleAir( Fetcher ):
 			if params is not None and not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
 			
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			for key, value in (params or { }).items( ):
 				if value is None:
@@ -21906,6 +22035,9 @@ class PurpleAir( Fetcher ):
 			self.modified_since = self.validate_non_negative_integer( 'modified_since',
 				modified_since )
 			self.fields = self.normalize_fields( fields=fields, default_fields=default_fields )
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint='sensors', params={ 'fields': self.fields,
@@ -21954,6 +22086,9 @@ class PurpleAir( Fetcher ):
 			self.mode = 'sensor'
 			self.sensor_index = self.validate_sensor_index( sensor_index )
 			self.fields = self.normalize_fields( fields=fields, default_fields=default_fields )
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint=f'sensors/{self.sensor_index}', params={
@@ -22025,6 +22160,9 @@ class PurpleAir( Fetcher ):
 				self.max_age = max_age
 				self.modified_since = modified_since
 				self.fields = fields
+				throw_if( 'time', time )
+				if type( time ) is not int or time < 1:
+					raise ValueError( 'time must be a positive integer.' )
 				self.timeout = time
 				return self.fetch_sensors( nwlng=self.nwlng, nwlat=self.nwlat,
 					selng=self.selng, selat=self.selat, location_type=self.location_type,
@@ -22781,12 +22919,12 @@ class OpenAQ( Fetcher ):
 			if params is not None and not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
 			
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
 			self.params = { }
 			
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			for key, value in (params or { }).items( ):
 				if value is None:
@@ -22845,6 +22983,9 @@ class OpenAQ( Fetcher ):
 			self.parameters_id = ( parameters_id or '' ).strip( )
 			self.limit = self.validate_positive_integer( 'limit', limit, maximum=1000 )
 			self.page = self.validate_positive_integer( 'page', page )
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint='countries', params={ 'providers_id': self.providers_id,
@@ -22886,6 +23027,9 @@ class OpenAQ( Fetcher ):
 			self.mode = 'providers'
 			self.limit = self.validate_positive_integer( 'limit', limit, maximum=1000 )
 			self.page = self.validate_positive_integer( 'page', page )
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint='providers', params={ 'limit': self.limit,
@@ -22926,6 +23070,9 @@ class OpenAQ( Fetcher ):
 			self.mode = 'parameters'
 			self.limit = self.validate_positive_integer( 'limit', limit, maximum=1000 )
 			self.page = self.validate_positive_integer( 'page', page )
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint='parameters', params={ 'limit': self.limit,
@@ -22970,6 +23117,9 @@ class OpenAQ( Fetcher ):
 				value=parameter_id )
 			self.limit = self.validate_positive_integer( 'limit', limit, maximum=1000 )
 			self.page = self.validate_positive_integer( 'page', page )
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint=f'parameters/{self.parameter_id}/latest', params={
@@ -23025,6 +23175,9 @@ class OpenAQ( Fetcher ):
 			self.parameters_id = ( parameters_id or '' ).strip( )
 			self.limit = self.validate_positive_integer( 'limit', limit, maximum=1000 )
 			self.page = self.validate_positive_integer( 'page', page )
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint='locations', params={ 'country_id': self.country_id,
@@ -23066,6 +23219,9 @@ class OpenAQ( Fetcher ):
 			self.mode = 'latest'
 			self.location_id = self.validate_positive_integer( name='location_id',
 				value=location_id )
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			
 			self.request( endpoint=f'locations/{self.location_id}/latest', params={ },
@@ -23671,9 +23827,9 @@ class Firms( Fetcher ):
 			throw_if( 'url', url )
 			throw_if( 'time', time )
 			self.url = url.strip( )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			self.response = requests.get( url=self.url, headers=self.headers,
 				timeout=self.timeout )
@@ -23724,6 +23880,9 @@ class Firms( Fetcher ):
 			self.area_coordinates = self.validate_area_coordinates( area_coordinates )
 			self.day_range = self.validate_day_range( day_range )
 			self.date = self.validate_date( date )
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { 'source': self.source, 'area_coordinates': self.area_coordinates,
 					'day_range': self.day_range, 'date': self.date }
@@ -23769,6 +23928,9 @@ class Firms( Fetcher ):
 		try:
 			self.mode = 'data-availability'
 			self.sensor = self.validate_sensor( sensor )
+			throw_if( 'time', time )
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.params = { 'sensor': self.sensor }
 			self.url = (f'{self.base_url}/data_availability/csv/'
