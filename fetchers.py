@@ -18631,37 +18631,29 @@ class EoNet( Fetcher ):
 			raise exception
 
 class EnviroFacts( Fetcher ):
-	"""EnviroFacts component.
+	"""EPA Envirofacts table retrieval adapter.
 
 	Purpose:
-	    Retrieves EPA Envirofacts table data using validated table names, state filters,
-	    and row limits.
+	    Retrieve supported EPA table records through path-based Envirofacts queries, apply
+	    optional state and facility filters, and package display-oriented records.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    mode (Optional[str]): Current mode retained by the EnviroFacts workflow between related
-	    operations.
-	    table_name (Optional[str]): Current table name retained by the EnviroFacts workflow
-	    between related operations.
-	    state_code (Optional[str]): Current state code retained by the EnviroFacts workflow
-	    between related operations.
-	    facility_name (Optional[str]): Current facility name retained by the EnviroFacts workflow
-	    between related operations.
-	    limit (Optional[int]): Current limit retained by the EnviroFacts workflow between related
-	    operations.
-	    path (Optional[str]): Current path retained by the EnviroFacts workflow between related
-	    operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the EnviroFacts workflow between
-	    related operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
+	    base_url (Optional[str]): Base provider API URL.
+	    mode (Optional[str]): Selected retrieval operation.
+	    table_name (Optional[str]): Selected normalized Envirofacts table identifier.
+	    state_code (Optional[str]): Optional normalized two-letter state filter.
+	    facility_name (Optional[str]): Optional facility-name filter.
+	    limit (Optional[int]): Requested record limit.
+	    path (Optional[str]): Encoded relative table query path.
+	    params (Optional[Dict[str, Any]]): Descriptive table filters retained for output; not
+	        sent as query-string parameters.
+	    payload (Optional[Any]): Latest decoded list of table records.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest request URL.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	base_url: Optional[ str ]
 	mode: Optional[ str ]
@@ -18676,15 +18668,14 @@ class EnviroFacts( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure the Envirofacts base URL, TRI_FACILITY table, default limit of 25, JSON
+		    headers, and twenty-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.base_url = 'https://data.epa.gov/efservice'
@@ -18704,14 +18695,13 @@ class EnviroFacts( Fetcher ):
 		self.headers = { 'Accept': 'application/json', 'User-Agent': self.agents }
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'mode', 'table_name', 'state_code', 'facility_name', 'limit', 'path',
 				'params', 'payload', 'result', 'response', 'url', 'timeout', 'agents', 'headers',
@@ -18721,21 +18711,20 @@ class EnviroFacts( Fetcher ):
 				'fetch_table', 'fetch', 'create_schema' ]
 	
 	def validate_table_name( self, table_name: str ) -> str:
-		"""Validate table name.
+		"""Validate an Envirofacts table name.
 
 		Purpose:
-		    Validates the table name against provider constraints and returns the accepted value.
+		    Trim and uppercase the name and require one of the supported tables.
 
 		Args:
-		    table_name (str): Table name supplied by the caller and interpreted according to the
-		    method contract.
+		    table_name (str): TRI_FACILITY, TRI_RELEASE, or EF_W_EMISSIONS_SOURCE_GHG; trimmed and
+		        uppercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted table name.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'table_name', table_name )
@@ -18758,20 +18747,20 @@ class EnviroFacts( Fetcher ):
 			raise exception
 	
 	def validate_state_code( self, state_code: str='' ) -> str:
-		"""Validate state code.
+		"""Validate an optional state code.
 
 		Purpose:
-		    Validates the state code against provider constraints and returns the accepted value.
+		    Trim and uppercase the supplied code; allow blank or exactly two alphabetic characters.
 
 		Args:
-		    state_code (str): Code identifying the requested state value.
+		    state_code (str): Optional two-letter alphabetic code, trimmed and uppercased. Defaults
+		        to an empty string.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized two-letter code or an empty string.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			value = ( state_code or '' ).strip( ).upper( )
@@ -18793,20 +18782,19 @@ class EnviroFacts( Fetcher ):
 			raise exception
 	
 	def validate_limit( self, limit: int ) -> int:
-		"""Validate limit.
+		"""Validate the record limit.
 
 		Purpose:
-		    Validates the limit against provider constraints and returns the accepted value.
+		    Require an integer from 1 through 500, excluding booleans.
 
 		Args:
-		    limit (int): Maximum number of records or characters permitted by the operation.
+		    limit (int): Integer record limit from 1 through 500; booleans are rejected.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted limit.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			
@@ -18827,26 +18815,27 @@ to the application logger, and re-raises it.
 			raise exception
 	
 	def resolve_table_path( self, table_name: str, state_code: str='', facility_name: str='', limit: int=25 ) -> str:
-		"""Resolve table path.
+		"""Construct an Envirofacts table query path.
 
 		Purpose:
-		    Resolve table path using the class state and returns data required by the surrounding
-		    workflow.
+		    Validate table, state and limit, select STATE or STATE_ABBR according to the table,
+		    append optional FACILITY_NAME and inclusive zero-based row bounds, and URL-encode each
+		    segment.
 
 		Args:
-		    table_name (str): Table name supplied by the caller and interpreted according to the
-		    method contract.
-		    state_code (str): Code identifying the requested state value.
-		    facility_name (str): Facility name supplied by the caller and interpreted according to
-		    the method contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
+		    table_name (str): TRI_FACILITY, TRI_RELEASE, or EF_W_EMISSIONS_SOURCE_GHG; trimmed and
+		        uppercased.
+		    state_code (str): Optional two-letter alphabetic code, trimmed and uppercased. Defaults
+		        to an empty string.
+		    facility_name (str): Optional facility-name filter. Defaults to an empty string.
+		    limit (int): Integer record limit from 1 through 500; booleans are rejected. Defaults to
+		        25.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Encoded relative table path ending in JSON.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.table_name = self.validate_table_name( table_name )
@@ -18884,23 +18873,20 @@ to the application logger, and re-raises it.
 			raise exception
 	
 	def shape_rows( self, records: List[ Dict[ str, Any ] ] ) -> List[ Dict[ str, Any ] ]:
-		"""Shape rows.
+		"""Shape provider records for display.
 
 		Purpose:
-		    Transforms provider rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Skip non-dictionary records and replace underscores in field names with spaces before
+		    applying title case; preserve associated values unless transformed keys collide.
 
 		Args:
-		    records (List[Dict[str, Any]]): Records supplied by the caller and interpreted
-		    according to the method contract.
+		    records (List[Dict[str, Any]]): Decoded provider record dictionaries.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Display-oriented row dictionaries.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			rows: List[ Dict[ str, Any ] ] = [ ]
@@ -18928,22 +18914,20 @@ to the application logger, and re-raises it.
 			raise exception
 	
 	def summarize_rows( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Summarize rows.
+		"""Summarize shaped table records.
 
 		Purpose:
-		    Computes a compact summary of rows so callers can inspect the response without
-		    traversing every record.
+		    Count rows and extract the first row's facility and state using alternative display
+		    field names.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Count, first_facility, and first_state.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			count = len( rows or [ ] )
@@ -18970,22 +18954,21 @@ to the application logger, and re-raises it.
 			raise exception
 	
 	def package_response( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Package response.
+		"""Package shaped table records.
 
 		Purpose:
-		    Combines normalized records, summary metrics, and request metadata into the standard
-		    response payload.
+		    Combine table name, mode, retained request metadata, summary, shaped rows, and raw
+		    response.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, table name, URL, descriptive parameters, summary, shaped rows, and
+		        raw record list.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.result = { 'mode': self.mode, 'table_name': self.table_name, 'url': self.url,
@@ -19003,23 +18986,22 @@ to the application logger, and re-raises it.
 			raise exception
 	
 	def request( self, url: str, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Request.
+		"""Execute an Envirofacts request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Trim the URL, validate the timeout, issue a GET without query-string parameters, and
+		    require a JSON list of dictionaries.
 
 		Args:
-		    url (str): Absolute endpoint or resource URL.
-		    time (int): Maximum request duration in seconds.
+		    url (str): Nonblank request URL, trimmed before retrieval.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Endpoint URL, request parameters, and raw decoded response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'url', url )
@@ -19051,27 +19033,29 @@ to the application logger, and re-raises it.
 			raise exception
 	
 	def fetch_table( self, table_name: str, state_code: str='', facility_name: str='', limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch table.
+		"""Retrieve a supported Envirofacts table.
 
 		Purpose:
-		    Retrieves table from the configured provider and returns normalized response data.
+		    Build the encoded table path, retain descriptive filter parameters, retrieve records,
+		    and shape and summarize the result.
 
 		Args:
-		    table_name (str): Table name supplied by the caller and interpreted according to the
-		    method contract.
-		    state_code (str): Code identifying the requested state value.
-		    facility_name (str): Facility name supplied by the caller and interpreted according to
-		    the method contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    time (int): Maximum request duration in seconds.
+		    table_name (str): TRI_FACILITY, TRI_RELEASE, or EF_W_EMISSIONS_SOURCE_GHG; trimmed and
+		        uppercased.
+		    state_code (str): Optional two-letter alphabetic code, trimmed and uppercased. Defaults
+		        to an empty string.
+		    facility_name (str): Optional facility-name filter. Defaults to an empty string.
+		    limit (int): Integer record limit from 1 through 500; booleans are rejected. Defaults to
+		        25.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, table name, URL, descriptive parameters, summary, shaped rows, and
+		        raw record list.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'table_name', table_name )
@@ -19100,28 +19084,28 @@ to the application logger, and re-raises it.
 			raise exception
 	
 	def fetch( self, table_name: str='TRI_FACILITY', state_code: str='', facility_name: str = '', limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Retrieve Envirofacts records using the public entry point.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Delegate to fetch_table with the selected table and optional filters.
 
 		Args:
-		    table_name (str): Table name supplied by the caller and interpreted according to the
-		    method contract.
-		    state_code (str): Code identifying the requested state value.
-		    facility_name (str): Facility name supplied by the caller and interpreted according to
-		    the method contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    time (int): Maximum request duration in seconds.
+		    table_name (str): TRI_FACILITY, TRI_RELEASE, or EF_W_EMISSIONS_SOURCE_GHG; trimmed and
+		        uppercased. Defaults to 'TRI_FACILITY'.
+		    state_code (str): Optional two-letter alphabetic code, trimmed and uppercased. Defaults
+		        to an empty string.
+		    facility_name (str): Optional facility-name filter. Defaults to an empty string.
+		    limit (int): Integer record limit from 1 through 500; booleans are rejected. Defaults to
+		        25.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, table name, URL, descriptive parameters, summary, shaped rows, and
+		        raw record list.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			return self.fetch_table( table_name=table_name, state_code=state_code,
@@ -19136,26 +19120,25 @@ to the application logger, and re-raises it.
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter properties and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property dictionary.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -19184,42 +19167,33 @@ to the application logger, and re-raises it.
 			raise exception
 
 class TidesAndCurrents( Fetcher ):
-	"""TidesAndCurrents component.
+	"""NOAA CO-OPS Tides and Currents retrieval adapter.
 
 	Purpose:
-	    Retrieves NOAA station metadata, water levels, and tide predictions with validated datum,
-	    units, interval, and time-zone options.
+	    Retrieve station metadata, water-level observations, or tide predictions using NOAA
+	    metadata and data endpoints, validated station and date arguments, and selectable datum,
+	    units and time zone.
 
 	Attributes:
-	    data_url (Optional[str]): URL associated with the current data resource or endpoint.
-	    metadata_url (Optional[str]): URL associated with the current metadata resource or
-	    endpoint.
-	    mode (Optional[str]): Current mode retained by the TidesAndCurrents workflow between
-	    related operations.
-	    station_id (Optional[str]): Identifier of the current station resource.
-	    begin_date (Optional[str]): Current begin date retained by the TidesAndCurrents workflow
-	    between related operations.
-	    end_date (Optional[str]): Current end date retained by the TidesAndCurrents workflow
-	    between related operations.
-	    datum (Optional[str]): Current datum retained by the TidesAndCurrents workflow between
-	    related operations.
-	    units (Optional[str]): Current units retained by the TidesAndCurrents workflow between
-	    related operations.
-	    time_zone (Optional[str]): Current time zone retained by the TidesAndCurrents workflow
-	    between related operations.
-	    interval (Optional[str]): Current interval retained by the TidesAndCurrents workflow
-	    between related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the TidesAndCurrents workflow between
-	    related operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
+	    data_url (Optional[str]): NOAA CO-OPS data getter endpoint.
+	    metadata_url (Optional[str]): NOAA CO-OPS station metadata base URL.
+	    mode (Optional[str]): Selected retrieval operation.
+	    station_id (Optional[str]): Selected normalized station identifier.
+	    begin_date (Optional[str]): Validated beginning calendar date string.
+	    end_date (Optional[str]): Validated ending calendar date string.
+	    datum (Optional[str]): Selected normalized vertical datum.
+	    units (Optional[str]): Selected measurement system.
+	    time_zone (Optional[str]): Selected provider timezone setting.
+	    interval (Optional[str]): Selected tide-prediction sampling interval.
+	    params (Optional[Dict[str, Any]]): Latest request parameters or descriptive request
+	        metadata.
+	    payload (Optional[Any]): Latest decoded provider response.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest request URL.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	data_url: Optional[ str ]
 	metadata_url: Optional[ str ]
@@ -19237,15 +19211,14 @@ class TidesAndCurrents( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure NOAA metadata and data endpoints, water-level mode, MLLW datum, metric units,
+		    GMT timezone, hilo prediction interval, JSON headers, and twenty-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.data_url = 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter'
@@ -19268,14 +19241,13 @@ class TidesAndCurrents( Fetcher ):
 		self.headers = { 'Accept': 'application/json', 'User-Agent': self.agents }
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'data_url', 'metadata_url', 'mode', 'station_id', 'begin_date', 'end_date',
 				'datum', 'units', 'time_zone', 'interval', 'params', 'payload', 'result',
@@ -19286,20 +19258,19 @@ class TidesAndCurrents( Fetcher ):
 				'fetch_water_level', 'fetch_tide_predictions', 'fetch', 'create_schema' ]
 	
 	def validate_mode( self, mode: str ) -> str:
-		"""Validate mode.
+		"""Validate the retrieval mode.
 
 		Purpose:
-		    Validates the mode against provider constraints and returns the accepted value.
+		    Trim and lowercase the mode and reject unsupported operations.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
+		    mode (str): station, water-level, or tide-predictions; trimmed and lowercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted mode.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -19322,20 +19293,20 @@ class TidesAndCurrents( Fetcher ):
 			raise exception
 	
 	def validate_station_id( self, station_id: str ) -> str:
-		"""Validate station id.
+		"""Validate a NOAA station identifier.
 
 		Purpose:
-		    Validates the station id against provider constraints and returns the accepted value.
+		    Trim the identifier and require the permitted characters and length.
 
 		Args:
-		    station_id (str): Provider identifier of the target station resource.
+		    station_id (str): Station identifier containing 3–20 letters, digits, underscores, or
+		        hyphens after trimming.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Trimmed station identifier.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'station_id', station_id )
@@ -19357,21 +19328,21 @@ class TidesAndCurrents( Fetcher ):
 			raise exception
 	
 	def validate_date_range( self, begin_date: str, end_date: str ) -> Tuple[ str, str ]:
-		"""Validate date range.
+		"""Validate a NOAA calendar date interval.
 
 		Purpose:
-		    Validates the date range against provider constraints and returns the accepted value.
+		    Require eight digits for each date, parse valid calendar dates, and reject reversed
+		    intervals.
 
 		Args:
-		    begin_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
+		    begin_date (str): Valid calendar date in YYYYMMDD format.
+		    end_date (str): Valid calendar date in YYYYMMDD format, on or after begin_date.
 
 		Returns:
-		    Tuple[str, str]: Ordered values or records produced by the operation.
+		    Tuple[str, str]: Trimmed begin and end date strings.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'begin_date', begin_date )
@@ -19405,21 +19376,19 @@ class TidesAndCurrents( Fetcher ):
 			raise exception
 	
 	def validate_datum( self, datum: str ) -> str:
-		"""Validate datum.
+		"""Validate the vertical datum.
 
 		Purpose:
-		    Validates the datum against provider constraints and returns the accepted value.
+		    Trim and uppercase the datum and accept only the listed codes.
 
 		Args:
-		    datum (str): Datum supplied by the caller and interpreted according to the method
-		    contract.
+		    datum (str): MLLW, MHHW, MHW, MTL, MSL, MLW, NAVD, or STND; trimmed and uppercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted datum.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'datum', datum )
@@ -19442,21 +19411,19 @@ class TidesAndCurrents( Fetcher ):
 			raise exception
 	
 	def validate_units( self, units: str ) -> str:
-		"""Validate units.
+		"""Validate the measurement system.
 
 		Purpose:
-		    Validates the units against provider constraints and returns the accepted value.
+		    Trim and lowercase the units and accept metric or english.
 
 		Args:
-		    units (str): Units supplied by the caller and interpreted according to the method
-		    contract.
+		    units (str): metric or english; trimmed and lowercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted units.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'units', units )
@@ -19478,21 +19445,19 @@ class TidesAndCurrents( Fetcher ):
 			raise exception
 	
 	def validate_time_zone( self, time_zone: str ) -> str:
-		"""Validate time zone.
+		"""Validate the provider timezone.
 
 		Purpose:
-		    Validates the time zone against provider constraints and returns the accepted value.
+		    Trim and lowercase the timezone and accept the supported codes.
 
 		Args:
-		    time_zone (str): Time zone supplied by the caller and interpreted according to the
-		    method contract.
+		    time_zone (str): gmt, lst, or lst_ldt; trimmed and lowercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted timezone.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'time_zone', time_zone )
@@ -19514,21 +19479,19 @@ class TidesAndCurrents( Fetcher ):
 			raise exception
 	
 	def validate_interval( self, interval: str ) -> str:
-		"""Validate interval.
+		"""Validate the prediction interval.
 
 		Purpose:
-		    Validates the interval against provider constraints and returns the accepted value.
+		    Trim and lowercase the interval and accept only the supported codes.
 
 		Args:
-		    interval (str): Interval supplied by the caller and interpreted according to the
-		    method contract.
+		    interval (str): hilo, h, 1, 5, 6, 10, 15, 30, or 60; trimmed and lowercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted interval.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'interval', interval )
@@ -19551,23 +19514,21 @@ class TidesAndCurrents( Fetcher ):
 			raise exception
 	
 	def shape_station_rows( self, payload: Dict[ str, Any ] ) -> List[ Dict[ str, Any ] ]:
-		"""Shape station rows.
+		"""Shape NOAA station metadata.
 
 		Purpose:
-		    Transforms provider station rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Use the first stations list entry, a stations dictionary, or the top-level payload;
+		    construct one display-oriented station row even when metadata is empty.
 
 		Args:
-		    payload (Dict[str, Any]): Validated request dictionary forwarded to the provider
-		    client.
+		    payload (Dict[str, Any]): Decoded provider response object.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: One row containing station ID, name, state, coordinates, timezone,
+		        Great Lakes flag, SHEF code, and details link.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			station = payload.get( 'stations', None ) if isinstance( payload, dict ) else None
@@ -19597,23 +19558,20 @@ class TidesAndCurrents( Fetcher ):
 			raise exception
 	
 	def shape_data_rows( self, payload: Dict[ str, Any ] ) -> List[ Dict[ str, Any ] ]:
-		"""Shape data rows.
+		"""Shape observations or predictions.
 
 		Purpose:
-		    Transforms provider data rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Read data or, when data is None, predictions; skip non-dictionaries and convert field
+		    names to title case with spaces.
 
 		Args:
-		    payload (Dict[str, Any]): Validated request dictionary forwarded to the provider
-		    client.
+		    payload (Dict[str, Any]): Decoded provider response object.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Display-oriented observation or prediction rows.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			rows: List[ Dict[ str, Any ] ] = [ ]
@@ -19649,22 +19607,20 @@ class TidesAndCurrents( Fetcher ):
 			raise exception
 	
 	def summarize_rows( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Summarize rows.
+		"""Summarize shaped NOAA records.
 
 		Purpose:
-		    Computes a compact summary of rows so callers can inspect the response without
-		    traversing every record.
+		    Count rows and extract first-row station, value and time with truthiness-based
+		    alternative-field selection.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Count, first_station, first_value, and first_time.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			count = len( rows or [ ] )
@@ -19693,22 +19649,20 @@ class TidesAndCurrents( Fetcher ):
 			raise exception
 	
 	def package_response( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Package response.
+		"""Package NOAA station or data records.
 
 		Purpose:
-		    Combines normalized records, summary metrics, and request metadata into the standard
-		    response payload.
+		    Combine mode, station identifier, request metadata, summary, shaped rows, and raw JSON.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, station identifier, URL, request parameters, summary, shaped rows,
+		        and raw response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.result = { 'mode': self.mode, 'station_id': self.station_id, 'url': self.url,
@@ -19726,25 +19680,23 @@ class TidesAndCurrents( Fetcher ):
 			raise exception
 	
 	def request( self, url: str, params: Optional[ Dict[ str, Any ] ]=None, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Request.
+		"""Execute a NOAA request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Validate URL, timeout and optional dictionary, omit None and blank strings, issue a GET,
+		    and validate the JSON object and mode-dependent data collection or station metadata.
 
 		Args:
-		    url (str): Absolute endpoint or resource URL.
-		    params (Optional[Dict[str, Any]]): Params supplied by the caller and interpreted
-		    according to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    url (str): Nonblank request URL, trimmed before retrieval.
+		    params (Dict[str, Any] | None): Optional query parameter dictionary. Defaults to None.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-metadata, or generated schema content.
+		    Dict[str, Any]: Endpoint URL, request parameters, and raw decoded response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'url', url )
@@ -19798,22 +19750,24 @@ metadata, or generated schema content.
 			raise exception
 	
 	def fetch_station( self, station_id: str, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch station.
+		"""Retrieve NOAA station metadata.
 
 		Purpose:
-		    Retrieves station from the configured provider and returns normalized response data.
+		    Validate station ID, request its metadata JSON endpoint, shape one station row, and
+		    package the response.
 
 		Args:
-		    station_id (str): Provider identifier of the target station resource.
-		    time (int): Maximum request duration in seconds.
+		    station_id (str): Station identifier containing 3–20 letters, digits, underscores, or
+		        hyphens after trimming.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, station identifier, URL, request parameters, summary, shaped rows,
+		        and raw response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'station_id', station_id )
@@ -19840,31 +19794,30 @@ metadata, or generated schema content.
 			raise exception
 	
 	def fetch_water_level( self, station_id: str, begin_date: str, end_date: str, datum: str = 'MLLW', units: str='metric', time_zone: str='gmt', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch water level.
+		"""Retrieve water-level observations.
 
 		Purpose:
-		    Retrieves water level from the configured provider and returns normalized response
-		    data.
+		    Validate station, dates, datum, units and timezone; request the water_level product and
+		    shape the returned observation records.
 
 		Args:
-		    station_id (str): Provider identifier of the target station resource.
-		    begin_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
-		    datum (str): Datum supplied by the caller and interpreted according to the method
-		    contract.
-		    units (str): Units supplied by the caller and interpreted according to the method
-		    contract.
-		    time_zone (str): Time zone supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    station_id (str): Station identifier containing 3–20 letters, digits, underscores, or
+		        hyphens after trimming.
+		    begin_date (str): Valid calendar date in YYYYMMDD format.
+		    end_date (str): Valid calendar date in YYYYMMDD format, on or after begin_date.
+		    datum (str): MLLW, MHHW, MHW, MTL, MSL, MLW, NAVD, or STND; trimmed and uppercased.
+		        Defaults to 'MLLW'.
+		    units (str): metric or english; trimmed and lowercased. Defaults to 'metric'.
+		    time_zone (str): gmt, lst, or lst_ldt; trimmed and lowercased. Defaults to 'gmt'.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, station identifier, URL, request parameters, summary, shaped rows,
+		        and raw response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'station_id', station_id )
@@ -19900,33 +19853,32 @@ metadata, or generated schema content.
 			raise exception
 	
 	def fetch_tide_predictions( self, station_id: str, begin_date: str, end_date: str, datum: str = 'MLLW', units: str='metric', time_zone: str='gmt', interval: str='hilo', time: int = 20 ) -> Dict[ str, Any ] | None:
-		"""Fetch tide predictions.
+		"""Retrieve tide predictions.
 
 		Purpose:
-		    Retrieves tide predictions from the configured provider and returns normalized
-		    response data.
+		    Validate station, dates, datum, units, timezone and interval; request the predictions
+		    product and shape the returned records.
 
 		Args:
-		    station_id (str): Provider identifier of the target station resource.
-		    begin_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
-		    datum (str): Datum supplied by the caller and interpreted according to the method
-		    contract.
-		    units (str): Units supplied by the caller and interpreted according to the method
- contract.
-		    time_zone (str): Time zone supplied by the caller and interpreted according to the
-		    method contract.
-		    interval (str): Interval supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    station_id (str): Station identifier containing 3–20 letters, digits, underscores, or
+		        hyphens after trimming.
+		    begin_date (str): Valid calendar date in YYYYMMDD format.
+		    end_date (str): Valid calendar date in YYYYMMDD format, on or after begin_date.
+		    datum (str): MLLW, MHHW, MHW, MTL, MSL, MLW, NAVD, or STND; trimmed and uppercased.
+		        Defaults to 'MLLW'.
+		    units (str): metric or english; trimmed and lowercased. Defaults to 'metric'.
+		    time_zone (str): gmt, lst, or lst_ldt; trimmed and lowercased. Defaults to 'gmt'.
+		    interval (str): hilo, h, 1, 5, 6, 10, 15, 30, or 60; trimmed and lowercased. Defaults to
+		        'hilo'.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, station identifier, URL, request parameters, summary, shaped rows,
+		        and raw response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'station_id', station_id )
@@ -19964,34 +19916,37 @@ metadata, or generated schema content.
 			raise exception
 	
 	def fetch( self, mode: str='water-level', station_id: str='', begin_date: str='', end_date: str='', datum: str='MLLW', units: str='metric', time_zone: str = 'gmt', interval: str='hilo', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a NOAA CO-OPS retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Validate mode and delegate to station metadata, water-level observations or tide
+		    predictions; dates are required for data products and interval applies only to
+		    predictions.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    station_id (str): Provider identifier of the target station resource.
-		    begin_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
-		    datum (str): Datum supplied by the caller and interpreted according to the method
-		    contract.
-		    units (str): Units supplied by the caller and interpreted according to the method
-		    contract.
-		    time_zone (str): Time zone supplied by the caller and interpreted according to the
-		    method contract.
-		    interval (str): Interval supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): station, water-level, or tide-predictions; trimmed and lowercased. Defaults
+		        to 'water-level'.
+		    station_id (str): Station identifier containing 3–20 letters, digits, underscores, or
+		        hyphens after trimming. Defaults to an empty string; required in all modes.
+		    begin_date (str): Valid calendar date in YYYYMMDD format. Defaults to an empty string;
+		        required in data modes.
+		    end_date (str): Valid calendar date in YYYYMMDD format, on or after begin_date. Defaults
+		        to an empty string; required in data modes.
+		    datum (str): MLLW, MHHW, MHW, MTL, MSL, MLW, NAVD, or STND; trimmed and uppercased.
+		        Defaults to 'MLLW'.
+		    units (str): metric or english; trimmed and lowercased. Defaults to 'metric'.
+		    time_zone (str): gmt, lst, or lst_ldt; trimmed and lowercased. Defaults to 'gmt'.
+		    interval (str): hilo, h, 1, 5, 6, 10, 15, 30, or 60; trimmed and lowercased. Defaults to
+		        'hilo'.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, station identifier, URL, request parameters, summary, shaped rows,
+		        and raw response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = self.validate_mode( mode )
@@ -20020,26 +19975,25 @@ metadata, or generated schema content.
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter properties and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property dictionary.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -20068,34 +20022,28 @@ metadata, or generated schema content.
 			raise exception
 
 class UvIndex( Fetcher ):
-	"""UvIndex component.
+	"""EPA daily and hourly UV Index forecast adapter.
 
 	Purpose:
-	    Retrieves daily or hourly ultraviolet-index forecasts by ZIP code or city and state.
+	    Retrieve EPA UV Index forecasts by ZIP code or city and state using encoded location
+	    paths, shape records and summarize the maximum finite UV value.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    mode (Optional[str]): Current mode retained by the UvIndex workflow between related
-	    operations.
-	    zip_code (Optional[str]): Current zip code retained by the UvIndex workflow between
-	    related operations.
-	    city (Optional[str]): Current city retained by the UvIndex workflow between related
-	    operations.
-	    state (Optional[str]): Current state retained by the UvIndex workflow between related
-	    operations.
-	    endpoint (Optional[str]): Current endpoint retained by the UvIndex workflow between
-	    related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the UvIndex workflow between related
-	    operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
+	    base_url (Optional[str]): Base provider API URL.
+	    mode (Optional[str]): Selected retrieval operation.
+	    zip_code (Optional[str]): Latest normalized ZIP or ZIP+4 selection.
+	    city (Optional[str]): Latest trimmed city selection.
+	    state (Optional[str]): Latest normalized two-letter state selection.
+	    endpoint (Optional[str]): Selected relative API endpoint.
+	    params (Optional[Dict[str, Any]]): Descriptive location parameters retained for output;
+	        not sent as query-string parameters.
+	    payload (Optional[Any]): Latest decoded forecast record list.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest request URL.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	base_url: Optional[ str ]
 	mode: Optional[ str ]
@@ -20109,15 +20057,14 @@ class UvIndex( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure EPA dmapservice base URL, daily-zip mode, empty location and response state,
+		    JSON headers, and twenty-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.base_url = 'https://data.epa.gov/dmapservice'
@@ -20136,14 +20083,13 @@ class UvIndex( Fetcher ):
 		self.headers = { 'Accept': 'application/json', 'User-Agent': self.agents }
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'mode', 'zip_code', 'city', 'state', 'endpoint', 'params', 'payload',
 				'result', 'response', 'url', 'timeout', 'agents', 'headers', 'validate_mode',
@@ -20153,20 +20099,20 @@ class UvIndex( Fetcher ):
 				'create_schema' ]
 	
 	def validate_mode( self, mode: str ) -> str:
-		"""Validate mode.
+		"""Validate a UV Index retrieval mode.
 
 		Purpose:
-		    Validates the mode against provider constraints and returns the accepted value.
+		    Trim and lowercase the mode and reject unsupported operations.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
+		    mode (str): daily-zip, daily-city-state, hourly-zip, or hourly-city-state; trimmed and
+		        lowercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted mode.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -20187,20 +20133,20 @@ class UvIndex( Fetcher ):
 			raise exception
 	
 	def validate_zip_code( self, zip_code: str ) -> str:
-		"""Validate zip code.
+		"""Validate ZIP or ZIP+4 format.
 
 		Purpose:
-		    Validates the zip code against provider constraints and returns the accepted value.
+		    Trim the value and require five digits with an optional hyphen and four additional
+		    digits.
 
 		Args:
-		    zip_code (str): Code identifying the requested zip value.
+		    zip_code (str): Five-digit ZIP or ZIP+4 string after trimming.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Trimmed accepted ZIP code.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'zip_code', zip_code )
@@ -20221,21 +20167,19 @@ class UvIndex( Fetcher ):
 			raise exception
 	
 	def validate_city( self, city: str ) -> str:
-		"""Validate city.
+		"""Validate a city path value.
 
 		Purpose:
-		    Validates the city against provider constraints and returns the accepted value.
+		    Trim the city and reject empty values or path separators.
 
 		Args:
-		    city (str): City supplied by the caller and interpreted according to the method
-		    contract.
+		    city (str): Nonblank city name without forward or backward path separators.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Trimmed city name.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'city', city )
@@ -20259,21 +20203,19 @@ class UvIndex( Fetcher ):
 			raise exception
 	
 	def validate_state( self, state: str ) -> str:
-		"""Validate state.
+		"""Validate a state code.
 
 		Purpose:
-		    Validates the state against provider constraints and returns the accepted value.
+		    Trim and uppercase the code and require exactly two letters.
 
 		Args:
-		    state (str): State supplied by the caller and interpreted according to the method
-		    contract.
+		    state (str): Two-letter alphabetic state code after trimming and uppercasing.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized two-letter code.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'state', state )
@@ -20294,23 +20236,20 @@ class UvIndex( Fetcher ):
 			raise exception
 	
 	def shape_rows( self, records: List[ Dict[ str, Any ] ] ) -> List[ Dict[ str, Any ] ]:
-		"""Shape rows.
+		"""Shape provider records for display.
 
 		Purpose:
-		    Transforms provider rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Skip non-dictionary records and replace underscores in field names with spaces before
+		    applying title case; preserve associated values unless transformed keys collide.
 
 		Args:
-		    records (List[Dict[str, Any]]): Records supplied by the caller and interpreted
-		    according to the method contract.
+		    records (List[Dict[str, Any]]): Decoded provider record dictionaries.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Display-oriented row dictionaries.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-			to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			rows: List[ Dict[ str, Any ] ] = [ ]
@@ -20338,22 +20277,20 @@ class UvIndex( Fetcher ):
 			raise exception
 	
 	def summarize_rows( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Summarize rows.
+		"""Summarize UV forecast rows.
 
 		Purpose:
-		    Computes a compact summary of rows so callers can inspect the response without
-		    traversing every record.
+		    Count rows, retain the first nonempty location and alert, and find the maximum finite
+		    convertible UV value using supported alternate field names.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Count, max_uv, first_location, and first_alert.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			count = len( rows or [ ] )
@@ -20395,22 +20332,21 @@ class UvIndex( Fetcher ):
 			raise exception
 	
 	def package_response( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Package response.
+		"""Package shaped provider records.
 
 		Purpose:
-		    Combines normalized records, summary metrics, and request metadata into the standard
-		    response payload.
+		    Combine retained operation and request metadata with row summary statistics, shaped
+		    rows, and raw response.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.result = { 'mode': self.mode, 'url': self.url, 'params': self.params,
@@ -20427,25 +20363,23 @@ class UvIndex( Fetcher ):
 			raise exception
 	
 	def request( self, url: str, params: Dict[ str, Any ], time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Request.
+		"""Execute an EPA UV Index request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Validate URL, parameter dictionary and timeout; retain descriptive parameters but issue
+		    a GET using only the URL and headers, and require a JSON list of dictionaries.
 
 		Args:
-		    url (str): Absolute endpoint or resource URL.
-		    params (Dict[str, Any]): Params supplied by the caller and interpreted according to
-		    the method contract.
-		    time (int): Maximum request duration in seconds.
+		    url (str): Nonblank request URL, trimmed before retrieval.
+		    params (Dict[str, Any]): Descriptive request parameter dictionary.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Endpoint URL, request parameters, and raw decoded response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'url', url )
@@ -20481,22 +20415,23 @@ class UvIndex( Fetcher ):
 			raise exception
 	
 	def fetch_daily_zip( self, zip_code: str, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch daily zip.
+		"""Retrieve daily UV forecasts by ZIP code.
 
 		Purpose:
-		    Retrieves daily zip from the configured provider and returns normalized response data.
+		    Validate the location, encode its values as URL path segments, request the EPA daily
+		    endpoint, and shape and summarize the returned records.
 
 		Args:
-		    zip_code (str): Code identifying the requested zip value.
-		    time (int): Maximum request duration in seconds.
+		    zip_code (str): Five-digit ZIP or ZIP+4 string after trimming.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'zip_code', zip_code )
@@ -20527,26 +20462,24 @@ class UvIndex( Fetcher ):
 			raise exception
 	
 	def fetch_daily_city_state( self, city: str, state: str, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch daily city state.
+		"""Retrieve daily UV forecasts by city and state.
 
 		Purpose:
-		    Retrieves daily city state from the configured provider and returns normalized
-		    response data.
+		    Validate the location, encode its values as URL path segments, request the EPA daily
+		    endpoint, and shape and summarize the returned records.
 
 		Args:
-		    city (str): City supplied by the caller and interpreted according to the method
-		    contract.
-		    state (str): State supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    city (str): Nonblank city name without forward or backward path separators.
+		    state (str): Two-letter alphabetic state code after trimming and uppercasing.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'city', city )
@@ -20580,22 +20513,23 @@ class UvIndex( Fetcher ):
 			raise exception
 	
 	def fetch_hourly_zip( self, zip_code: str, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch hourly zip.
+		"""Retrieve hourly UV forecasts by ZIP code.
 
 		Purpose:
-		    Retrieves hourly zip from the configured provider and returns normalized response data.
+		    Validate the location, encode its values as URL path segments, request the EPA hourly
+		    endpoint, and shape and summarize the returned records.
 
 		Args:
-		    zip_code (str): Code identifying the requested zip value.
-		    time (int): Maximum request duration in seconds.
+		    zip_code (str): Five-digit ZIP or ZIP+4 string after trimming.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'zip_code', zip_code )
@@ -20626,26 +20560,24 @@ class UvIndex( Fetcher ):
 			raise exception
 	
 	def fetch_hourly_city_state( self, city: str, state: str, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch hourly city state.
+		"""Retrieve hourly UV forecasts by city and state.
 
 		Purpose:
-		    Retrieves hourly city state from the configured provider and returns normalized
-		    response data.
+		    Validate the location, encode its values as URL path segments, request the EPA hourly
+		    endpoint, and shape and summarize the returned records.
 
 		Args:
-		    city (str): City supplied by the caller and interpreted according to the method
-		    contract.
-		    state (str): State supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    city (str): Nonblank city name without forward or backward path separators.
+		    state (str): Two-letter alphabetic state code after trimming and uppercasing.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'city', city )
@@ -20679,28 +20611,29 @@ class UvIndex( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='daily-zip', zip_code: str='', city: str='', state: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch an EPA UV Index retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Validate mode and select daily or hourly retrieval by ZIP or city/state.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    zip_code (str): Code identifying the requested zip value.
-		    city (str): City supplied by the caller and interpreted according to the method
-		    contract.
-		    state (str): State supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): daily-zip, daily-city-state, hourly-zip, or hourly-city-state; trimmed and
+		        lowercased. Defaults to 'daily-zip'.
+		    zip_code (str): Five-digit ZIP or ZIP+4 string after trimming. Defaults to an empty
+		        string; required in ZIP modes.
+		    city (str): Nonblank city name without forward or backward path separators. Defaults to
+		        an empty string; required in city/state modes.
+		    state (str): Two-letter alphabetic state code after trimming and uppercasing. Defaults
+		        to an empty string; required in city/state modes.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = self.validate_mode( mode )
@@ -20729,26 +20662,25 @@ class UvIndex( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter properties and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property dictionary.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -20777,47 +20709,37 @@ class UvIndex( Fetcher ):
 			raise exception
 
 class PurpleAir( Fetcher ):
-	"""PurpleAir component.
+	"""PurpleAir v1 sensor retrieval adapter.
 
 	Purpose:
-	    Queries PurpleAir sensor lists or details with validated fields, coordinates, bounding
-	    boxes, and API credentials.
+	    Retrieve sensor lists within a geographic bounding box or individual sensor details,
+	    validate filters and field selection, and package shaped air-quality records and PM2.5
+	    summaries.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    mode (Optional[str]): Current mode retained by the PurpleAir workflow between related
-	    operations.
-	    endpoint (Optional[str]): Current endpoint retained by the PurpleAir workflow between
-	    related operations.
-	    sensor_index (Optional[int]): Current sensor index retained by the PurpleAir workflow
-	    between related operations.
-	    nwlng (Optional[float]): Current nwlng retained by the PurpleAir workflow between related
-	    operations.
-	    nwlat (Optional[float]): Current nwlat retained by the PurpleAir workflow between related
-	    operations.
-	    selng (Optional[float]): Current selng retained by the PurpleAir workflow between related
-	    operations.
-	    selat (Optional[float]): Current selat retained by the PurpleAir workflow between related
-	    operations.
-	    location_type (Optional[int]): Current location type retained by the PurpleAir workflow
-	    between related operations.
-	    max_age (Optional[int]): Upper bound applied to age.
-	    modified_since (Optional[int]): Current modified since retained by the PurpleAir workflow
-	    between related operations.
-	    fields (Optional[str]): Current fields retained by the PurpleAir workflow between related
-	    operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the PurpleAir workflow between
-	    related operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
+	    base_url (Optional[str]): Base provider API URL.
+	    api_key (Optional[str]): Provider credential loaded from configuration; sent in
+	        X-API-Key.
+	    mode (Optional[str]): Selected retrieval operation.
+	    endpoint (Optional[str]): Selected relative API endpoint.
+	    sensor_index (Optional[int]): Selected individual sensor index.
+	    nwlng (Optional[float]): Northwest bounding longitude.
+	    nwlat (Optional[float]): Northwest bounding latitude.
+	    selng (Optional[float]): Southeast bounding longitude.
+	    selat (Optional[float]): Southeast bounding latitude.
+	    location_type (Optional[int]): Requested integer location type.
+	    max_age (Optional[int]): Requested nonnegative age filter.
+	    modified_since (Optional[int]): Requested nonnegative modification filter.
+	    fields (Optional[str]): Normalized comma-separated field selection.
+	    params (Optional[Dict[str, Any]]): Latest request parameters or descriptive request
+	        metadata.
+	    payload (Optional[Any]): Latest decoded provider response.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest request URL.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	base_url: Optional[ str ]
 	api_key: Optional[ str ]
@@ -20838,15 +20760,14 @@ class PurpleAir( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the configured PurpleAir key, configure v1 endpoint and JSON headers, initialize
+		    sensors mode, zero-valued filters, and twenty-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.base_url = 'https://api.purpleair.com/v1'
@@ -20875,14 +20796,13 @@ class PurpleAir( Fetcher ):
 			self.headers[ 'X-API-Key' ] = self.api_key
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'api_key', 'mode', 'endpoint', 'sensor_index', 'nwlng', 'nwlat',
 				'selng', 'selat', 'location_type', 'max_age', 'modified_since', 'fields', 'params',
@@ -20895,20 +20815,19 @@ class PurpleAir( Fetcher ):
 				'create_schema' ]
 	
 	def validate_mode( self, mode: str ) -> str:
-		"""Validate mode.
+		"""Validate the sensor retrieval mode.
 
 		Purpose:
-		    Validates the mode against provider constraints and returns the accepted value.
+		    Trim and lowercase the mode and accept sensors or sensor.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
+		    mode (str): sensors or sensor; trimmed and lowercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted mode.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -20930,21 +20849,21 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def validate_endpoint( self, endpoint: str ) -> str:
-		"""Validate endpoint.
+		"""Validate a PurpleAir relative endpoint.
 
 		Purpose:
-		    Validates the endpoint against provider constraints and returns the accepted value.
+		    Trim surrounding whitespace and slashes, reject full URLs and parent-directory markers,
+		    and require a supported sensor path.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
+		    endpoint (str): Relative path sensors or sensors/{sensor_index}, with a digit-only
+		        index; surrounding whitespace and slashes are removed.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted endpoint.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'endpoint', endpoint )
@@ -20971,21 +20890,19 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def validate_sensor_index( self, sensor_index: int ) -> int:
-		"""Validate sensor index.
+		"""Validate an individual sensor index.
 
 		Purpose:
-		    Validates the sensor index against provider constraints and returns the accepted value.
+		    Require a positive integer excluding booleans.
 
 		Args:
-		    sensor_index (int): Sensor index supplied by the caller and interpreted according to
-		    the method contract.
+		    sensor_index (int): Positive integer sensor index; booleans are rejected.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted sensor index.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'sensor_index', sensor_index )
@@ -21005,21 +20922,20 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def validate_longitude( self, name: str, value: float ) -> float:
-		"""Validate longitude.
+		"""Validate a longitude value.
 
 		Purpose:
-		    Validates the longitude against provider constraints and returns the accepted value.
+		    Reject booleans and nonfinite or out-of-range longitude values.
 
 		Args:
-		    name (str): Argument name included in validation error messages.
-		    value (float): Candidate value to validate or normalize.
+		    name (str): Nonblank argument label used in validation messages.
+		    value (float): Finite longitude from -180 through 180 degrees.
 
 		Returns:
-		    float: Computed numeric value produced by the operation.
+		    float: Original accepted longitude.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'name', name )
@@ -21040,21 +20956,20 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def validate_latitude( self, name: str, value: float ) -> float:
-		"""Validate latitude.
+		"""Validate a latitude value.
 
 		Purpose:
-		    Validates the latitude against provider constraints and returns the accepted value.
+		    Reject booleans and nonfinite or out-of-range latitude values.
 
 		Args:
-		    name (str): Argument name included in validation error messages.
-		    value (float): Candidate value to validate or normalize.
+		    name (str): Nonblank argument label used in validation messages.
+		    value (float): Finite latitude from -90 through 90 degrees.
 
 		Returns:
-		    float: Computed numeric value produced by the operation.
+		    float: Original accepted latitude.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'name', name )
@@ -21075,27 +20990,28 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def validate_bbox( self, nwlng: float, nwlat: float, selng: float, selat: float ) -> Tuple[ float, float, float, float ]:
-		"""Validate bbox.
+		"""Validate a northwest/southeast bounding box.
 
 		Purpose:
-		    Validates the bbox against provider constraints and returns the accepted value.
+		    Validate all four coordinates and require west longitude less than east longitude and
+		    north latitude greater than south latitude.
 
 		Args:
-		    nwlng (float): Nwlng supplied by the caller and interpreted according to the method
-		    contract.
-		    nwlat (float): Nwlat supplied by the caller and interpreted according to the method
-		    contract.
-		    selng (float): Selng supplied by the caller and interpreted according to the method
-		    contract.
-		    selat (float): Selat supplied by the caller and interpreted according to the method
-		    contract.
+		    nwlng (float): Finite northwest longitude from -180 through 180 degrees; less than
+		        selng; booleans are rejected.
+		    nwlat (float): Finite northwest latitude from -90 through 90 degrees; greater than
+		        selat; booleans are rejected.
+		    selng (float): Finite southeast longitude from -180 through 180 degrees; booleans are
+		        rejected.
+		    selat (float): Finite southeast latitude from -90 through 90 degrees; booleans are
+		        rejected.
 
 		Returns:
-		    Tuple[float, float, float, float]: Ordered values or records produced by the operation.
+		    Tuple[float, float, float, float]: Original accepted northwest longitude, northwest
+		        latitude, southeast longitude, and southeast latitude.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			nw_lng = self.validate_longitude( 'nwlng', nwlng )
@@ -21120,22 +21036,19 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def validate_location_type( self, location_type: int ) -> int:
-		"""Validate location type.
+		"""Validate the location type.
 
 		Purpose:
-		    Validates the location type against provider constraints and returns the accepted
-		    value.
+		    Require an integer equal to zero or one, excluding booleans.
 
 		Args:
-		    location_type (int): Location type supplied by the caller and interpreted according to
-		    the method contract.
+		    location_type (int): Integer location type, 0 or 1; booleans are rejected.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted location type.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'location_type', location_type )
@@ -21155,22 +21068,20 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def validate_non_negative_integer( self, name: str, value: int ) -> int:
-		"""Validate non negative integer.
+		"""Validate a nonnegative integer filter.
 
 		Purpose:
-		    Validates the non negative integer against provider constraints and returns the
-		    accepted value.
+		    Require an integer at least zero, excluding booleans.
 
 		Args:
-		    name (str): Argument name included in validation error messages.
-		    value (int): Candidate value to validate or normalize.
+		    name (str): Nonblank argument label used in validation messages.
+		    value (int): Nonnegative integer filter.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted value.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'name', name )
@@ -21192,24 +21103,21 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def normalize_fields( self, fields: str, default_fields: str ) -> str:
-		"""Normalize fields.
+		"""Normalize a sensor field selection.
 
 		Purpose:
-		    Normalizes fields into the canonical representation expected by the surrounding
-		    workflow.
+		    Use default fields when the requested string is blank, trim comma-separated names,
+		    discard blank entries, require at least one field, and retain the joined selection.
 
 		Args:
-		    fields (str): Fields supplied by the caller and interpreted according to the method
-		    contract.
-		    default_fields (str): Default fields supplied by the caller and interpreted according
-		    to the method contract.
+		    fields (str): Requested comma-separated fields, or blank to use defaults.
+		    default_fields (str): Nonblank fallback comma-separated fields.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized comma-separated field selection.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'default_fields', default_fields )
@@ -21238,23 +21146,21 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def shape_sensor_list_rows( self, payload: Dict[ str, Any ] ) -> List[ Dict[ str, Any ] ]:
-		"""Shape sensor list rows.
+		"""Shape PurpleAir sensor list records.
 
 		Purpose:
-		    Transforms provider sensor list rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Map each array record to provider field names by position, fill missing cells with None,
+		    and extract fixed display columns.
 
 		Args:
-		    payload (Dict[str, Any]): Validated request dictionary forwarded to the provider
-		    client.
+		    payload (Dict[str, Any]): Decoded provider response object.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Sensor index, name, PM2.5, temperature, humidity, coordinates,
+		        last seen, and location type rows.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			rows: List[ Dict[ str, Any ] ] = [ ]
@@ -21292,23 +21198,21 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def shape_sensor_detail_rows( self, payload: Dict[ str, Any ] ) -> List[ Dict[ str, Any ] ]:
-		"""Shape sensor detail rows.
+		"""Shape an individual sensor record.
 
 		Purpose:
-		    Transforms provider sensor detail rows into stable row dictionaries suitable for
-		    tables, serialization, and analysis.
+		    Extract the sensor object and fixed detail fields, using the retained sensor index when
+		    the response omits it.
 
 		Args:
-		    payload (Dict[str, Any]): Validated request dictionary forwarded to the provider
-		    client.
+		    payload (Dict[str, Any]): Decoded provider response object.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: One sensor detail row for a dictionary payload, otherwise an empty
+		        list.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			if not isinstance( payload, dict ):
@@ -21341,22 +21245,20 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def summarize_rows( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Summarize rows.
+		"""Summarize shaped sensor records.
 
 		Purpose:
-		    Computes a compact summary of rows so callers can inspect the response without
-		    traversing every record.
+		    Count rows, retain the first nonempty sensor name or index, and compute maximum finite
+		    PM2.5 using the list field or CF 1 A detail field.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Count, max_pm25, and first_name.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			count = len( rows or [ ] )
@@ -21392,24 +21294,22 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def package_response( self, rows: List[ Dict[ str, Any ] ], params: Dict[ str, Any ] ) -> Dict[ str, Any ]:
-		"""Package response.
+		"""Package shaped PurpleAir records.
 
 		Purpose:
-		    Combines normalized records, summary metrics, and request metadata into the standard
-		    response payload.
+		    Combine mode, URL, caller-supplied descriptive parameters, row summary, shaped rows, and
+		    raw provider response.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
-		    params (Dict[str, Any]): Params supplied by the caller and interpreted according to
-		    the method contract.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
+		    params (Dict[str, Any]): Request metadata to include in the result.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.result = { 'mode': self.mode, 'url': self.url, 'params': params,
@@ -21426,26 +21326,25 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Request.
+		"""Execute a PurpleAir request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Validate endpoint, optional parameters and timeout, omit None and blank strings, set
+		    X-API-Key, issue a GET, and validate list fields/data arrays or an individual sensor
+		    object.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
-		    params (Optional[Dict[str, Any]]): Params supplied by the caller and interpreted
-		    according to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    endpoint (str): Relative path sensors or sensors/{sensor_index}, with a digit-only
+		        index; surrounding whitespace and slashes are removed.
+		    params (Dict[str, Any] | None): Optional query parameter dictionary. Defaults to None.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Endpoint URL, request parameters, and raw decoded response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.endpoint = self.validate_endpoint( endpoint )
@@ -21498,37 +21397,37 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def fetch_sensors( self, nwlng: float, nwlat: float, selng: float, selat: float, location_type: int=0, max_age: int=0, modified_since: int=0, fields: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch sensors.
+		"""Retrieve sensors within a geographic bounding box.
 
 		Purpose:
-		    Retrieves sensors from the configured provider and returns normalized response data.
+		    Validate bounding coordinates and integer filters, normalize requested fields, request
+		    sensors, and shape the returned array records.
 
 		Args:
-		    nwlng (float): Nwlng supplied by the caller and interpreted according to the method
-		    contract.
-		    nwlat (float): Nwlat supplied by the caller and interpreted according to the method
-		    contract.
-		    selng (float): Selng supplied by the caller and interpreted according to the method
-		    contract.
-		    selat (float): Selat supplied by the caller and interpreted according to the method
-		    contract.
-		    location_type (int): Location type supplied by the caller and interpreted according to
-		    the method contract.
-		    max_age (int): Max age supplied by the caller and interpreted according to the method
-		    contract.
-		    modified_since (int): Modified since supplied by the caller and interpreted according
-		    to the method contract.
-		    fields (str): Fields supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    nwlng (float): Finite northwest longitude from -180 through 180 degrees; less than
+		        selng; booleans are rejected.
+		    nwlat (float): Finite northwest latitude from -90 through 90 degrees; greater than
+		        selat; booleans are rejected.
+		    selng (float): Finite southeast longitude from -180 through 180 degrees; booleans are
+		        rejected.
+		    selat (float): Finite southeast latitude from -90 through 90 degrees; booleans are
+		        rejected.
+		    location_type (int): Integer location type, 0 or 1; booleans are rejected. Defaults to
+		        0.
+		    max_age (int): Nonnegative integer age filter passed to PurpleAir. Defaults to 0.
+		    modified_since (int): Nonnegative integer modification filter passed to PurpleAir.
+		        Defaults to 0.
+		    fields (str): Comma-separated field selection; blank uses operation-specific defaults.
+		        Defaults to an empty string.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			default_fields = ('name,pm2.5,temperature,humidity,latitude,longitude,last_seen,'
@@ -21564,25 +21463,25 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def fetch_sensor( self, sensor_index: int, fields: str='', time: int=20 ) -> (Dict[ str, Any ] | None):
-		"""Fetch sensor.
+		"""Retrieve an individual PurpleAir sensor.
 
 		Purpose:
-		    Retrieves sensor from the configured provider and returns normalized response data.
+		    Validate sensor index, normalize fields, request its endpoint, and shape detail
+		    metadata.
 
 		Args:
-		    sensor_index (int): Sensor index supplied by the caller and interpreted according to
-		    the method contract.
-		    fields (str): Fields supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    sensor_index (int): Positive integer sensor index; booleans are rejected.
+		    fields (str): Comma-separated field selection; blank uses operation-specific defaults.
+		        Defaults to an empty string.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			default_fields = ('name,model,hardware,pm2.5_cf_1_a,pm2.5_cf_1_b,temperature,'
@@ -21613,41 +21512,40 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='sensors', sensor_index: int=None, nwlng: float | None = None, nwlat: float | None = None, selng: float | None = None, selat: float | None = None, location_type: int=0, max_age: int=0, modified_since: int=0, fields: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a PurpleAir retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Validate mode and require four bounding coordinates for sensors mode or an index for
+		    sensor mode.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    sensor_index (int): Sensor index supplied by the caller and interpreted according to
-		    the method contract.
-		    nwlng (float | None): Nwlng supplied by the caller and interpreted according to the
-		    method contract.
-		    nwlat (float | None): Nwlat supplied by the caller and interpreted according to the
-		    method contract.
-		    selng (float | None): Selng supplied by the caller and interpreted according to the
-		    method contract.
-		    selat (float | None): Selat supplied by the caller and interpreted according to the
-		    method contract.
-		    location_type (int): Location type supplied by the caller and interpreted according to
-		    the method contract.
-		    max_age (int): Max age supplied by the caller and interpreted according to the method
-		    contract.
-		    modified_since (int): Modified since supplied by the caller and interpreted according
-		    to the method contract.
-		    fields (str): Fields supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): sensors or sensor; trimmed and lowercased. Defaults to 'sensors'.
+		    sensor_index (int | None): Positive integer sensor index; booleans are rejected.
+		        Defaults to None; required in sensor mode.
+		    nwlng (float | None): Finite northwest longitude from -180 through 180 degrees; less
+		        than selng; booleans are rejected. Defaults to None; required in sensors mode.
+		    nwlat (float | None): Finite northwest latitude from -90 through 90 degrees; greater
+		        than selat; booleans are rejected. Defaults to None; required in sensors mode.
+		    selng (float | None): Finite southeast longitude from -180 through 180 degrees; booleans
+		        are rejected. Defaults to None; required in sensors mode.
+		    selat (float | None): Finite southeast latitude from -90 through 90 degrees; booleans
+		        are rejected. Defaults to None; required in sensors mode.
+		    location_type (int): Integer location type, 0 or 1; booleans are rejected. Defaults to
+		        0.
+		    max_age (int): Nonnegative integer age filter passed to PurpleAir. Defaults to 0.
+		    modified_since (int): Nonnegative integer modification filter passed to PurpleAir.
+		        Defaults to 0.
+		    fields (str): Comma-separated field selection; blank uses operation-specific defaults.
+		        Defaults to an empty string.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = self.validate_mode( mode )
@@ -21691,26 +21589,25 @@ class PurpleAir( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter properties and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property dictionary.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -21739,43 +21636,36 @@ class PurpleAir( Fetcher ):
 			raise exception
 
 class OpenAQ( Fetcher ):
-	"""OpenAQ component.
+	"""OpenAQ v3 air-quality retrieval adapter.
 
 	Purpose:
-	    Retrieves OpenAQ countries, providers, parameters, locations, and latest measurements with
-	    normalized pagination and spatial filters.
+	    Retrieve country, provider, parameter, location, and latest-measurement resources through
+	    OpenAQ v3, validate geographic and pagination arguments, and package shaped records.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    mode (Optional[str]): Current mode retained by the OpenAQ workflow between related
-	    operations.
-	    endpoint (Optional[str]): Current endpoint retained by the OpenAQ workflow between related
-	    operations.
-	    location_id (Optional[int]): Identifier of the current location resource.
-	    parameter_id (Optional[int]): Identifier of the current parameter resource.
-	    country_id (Optional[int]): Identifier of the current country resource.
-	    coordinates (Optional[str]): Current coordinates retained by the OpenAQ workflow between
-	    related operations.
-	    radius (Optional[int]): Current radius retained by the OpenAQ workflow between related
-	    operations.
-	    providers_id (Optional[str]): Identifier of the current providers resource.
-	    parameters_id (Optional[str]): Identifier of the current parameters resource.
-	    limit (Optional[int]): Current limit retained by the OpenAQ workflow between related
-	    operations.
-	    page (Optional[int]): Current page retained by the OpenAQ workflow between related
-	    operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the OpenAQ workflow between related
-	    operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
+	    base_url (Optional[str]): Base provider API URL.
+	    api_key (Optional[str]): Provider credential loaded from configuration; sent in
+	        X-API-Key.
+	    mode (Optional[str]): Selected retrieval operation.
+	    endpoint (Optional[str]): Selected relative API endpoint.
+	    location_id (Optional[int]): Selected location identifier.
+	    parameter_id (Optional[int]): Selected measurement parameter identifier.
+	    country_id (Optional[int]): Optional country identifier filter.
+	    coordinates (Optional[str]): Normalized latitude,longitude selection.
+	    radius (Optional[int]): Requested integer search radius.
+	    providers_id (Optional[str]): Optional provider identifier filter text.
+	    parameters_id (Optional[str]): Optional parameter identifier filter text.
+	    limit (Optional[int]): Requested page size.
+	    page (Optional[int]): Requested one-based page number.
+	    params (Optional[Dict[str, Any]]): Latest request parameters or descriptive request
+	        metadata.
+	    payload (Optional[Any]): Latest decoded provider response.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest request URL.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	base_url: Optional[ str ]
 	api_key: Optional[ str ]
@@ -21796,15 +21686,14 @@ class OpenAQ( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the configured OpenAQ key, configure v3 endpoint and JSON headers, initialize
+		    locations mode, radius of 25000, page size of 25, page one, and twenty-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.base_url = 'https://api.openaq.org/v3'
@@ -21833,14 +21722,13 @@ class OpenAQ( Fetcher ):
 			self.headers[ 'X-API-Key' ] = self.api_key
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'api_key', 'mode', 'endpoint', 'location_id', 'parameter_id',
 				'country_id', 'coordinates', 'radius', 'providers_id', 'parameters_id', 'limit',
@@ -21855,20 +21743,20 @@ class OpenAQ( Fetcher ):
 				'fetch', 'create_schema' ]
 	
 	def validate_mode( self, mode: str ) -> str:
-		"""Validate mode.
+		"""Validate an OpenAQ retrieval mode.
 
 		Purpose:
-		    Validates the mode against provider constraints and returns the accepted value.
+		    Trim and lowercase the mode and accept only supported operations.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
+		    mode (str): countries, providers, parameters, parameter_latest, locations, or latest;
+		        trimmed and lowercased.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted mode.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -21892,21 +21780,21 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def validate_endpoint( self, endpoint: str ) -> str:
-		"""Validate endpoint.
+		"""Validate an OpenAQ relative endpoint.
 
 		Purpose:
-		    Validates the endpoint against provider constraints and returns the accepted value.
+		    Trim whitespace and surrounding slashes, reject full URLs and parent-directory markers,
+		    and require a supported resource path.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
+		    endpoint (str): Relative path countries, providers, parameters, locations,
+		        parameters/{id}/latest, or locations/{id}/latest; IDs contain digits.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted endpoint.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'endpoint', endpoint )
@@ -21934,24 +21822,22 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def validate_positive_integer( self, name: str, value: Any, maximum: int | None = None ) -> ( int):
-		"""Validate positive integer.
+		"""Validate a positive integer.
 
 		Purpose:
-		    Validates the positive integer against provider constraints and returns the accepted
-		    value.
+		    Require a positive integer excluding booleans and enforce an optional validated positive
+		    integer maximum.
 
 		Args:
-		    name (str): Argument name included in validation error messages.
-		    value (Any): Candidate value to validate or normalize.
-		    maximum (int | None): Maximum supplied by the caller and interpreted according to the
-		    method contract.
+		    name (str): Nonblank argument label used in validation messages.
+		    value (Any): Positive integer to validate.
+		    maximum (int | None): Optional positive integer upper bound. Defaults to None.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted integer.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'name', name )
@@ -21982,22 +21868,20 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def validate_non_negative_integer( self, name: str, value: Any ) -> int:
-		"""Validate non negative integer.
+		"""Validate a nonnegative integer.
 
 		Purpose:
-		    Validates the non negative integer against provider constraints and returns the
-		    accepted value.
+		    Require an integer at least zero, excluding booleans.
 
 		Args:
-		    name (str): Argument name included in validation error messages.
-		    value (Any): Candidate value to validate or normalize.
+		    name (str): Nonblank argument label used in validation messages.
+		    value (Any): Nonnegative integer to validate.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted integer.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			throw_if( 'name', name )
@@ -22020,21 +21904,22 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def validate_coordinates( self, coordinates: str='' ) -> str:
-		"""Validate coordinates.
+		"""Validate and serialize a coordinate pair.
 
 		Purpose:
-		    Validates the coordinates against provider constraints and returns the accepted value.
+		    Allow blank or parse two finite numeric coordinates, validate geographic ranges, and
+		    serialize latitude then longitude.
 
 		Args:
-		    coordinates (str): Coordinates supplied by the caller and interpreted according to the
-		    method contract.
+		    coordinates (str): Optional comma-separated latitude,longitude pair; finite latitude
+		        from -90 through 90 and longitude from -180 through 180 degrees. Defaults to an
+		        empty string.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Comma-separated floating-point coordinates or an empty string.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			value = ( coordinates or '' ).strip( )
@@ -22069,21 +21954,19 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def validate_radius( self, radius: int ) -> int:
-		"""Validate radius.
+		"""Validate the geographic search radius.
 
 		Purpose:
-		    Validates the radius against provider constraints and returns the accepted value.
+		    Delegate positive integer validation with maximum 100000.
 
 		Args:
-		    radius (int): Radius supplied by the caller and interpreted according to the method
-		    contract.
+		    radius (int): Integer search radius from 1 through 100000; booleans are rejected.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted radius.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value fails validation.
 		"""
 		try:
 			value = self.validate_positive_integer( name='radius', value=radius, maximum=100000 )
@@ -22099,22 +21982,20 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def coalesce_results( self, payload: Any ) -> List[ Dict[ str, Any ] ]:
-		"""Coalesce results.
+		"""Extract OpenAQ result objects.
 
 		Purpose:
-		    Coalesce results using the class state and returns data required by the surrounding
-		    workflow.
+		    Filter a list payload or a dictionary's results list to dictionaries; return an empty
+		    list for other input.
 
 		Args:
-		    payload (Any): Validated request dictionary forwarded to the provider client.
+		    payload (Any): Decoded provider response.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Extracted result dictionaries.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			if payload is None:
@@ -22142,24 +22023,21 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def shape_resource_rows( self, payload: Any, resource_name: str ) -> List[ Dict[ str, Any ] ]:
-		"""Shape resource rows.
+		"""Shape OpenAQ resource metadata.
 
 		Purpose:
-		    Transforms provider resource rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Extract identifier, name, display name, code, resource label and date bounds; include
+		    parameter count and first parameter for nonempty parameter lists.
 
 		Args:
-		    payload (Any): Validated request dictionary forwarded to the provider client.
-		    resource_name (str): Resource name supplied by the caller and interpreted according to
-		    the method contract.
+		    payload (Any): Decoded provider response.
+		    resource_name (str): Nonblank resource label.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Display-oriented resource metadata rows.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'resource_name', resource_name )
@@ -22194,22 +22072,20 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def shape_location_rows( self, payload: Any ) -> List[ Dict[ str, Any ] ]:
-		"""Shape location rows.
+		"""Shape monitoring location records.
 
 		Purpose:
-		    Transforms provider location rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Extract location identifiers, names, locality, timezone, country, provider or owner,
+		    parameter metadata, coordinates and date bounds.
 
 		Args:
-		    payload (Any): Validated request dictionary forwarded to the provider client.
+		    payload (Any): Decoded provider response.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Display-oriented monitoring location rows.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			rows: List[ Dict[ str, Any ] ] = [ ]
@@ -22257,22 +22133,20 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def shape_latest_rows( self, payload: Any ) -> List[ Dict[ str, Any ] ]:
-		"""Shape latest rows.
+		"""Shape latest measurement records.
 
 		Purpose:
-		    Transforms provider latest rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Extract location and sensor identifiers, parameter metadata, measured value, unit, UTC
+		    datetime or supplied date value, period label, and coordinates.
 
 		Args:
-		    payload (Any): Validated request dictionary forwarded to the provider client.
+		    payload (Any): Decoded provider response.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Display-oriented latest measurement rows.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			rows: List[ Dict[ str, Any ] ] = [ ]
@@ -22320,22 +22194,20 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def summarize_rows( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Summarize rows.
+		"""Summarize shaped OpenAQ records.
 
 		Purpose:
-		    Computes a compact summary of rows so callers can inspect the response without
-		    traversing every record.
+		    Count rows and extract first-row resource, parameter and country labels using alternate
+		    display fields.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Count, first_result, first_parameter, and first_country.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			count = len( rows or [ ] )
@@ -22364,24 +22236,22 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def package_response( self, rows: List[ Dict[ str, Any ] ], params: Optional[ Dict[ str, Any ] ] = None ) -> Dict[ str, Any ]:
-		"""Package response.
+		"""Package shaped OpenAQ records.
 
 		Purpose:
-		    Combines normalized records, summary metrics, and request metadata into the standard
-		    response payload.
+		    Combine mode, URL, explicit parameter metadata or retained parameters, summary, shaped
+		    rows, and raw provider response.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
-		    params (Optional[Dict[str, Any]]): Params supplied by the caller and interpreted
-		    according to the method contract.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
+		    params (Dict[str, Any] | None): Optional query parameter dictionary. Defaults to None.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.result = { 'mode': self.mode, 'url': self.url,
@@ -22399,26 +22269,25 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Request.
+		"""Execute an OpenAQ v3 request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Validate endpoint, optional dictionary and timeout, omit None and blank strings, set
+		    X-API-Key, issue a GET, and require a successful JSON object containing a results list
+		    of dictionaries.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
-		    params (Optional[Dict[str, Any]]): Params supplied by the caller and interpreted
-		    according to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    endpoint (str): Relative path countries, providers, parameters, locations,
+		        parameters/{id}/latest, or locations/{id}/latest; IDs contain digits.
+		    params (Dict[str, Any] | None): Optional query parameter dictionary. Defaults to None.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Endpoint URL, request parameters, and raw decoded response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'endpoint', endpoint )
@@ -22467,25 +22336,29 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def fetch_countries( self, providers_id: str='', parameters_id: str='', limit: int=100, page: int=1, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch countries.
+		"""Retrieve OpenAQ country resources.
 
 		Purpose:
-		    Retrieves countries from the configured provider and returns normalized response data.
+		    Validate pagination, attach optional provider and parameter filters, request countries
+		    and shape resource metadata.
 
 		Args:
-		    providers_id (str): Provider identifier of the target providers resource.
-		    parameters_id (str): Provider identifier of the target parameters resource.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    page (int): One-based result page requested from the provider.
-		    time (int): Maximum request duration in seconds.
+		    providers_id (str): Optional provider identifier filter text. Defaults to an empty
+		        string.
+		    parameters_id (str): Optional parameter identifier filter text. Defaults to an empty
+		        string.
+		    limit (int): Integer page size from 1 through 1000; booleans are rejected. Defaults to
+		        100.
+		    page (int): Positive integer page number; booleans are rejected. Defaults to 1.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'countries'
@@ -22514,23 +22387,25 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def fetch_providers( self, limit: int=100, page: int=1, time: int=20 ) -> (Dict[ str, Any ] | None):
-		"""Fetch providers.
+		"""Retrieve OpenAQ providers.
 
 		Purpose:
-		    Retrieves providers from the configured provider and returns normalized response data.
+		    Validate page size and page number, request the providers endpoint, and shape resource
+		    metadata.
 
 		Args:
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    page (int): One-based result page requested from the provider.
-		    time (int): Maximum request duration in seconds.
+		    limit (int): Integer page size from 1 through 1000; booleans are rejected. Defaults to
+		        100.
+		    page (int): Positive integer page number; booleans are rejected. Defaults to 1.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'providers'
@@ -22556,23 +22431,25 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def fetch_parameters( self, limit: int=100, page: int=1, time: int=20 ) -> (Dict[ str, Any ] | None):
-		"""Fetch parameters.
+		"""Retrieve OpenAQ parameters.
 
 		Purpose:
-		    Retrieves parameters from the configured provider and returns normalized response data.
+		    Validate page size and page number, request the parameters endpoint, and shape resource
+		    metadata.
 
 		Args:
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    page (int): One-based result page requested from the provider.
-		    time (int): Maximum request duration in seconds.
+		    limit (int): Integer page size from 1 through 1000; booleans are rejected. Defaults to
+		        100.
+		    page (int): Positive integer page number; booleans are rejected. Defaults to 1.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'parameters'
@@ -22598,25 +22475,26 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def fetch_parameter_latest( self, parameter_id: int, limit: int=100, page: int=1, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch parameter latest.
+		"""Retrieve latest measurements by parameter.
 
 		Purpose:
-		    Retrieves parameter latest from the configured provider and returns normalized
-		    response data.
+		    Validate parameter identifier and pagination, request its latest endpoint, shape
+		    measurement records, and retain descriptive parameter metadata.
 
 		Args:
-		    parameter_id (int): Provider identifier of the target parameter resource.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    page (int): One-based result page requested from the provider.
-		    time (int): Maximum request duration in seconds.
+		    parameter_id (int): Positive integer parameter identifier.
+		    limit (int): Integer page size from 1 through 1000; booleans are rejected. Defaults to
+		        100.
+		    page (int): Positive integer page number; booleans are rejected. Defaults to 1.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'parameter_latest'
@@ -22645,30 +22523,36 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def fetch_locations( self, country_id: int=None, coordinates: str='', radius: int=25000, providers_id: str='', parameters_id: str='', limit: int=25, page: int=1, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch locations.
+		"""Retrieve OpenAQ monitoring locations.
 
 		Purpose:
-		    Retrieves locations from the configured provider and returns normalized response data.
+		    Validate optional country identifier, coordinate pair, radius and pagination, attach
+		    optional provider and parameter filters, and shape location results. Radius is submitted
+		    even when coordinates are omitted.
 
 		Args:
-		    country_id (int): Provider identifier of the target country resource.
-		    coordinates (str): Coordinates supplied by the caller and interpreted according to the
-		    method contract.
-		    radius (int): Radius supplied by the caller and interpreted according to the method
-		    contract.
-		    providers_id (str): Provider identifier of the target providers resource.
-		    parameters_id (str): Provider identifier of the target parameters resource.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    page (int): One-based result page requested from the provider.
-		    time (int): Maximum request duration in seconds.
+		    country_id (int | None): Optional positive integer country identifier. Defaults to None.
+		    coordinates (str): Optional comma-separated latitude,longitude pair; finite latitude
+		        from -90 through 90 and longitude from -180 through 180 degrees. Defaults to an
+		        empty string.
+		    radius (int): Integer search radius from 1 through 100000; booleans are rejected.
+		        Defaults to 25000.
+		    providers_id (str): Optional provider identifier filter text. Defaults to an empty
+		        string.
+		    parameters_id (str): Optional parameter identifier filter text. Defaults to an empty
+		        string.
+		    limit (int): Integer page size from 1 through 1000; booleans are rejected. Defaults to
+		        25.
+		    page (int): Positive integer page number; booleans are rejected. Defaults to 1.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'locations'
@@ -22703,22 +22587,23 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def fetch_latest( self, location_id: int, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch latest.
+		"""Retrieve latest measurements by location.
 
 		Purpose:
-		    Retrieves latest from the configured provider and returns normalized response data.
+		    Validate the location identifier, request its latest endpoint without pagination
+		    arguments, and shape measurement records.
 
 		Args:
-		    location_id (int): Provider identifier of the target location resource.
-		    time (int): Maximum request duration in seconds.
+		    location_id (int): Positive integer location identifier.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'latest'
@@ -22744,34 +22629,41 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='locations', location_id: int=None, parameter_id: int=None, country_id: int=None, coordinates: str='', radius: int=25000, providers_id: str = '', parameters_id: str='', limit: int=25, page: int=1, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch an OpenAQ retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Validate mode and forward applicable resource, location, parameter, geographic and
+		    pagination arguments.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    location_id (int): Provider identifier of the target location resource.
-		    parameter_id (int): Provider identifier of the target parameter resource.
-		    country_id (int): Provider identifier of the target country resource.
-		    coordinates (str): Coordinates supplied by the caller and interpreted according to the
-		    method contract.
-		    radius (int): Radius supplied by the caller and interpreted according to the method
-		    contract.
-		    providers_id (str): Provider identifier of the target providers resource.
-		    parameters_id (str): Provider identifier of the target parameters resource.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    page (int): One-based result page requested from the provider.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): countries, providers, parameters, parameter_latest, locations, or latest;
+		        trimmed and lowercased. Defaults to 'locations'.
+		    location_id (int | None): Positive integer location identifier. Defaults to None;
+		        required in latest mode.
+		    parameter_id (int | None): Positive integer parameter identifier. Defaults to None;
+		        required in parameter_latest mode.
+		    country_id (int | None): Optional positive integer country identifier. Defaults to None.
+		    coordinates (str): Optional comma-separated latitude,longitude pair; finite latitude
+		        from -90 through 90 and longitude from -180 through 180 degrees. Defaults to an
+		        empty string.
+		    radius (int): Integer search radius from 1 through 100000; booleans are rejected.
+		        Defaults to 25000.
+		    providers_id (str): Optional provider identifier filter text. Defaults to an empty
+		        string.
+		    parameters_id (str): Optional parameter identifier filter text. Defaults to an empty
+		        string.
+		    limit (int): Integer page size from 1 through 1000; booleans are rejected. Defaults to
+		        25.
+		    page (int): Positive integer page number; booleans are rejected. Defaults to 1.
+		    time (int): Positive integer HTTP timeout in seconds; booleans are rejected. Defaults to
+		        20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = self.validate_mode( mode )
@@ -22810,26 +22702,25 @@ class OpenAQ( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter properties and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property dictionary.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
