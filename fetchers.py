@@ -1665,8 +1665,6 @@ class GoogleDrive( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'results', results )
-
 			throw_if( 'template', template )
 			throw_if( 'folder_id', folder_id )
 			throw_if( 'results', results )
@@ -1677,8 +1675,6 @@ class GoogleDrive( Fetcher ):
 			self.template = template
 			self.mime_type = mime_type
 			self.mode = mode
-			self.credentials_path = cfg.GOOGLE_ACCOUNT_FILE
-			self.token_path = cfg.GOOGLE_DRIVE_TOKEN_PATH
 			if self.num_results < 1 or self.num_results > 100:
 				raise ValueError( 'results must be between 1 and 100.' )
 			
@@ -1697,8 +1693,7 @@ class GoogleDrive( Fetcher ):
 						'gdrive-mime-type-in-folder'):
 					self.invoke_query = '*'
 				else:
-					raise ValueError( 'A query is required for the selected Google Drive '
-					                  'template.' )
+					throw_if( 'question', question )
 			
 			self.retriever_kwargs = { 'folder_id': self.folder_id, 'template': self.template,
 					'num_results': self.num_results, 'mode': self.mode, }
@@ -1865,6 +1860,22 @@ class TheNews( Fetcher ):
 	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
 	    result (Any): Most recent normalized Foo result produced by the instance.
 	    headers (Any): HTTP headers sent with the current request.
+	    query (str): Article search text.
+	    language (str): Language filter.
+	    categories (str): Included categories.
+	    exclude_categories (str): Excluded categories.
+	    locale (str): Locale filter.
+	    domains (str): Included domains.
+	    exclude_domains (str): Excluded domains.
+	    source_ids (str): Included source identifiers.
+	    exclude_source_ids (str): Excluded source identifiers.
+	    published_after (str): Lower publication-date boundary.
+	    published_before (str): Upper publication-date boundary.
+	    published_on (str): Publication date filter.
+	    sort (str): Article ordering.
+	    include_similar (bool): Include similar articles.
+	    headlines_per_category (int): Headlines requested per category.
+	    request_url (str): URL for the selected news endpoint.
 	"""
 	agents: Optional[ str ]
 	url: Optional[ str ]
@@ -1874,6 +1885,22 @@ class TheNews( Fetcher ):
 	endpoint: Optional[ str ]
 	limit: Optional[ int ]
 	page: Optional[ int ]
+	query: str
+	language: str
+	categories: str
+	exclude_categories: str
+	locale: str
+	domains: str
+	exclude_domains: str
+	source_ids: str
+	exclude_source_ids: str
+	published_after: str
+	published_before: str
+	published_on: str
+	sort: str
+	include_similar: bool
+	headlines_per_category: int
+	request_url: str
 	
 	def __init__( self ) -> None:
 		"""Initialize the instance.
@@ -1896,6 +1923,22 @@ class TheNews( Fetcher ):
 		self.endpoint = 'all'
 		self.limit = 10
 		self.page = 1
+		self.query = ''
+		self.language = 'en'
+		self.categories = ''
+		self.exclude_categories = ''
+		self.locale = ''
+		self.domains = ''
+		self.exclude_domains = ''
+		self.source_ids = ''
+		self.exclude_source_ids = ''
+		self.published_after = ''
+		self.published_before = ''
+		self.published_on = ''
+		self.sort = 'published_at'
+		self.include_similar = True
+		self.headlines_per_category = 6
+		self.request_url = ''
 		self.api_key = cfg.THENEWS_API_KEY
 		self.agents = cfg.AGENTS
 		
@@ -1916,6 +1959,7 @@ class TheNews( Fetcher ):
 		    List[str]: Ordered public member names exposed by the instance.
 		"""
 		return [ 'api_key', 'url', 'timeout', 'headers', 'endpoint', 'limit', 'page', 'params',
+				'query', 'language', 'categories', 'exclude_categories', 'locale', 'domains', 'exclude_domains', 'source_ids', 'exclude_source_ids', 'published_after', 'published_before', 'published_on', 'sort', 'include_similar', 'headlines_per_category', 'request_url',
 				'fetch', ]
 	
 	def fetch( self, endpoint: str='all', query: str='', language: str='en', categories: str='', exclude_categories: str='', locale: str='', domains: str='', exclude_domains: str='', source_ids: str='', exclude_source_ids: str='', published_after: str='', published_before: str='', published_on: str='', sort: str='published_at', limit: int=10, page: int=1, include_similar: bool=True, headlines_per_category: int=6, time: int=10 ) -> Dict[ str, Any ]:
@@ -1968,18 +2012,27 @@ class TheNews( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-
-			throw_if( 'limit', limit )
-
-
-			throw_if( 'page', page )
-
+			throw_if( 'endpoint', endpoint )
 			self.endpoint = endpoint
-
 			throw_if( 'time', time )
 			self.timeout = time
+			throw_if( 'limit', limit )
 			self.limit = limit
+			throw_if( 'page', page )
 			self.page = page
+			self.query = query
+			self.language = language
+			self.categories = categories
+			self.exclude_categories = exclude_categories
+			self.locale = locale
+			self.domains = domains
+			self.exclude_domains = exclude_domains
+			self.source_ids = source_ids
+			self.exclude_source_ids = exclude_source_ids
+			self.published_after = published_after
+			self.published_before = published_before
+			self.published_on = published_on
+			self.sort = sort
 			
 			valid_endpoints = { 'all', 'top', 'headlines', 'sources' }
 			if self.endpoint not in valid_endpoints:
@@ -1989,93 +2042,91 @@ class TheNews( Fetcher ):
 			
 			self.params = { 'api_token': self.api_key }
 			if self.endpoint in ('all', 'top'):
-				if query and query.strip( ):
-					self.params[ 'search' ] = query.strip( )
+				if self.query:
+					self.params[ 'search' ] = self.query
 				
-				if language and language.strip( ):
-					self.params[ 'language' ] = language.strip( )
+				if self.language:
+					self.params[ 'language' ] = self.language
 				
-				if categories and categories.strip( ):
-					self.params[ 'categories' ] = categories.strip( )
+				if self.categories:
+					self.params[ 'categories' ] = self.categories
 				
-				if exclude_categories and exclude_categories.strip( ):
-					self.params[ 'exclude_categories' ] = exclude_categories.strip( )
+				if self.exclude_categories:
+					self.params[ 'exclude_categories' ] = self.exclude_categories
 				
-				if domains and domains.strip( ):
-					self.params[ 'domains' ] = domains.strip( )
+				if self.domains:
+					self.params[ 'domains' ] = self.domains
 				
-				if exclude_domains and exclude_domains.strip( ):
-					self.params[ 'exclude_domains' ] = exclude_domains.strip( )
+				if self.exclude_domains:
+					self.params[ 'exclude_domains' ] = self.exclude_domains
 				
-				if source_ids and source_ids.strip( ):
-					self.params[ 'source_ids' ] = source_ids.strip( )
+				if self.source_ids:
+					self.params[ 'source_ids' ] = self.source_ids
 				
-				if exclude_source_ids and exclude_source_ids.strip( ):
-					self.params[ 'exclude_source_ids' ] = exclude_source_ids.strip( )
+				if self.exclude_source_ids:
+					self.params[ 'exclude_source_ids' ] = self.exclude_source_ids
 				
-				if published_after and published_after.strip( ):
-					self.params[ 'published_after' ] = published_after.strip( )
+				if self.published_after:
+					self.params[ 'published_after' ] = self.published_after
 				
-				if published_before and published_before.strip( ):
-					self.params[ 'published_before' ] = published_before.strip( )
+				if self.published_before:
+					self.params[ 'published_before' ] = self.published_before
 				
-				if published_on and published_on.strip( ):
-					self.params[ 'published_on' ] = published_on.strip( )
+				if self.published_on:
+					self.params[ 'published_on' ] = self.published_on
 				
-				if sort and sort.strip( ):
-					self.params[ 'sort' ] = sort.strip( )
+				if self.sort:
+					self.params[ 'sort' ] = self.sort
 				
 				self.params[ 'limit' ] = self.limit
 				self.params[ 'page' ] = self.page
-				if self.endpoint == 'top' and locale and locale.strip( ):
-					self.params[ 'locale' ] = locale.strip( )
+				if self.endpoint == 'top' and self.locale:
+					self.params[ 'locale' ] = self.locale
 			
 			elif self.endpoint == 'headlines':
-				if locale and locale.strip( ):
-					self.params[ 'locale' ] = locale.strip( )
+				if self.locale:
+					self.params[ 'locale' ] = self.locale
 				
-				if domains and domains.strip( ):
-					self.params[ 'domains' ] = domains.strip( )
+				if self.domains:
+					self.params[ 'domains' ] = self.domains
 				
-				if exclude_domains and exclude_domains.strip( ):
-					self.params[ 'exclude_domains' ] = exclude_domains.strip( )
+				if self.exclude_domains:
+					self.params[ 'exclude_domains' ] = self.exclude_domains
 				
-				if source_ids and source_ids.strip( ):
-					self.params[ 'source_ids' ] = source_ids.strip( )
+				if self.source_ids:
+					self.params[ 'source_ids' ] = self.source_ids
 				
-				if exclude_source_ids and exclude_source_ids.strip( ):
-					self.params[ 'exclude_source_ids' ] = exclude_source_ids.strip( )
+				if self.exclude_source_ids:
+					self.params[ 'exclude_source_ids' ] = self.exclude_source_ids
 				
-				if language and language.strip( ):
-					self.params[ 'language' ] = language.strip( )
+				if self.language:
+					self.params[ 'language' ] = self.language
 				
-				if published_on and published_on.strip( ):
-					self.params[ 'published_on' ] = published_on.strip( )
+				if self.published_on:
+					self.params[ 'published_on' ] = self.published_on
 				
 				throw_if( 'headlines_per_category', headlines_per_category )
-
 				self.headlines_per_category = headlines_per_category
 				self.params[ 'headlines_per_category' ] = self.headlines_per_category
 				
 				throw_if( 'include_similar', include_similar )
-
 				self.include_similar = include_similar
 				self.params[ 'include_similar' ] = 'true' if self.include_similar else 'false'
 			
 			elif self.endpoint == 'sources':
-				if categories and categories.strip( ):
-					self.params[ 'categories' ] = categories.strip( )
+				if self.categories:
+					self.params[ 'categories' ] = self.categories
 				
-				if exclude_categories and exclude_categories.strip( ):
-					self.params[ 'exclude_categories' ] = exclude_categories.strip( )
+				if self.exclude_categories:
+					self.params[ 'exclude_categories' ] = self.exclude_categories
 				
-				if language and language.strip( ):
-					self.params[ 'language' ] = language.strip( )
+				if self.language:
+					self.params[ 'language' ] = self.language
 				
 				self.params[ 'page' ] = self.page
 			
-			request_url = f'{self.url}/{self.endpoint}'
-			self.response = requests.get( url=request_url, params=self.params,
+			self.request_url = f'{self.url}/{self.endpoint}'
+			self.response = requests.get( url=self.request_url, params=self.params,
 				headers=self.headers, timeout=self.timeout )
 			
 			self.response.raise_for_status( )
@@ -2255,7 +2306,7 @@ class GoogleSearch( Fetcher ):
 		        method contract.
 		    results (int): Results supplied by the caller and interpreted according to the method
 		        contract.
-		    start (int): Date boundary or date value used by the request.
+		    start (int): One-based index of the first search result, default 1.
 		    exact_terms (str): Exact terms supplied by the caller and interpreted according to the
 		        method contract.
 		    exclude_terms (str): Exclude terms supplied by the caller and interpreted according to
@@ -2285,7 +2336,6 @@ class GoogleSearch( Fetcher ):
 		    img_dominant_color (str): Img dominant color supplied by the caller and interpreted
 		        according to the method contract.
 		    time (int): Maximum request duration in seconds.
-		        contract.
 		    cse_id (str): Provider identifier of the target cse resource.
 
 		Returns:
@@ -2308,11 +2358,12 @@ class GoogleSearch( Fetcher ):
 			
 			
 			if cse_id:
-				self.cse_id = cse_id.strip( )
+				throw_if( 'cse_id', cse_id )
+				self.cse_id = cse_id
 			
 			throw_if( 'time', time )
 			self.timeout = time
-			self.keywords = keywords.strip( )
+			self.keywords = keywords
 			self.results = results
 			self.start = start
 			if self.results < 1:
