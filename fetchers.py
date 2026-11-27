@@ -1228,6 +1228,12 @@ class WebCrawler( WebFetcher ):
 				'errors': [ ], 'content_bytes': 0, 'truncated_by_max_bytes': False, }
 		
 		try:
+			if type( include_title ) is not bool:
+				raise ValueError( 'include_title must be a boolean.' )
+			if type( include_basic_text ) is not bool:
+				raise ValueError( 'include_basic_text must be a boolean.' )
+			if type( include_raw_html ) is not bool:
+				raise ValueError( 'include_raw_html must be a boolean.' )
 			methods = selected_methods or [ ]
 			self.fetch( url=url, time=request_timeout )
 			raw_html = self.html or ''
@@ -1303,6 +1309,16 @@ class WebCrawler( WebFetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
+			if type( include_title ) is not bool:
+				raise ValueError( 'include_title must be a boolean.' )
+			if type( include_basic_text ) is not bool:
+				raise ValueError( 'include_basic_text must be a boolean.' )
+			if type( include_raw_html ) is not bool:
+				raise ValueError( 'include_raw_html must be a boolean.' )
+			if type( recursive ) is not bool:
+				raise ValueError( 'recursive must be a boolean.' )
+			if type( same_domain_only ) is not bool:
+				raise ValueError( 'same_domain_only must be a boolean.' )
 			throw_if( 'seed_url', seed_url )
 			started_at = dt.datetime.now( )
 			normalized_seed = self.normalize_url( seed_url, seed_url )
@@ -1457,6 +1473,10 @@ class ArXiv( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
+			if full_documents is not None and type( full_documents ) is not bool:
+				raise ValueError( 'full_documents must be a boolean or None.' )
+			if include_metadata is not None and type( include_metadata ) is not bool:
+				raise ValueError( 'include_metadata must be a boolean or None.' )
 			throw_if( 'question', question )
 			self.query = question.strip( )
 			max_docs = self.max_documents if max_documents is None else max( 1, min( 
@@ -1770,6 +1790,8 @@ class Wikipedia( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
+			if include_metadata is not None and type( include_metadata ) is not bool:
+				raise ValueError( 'include_metadata must be a boolean or None.' )
 			throw_if( 'question', question )
 			self.query = question.strip( )
 			lang = self.language if language is None else (language.strip( ) if language else 'en')
@@ -5093,6 +5115,12 @@ class NearbyObjects( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			if type( include_physical ) is not bool:
+				raise ValueError( 'include_physical must be a boolean.' )
+			if type( include_close_approaches ) is not bool:
+				raise ValueError( 'include_close_approaches must be a boolean.' )
+			if type( include_discovery ) is not bool:
+				raise ValueError( 'include_discovery must be a boolean.' )
 			throw_if( 'query', query )
 			self.mode = 'object_lookup'
 			self.query = query.strip( )
@@ -5950,6 +5978,10 @@ class SpaceWeather( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			if type( most_accurate_only ) is not bool:
+				raise ValueError( 'most_accurate_only must be a boolean.' )
+			if type( complete_entry_only ) is not bool:
+				raise ValueError( 'complete_entry_only must be a boolean.' )
 			throw_if( 'endpoint', endpoint )
 			throw_if( 'time', time )
 			if type( time ) is not int or time < 1:
@@ -7017,9 +7049,22 @@ class StarMap( Fetcher ):
 
 		Returns:
 		    str: Normalized text produced by the operation.
+		Raises:
+		    Error: Wraps and logs invalid boolean arguments.
 		"""
-		return '1' if value else '0'
-	
+		try:
+			throw_if( 'value', value )
+			if type( value ) is not bool:
+				raise ValueError( 'value must be a boolean.' )
+			return '1' if value else '0'
+		except Exception as exc:
+			exception = Error( exc )
+			exception.module = 'fetchers'
+			exception.cause = 'StarMap'
+			exception.method = 'normalize( self, value: bool ) -> str'
+			Logger( ).write( exception )
+			raise exception
+
 	def extract_links( self, html: str, base_url: str ) -> Dict[ str, str ]:
 		"""Extract links.
 
@@ -7086,6 +7131,8 @@ class StarMap( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			if type( show_box ) is not bool:
+				raise ValueError( 'show_box must be a boolean.' )
 			throw_if( 'name', name )
 			
 			self.object = name
@@ -7150,6 +7197,14 @@ class StarMap( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			if type( show_box ) is not bool:
+				raise ValueError( 'show_box must be a boolean.' )
+			if type( show_grid ) is not bool:
+				raise ValueError( 'show_grid must be a boolean.' )
+			if type( show_lines ) is not bool:
+				raise ValueError( 'show_lines must be a boolean.' )
+			if type( show_boundaries ) is not bool:
+				raise ValueError( 'show_boundaries must be a boolean.' )
 			throw_if( 'ra', ra )
 			throw_if( 'dec', dec )
 			
@@ -7222,6 +7277,14 @@ class StarMap( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			if type( show_grid ) is not bool:
+				raise ValueError( 'show_grid must be a boolean.' )
+			if type( show_lines ) is not bool:
+				raise ValueError( 'show_lines must be a boolean.' )
+			if type( show_boundaries ) is not bool:
+				raise ValueError( 'show_boundaries must be a boolean.' )
+			if type( show_const_names ) is not bool:
+				raise ValueError( 'show_const_names must be a boolean.' )
 			throw_if( 'ra', ra )
 			throw_if( 'dec', dec )
 			
@@ -7948,12 +8011,27 @@ class StarChart( Fetcher ):
 
 		Returns:
 		    int: Computed numeric value produced by the operation.
+		Raises:
+		    Error: Wraps and logs invalid boolean arguments.
 		"""
-		if invert:
-			return 0 if value else 1
-		
-		return 1 if value else 0
-	
+		try:
+			throw_if( 'value', value )
+			if type( value ) is not bool:
+				raise ValueError( 'value must be a boolean.' )
+			if type( invert ) is not bool:
+				raise ValueError( 'invert must be a boolean.' )
+			if invert:
+				return 0 if value else 1
+			
+			return 1 if value else 0
+		except Exception as exc:
+			exception = Error( exc )
+			exception.module = 'fetchers'
+			exception.cause = 'StarChart'
+			exception.method = 'flag( self, value: bool, invert: bool=False ) -> int'
+			Logger( ).write( exception )
+			raise exception
+
 	def search_object( self, name: str, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Search object.
 
@@ -8046,6 +8124,8 @@ class StarChart( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			if type( show_box ) is not bool:
+				raise ValueError( 'show_box must be a boolean.' )
 			throw_if( 'name', name )
 			self.mode = 'object_chart'
 			self.query = name.strip( )
@@ -8107,6 +8187,14 @@ class StarChart( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			if type( show_box ) is not bool:
+				raise ValueError( 'show_box must be a boolean.' )
+			if type( show_grid ) is not bool:
+				raise ValueError( 'show_grid must be a boolean.' )
+			if type( show_lines ) is not bool:
+				raise ValueError( 'show_lines must be a boolean.' )
+			if type( show_boundaries ) is not bool:
+				raise ValueError( 'show_boundaries must be a boolean.' )
 			self.mode = 'coordinate_chart'
 			self.ra = ra
 			self.dec = dec
@@ -8177,6 +8265,14 @@ class StarChart( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			if type( show_grid ) is not bool:
+				raise ValueError( 'show_grid must be a boolean.' )
+			if type( show_lines ) is not bool:
+				raise ValueError( 'show_lines must be a boolean.' )
+			if type( show_boundaries ) is not bool:
+				raise ValueError( 'show_boundaries must be a boolean.' )
+			if type( show_const_names ) is not bool:
+				raise ValueError( 'show_const_names must be a boolean.' )
 			self.mode = 'static_chart'
 			self.ra = ra
 			self.dec = dec
@@ -8992,6 +9088,8 @@ class Congress( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			if type( conference ) is not bool:
+				raise ValueError( 'conference must be a boolean.' )
 			throw_if( 'congress', congress )
 			
 			self.congress_number = congress
@@ -10472,6 +10570,8 @@ class Grokipedia( Fetcher ):
 		    Error: Wraps the source exception with module, class, and method metadata.
 		"""
 		try:
+			if type( include_content ) is not bool:
+				raise ValueError( 'include_content must be a boolean.' )
 			throw_if( 'page', page )
 			self.page = page.strip( )
 			self.include_content = include_content
