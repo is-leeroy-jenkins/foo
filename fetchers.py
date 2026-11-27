@@ -1734,44 +1734,42 @@ class Wikipedia( Fetcher ):
 			raise exception
 
 class TheNews( Fetcher ):
-	"""TheNews component.
+	"""The News API article and source retriever.
 
 	Purpose:
-	    Queries a news service and packages current article results for display or downstream
-	    processing.
+	    Construct endpoint-specific news queries using configured credentials and return decoded
+	    JSON for article searches, top news, grouped headlines, and source listings.
 
 	Attributes:
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    response (Optional[Response]): Most recent raw response returned by the provider client.
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	        provider call.
-	    endpoint (Optional[str]): Current endpoint retained by the TheNews workflow between
-	        related operations.
-	    limit (Optional[int]): Current limit retained by the TheNews workflow between related
-	        operations.
-	    page (Optional[int]): Current page retained by the TheNews workflow between related
-	        operations.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    result (Any): Most recent normalized Foo result produced by the instance.
-	    headers (Any): HTTP headers sent with the current request.
-	    query (str): Article search text.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    url (Optional[str]): Base news API URL.
+	    response (Optional[Response]): Latest HTTP response.
+	    api_key (Optional[str]): News API token loaded from configuration.
+	    params (Optional[Dict[str, Any]]): Parameters submitted to the latest endpoint, including
+	        the API token.
+	    endpoint (Optional[str]): Selected news endpoint.
+	    limit (Optional[int]): Requested article count.
+	    page (Optional[int]): Requested result page.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    result (Optional[Result]): Inherited result placeholder; fetch returns decoded JSON
+	        directly.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    query (str): Article search expression.
 	    language (str): Language filter.
-	    categories (str): Included categories.
+	    categories (str): Included article or source categories.
 	    exclude_categories (str): Excluded categories.
-	    locale (str): Locale filter.
-	    domains (str): Included domains.
-	    exclude_domains (str): Excluded domains.
+	    locale (str): Locale filter for top news and headlines.
+	    domains (str): Included publisher domains.
+	    exclude_domains (str): Excluded publisher domains.
 	    source_ids (str): Included source identifiers.
 	    exclude_source_ids (str): Excluded source identifiers.
-	    published_after (str): Lower publication-date boundary.
-	    published_before (str): Upper publication-date boundary.
-	    published_on (str): Publication date filter.
-	    sort (str): Article ordering.
-	    include_similar (bool): Include similar articles.
-	    headlines_per_category (int): Headlines requested per category.
-	    request_url (str): URL for the selected news endpoint.
+	    published_after (str): Lower publication-date filter.
+	    published_before (str): Upper publication-date filter.
+	    published_on (str): Exact publication-date filter.
+	    sort (str): Article ordering expression.
+	    include_similar (bool): Whether grouped headlines include similar articles.
+	    headlines_per_category (int): Requested headlines per category.
+	    request_url (str): Complete URL of the selected news endpoint.
 	"""
 	agents: Optional[ str ]
 	url: Optional[ str ]
@@ -1799,15 +1797,14 @@ class TheNews( Fetcher ):
 	request_url: str
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize news retrieval configuration.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the API token and user-agent from configuration, set the news endpoint defaults, and
+		    prepare HTTP headers and request state without sending a request.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		        value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.timeout = 10
@@ -1845,67 +1842,61 @@ class TheNews( Fetcher ):
 			self.headers[ 'Accept' ] = 'application/json'
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed news retrieval members.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit attribute and method names returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered news retrieval member names.
 		"""
 		return [ 'api_key', 'url', 'timeout', 'headers', 'endpoint', 'limit', 'page', 'params',
 				'query', 'language', 'categories', 'exclude_categories', 'locale', 'domains', 'exclude_domains', 'source_ids', 'exclude_source_ids', 'published_after', 'published_before', 'published_on', 'sort', 'include_similar', 'headlines_per_category', 'request_url',
 				'fetch', ]
 	
 	def fetch( self, endpoint: str='all', query: str='', language: str='en', categories: str='', exclude_categories: str='', locale: str='', domains: str='', exclude_domains: str='', source_ids: str='', exclude_source_ids: str='', published_after: str='', published_before: str='', published_on: str='', sort: str='published_at', limit: int=10, page: int=1, include_similar: bool=True, headlines_per_category: int=6, time: int=10 ) -> Dict[ str, Any ]:
-		"""Fetch.
+		"""Retrieve news articles, headlines, or sources.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select the requested endpoint, assemble only its applicable filters with the configured
+		    API token, send an HTTP GET request, check its status, and return decoded JSON.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		        method contract.
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    language (str): Language supplied by the caller and interpreted according to the
-		        method contract.
-		    categories (str): Categories supplied by the caller and interpreted according to the
-		        method contract.
-		    exclude_categories (str): Exclude categories supplied by the caller and interpreted
-		        according to the method contract.
-		    locale (str): Locale supplied by the caller and interpreted according to the method
-		        contract.
-		    domains (str): Domain names or URLs used to constrain grounded web search.
-		    exclude_domains (str): Exclude domains supplied by the caller and interpreted
-		        according to the method contract.
-		    source_ids (str): Source ids supplied by the caller and interpreted according to the
-		        method contract.
-		    exclude_source_ids (str): Exclude source ids supplied by the caller and interpreted
-		        according to the method contract.
-		    published_after (str): Published after supplied by the caller and interpreted
-		        according to the method contract.
-		    published_before (str): Published before supplied by the caller and interpreted
-		        according to the method contract.
-		    published_on (str): Published on supplied by the caller and interpreted according to
-		        the method contract.
-		    sort (str): Sort supplied by the caller and interpreted according to the method
-		        contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    page (int): One-based result page requested from the provider.
-		    include_similar (bool): Whether include similar behavior is enabled for the operation.
-		    headlines_per_category (int): Headlines per category supplied by the caller and
-		        interpreted according to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    endpoint (str): Supported endpoint: all, top, headlines, or sources. Defaults to 'all'.
+		    query (str): Article search expression for all and top. Defaults to an empty string.
+		    language (str): Language filter. Defaults to 'en'.
+		    categories (str): Included categories for all, top, and sources. Defaults to an empty
+		        string.
+		    exclude_categories (str): Excluded categories for all, top, and sources. Defaults to an
+		        empty string.
+		    locale (str): Locale filter for top and headlines. Defaults to an empty string.
+		    domains (str): Included publisher domains for article and headline retrieval. Defaults to
+		        an empty string.
+		    exclude_domains (str): Excluded publisher domains for article and headline retrieval.
+		        Defaults to an empty string.
+		    source_ids (str): Included source identifiers for article and headline retrieval. Defaults
+		        to an empty string.
+		    exclude_source_ids (str): Excluded source identifiers for article and headline retrieval.
+		        Defaults to an empty string.
+		    published_after (str): Lower publication-date filter for all and top. Defaults to an empty
+		        string.
+		    published_before (str): Upper publication-date filter for all and top. Defaults to an
+		        empty string.
+		    published_on (str): Exact publication-date filter for article and headline retrieval.
+		        Defaults to an empty string.
+		    sort (str): Article sort expression for all and top. Defaults to 'published_at'.
+		    limit (int): Requested article count for all and top. Defaults to 10.
+		    page (int): Requested result page for all, top, and sources. Defaults to 1.
+		    include_similar (bool): Include similar articles in headlines mode. Defaults to True.
+		    headlines_per_category (int): Requested headlines per category in headlines mode. Defaults
+		        to 6.
+		    time (int): HTTP request timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Decoded provider JSON, whose structure depends on the endpoint.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, HTTP retrieval, or JSON decoding fails.
 		"""
 		try:
 			throw_if( 'endpoint', endpoint )
@@ -2037,64 +2028,45 @@ class TheNews( Fetcher ):
 			raise exception
 
 class GoogleSearch( Fetcher ):
-	"""GoogleSearch component.
+	"""Google Custom Search JSON API retriever.
 
 	Purpose:
-	    Executes Google search requests and returns normalized result data for research and
-	    model-assisted workflows.
+	    Submit web or image search requests to the configured programmable search engine and retain
+	    the decoded provider payload without transforming search records.
 
 	Attributes:
-	    keywords (Optional[str]): Current keywords retained by the GoogleSearch workflow between
-	        related operations.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    re_tag (Optional[Pattern]): Compiled pattern used to remove residual HTML tags.
-	    re_ws (Optional[Pattern]): Compiled pattern used to collapse repeated whitespace.
-	    response (Optional[Response]): Most recent raw response returned by the provider client.
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    cse_id (Optional[str]): Identifier of the current cse resource.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	        provider call.
-	    payload (Optional[Any]): Current payload retained by the GoogleSearch workflow between
-	        related operations.
-	    results (Optional[int]): Current results retained by the GoogleSearch workflow between
-	        related operations.
-	    start (Optional[int]): Current start retained by the GoogleSearch workflow between related
-	        operations.
-	    exact_terms (Optional[str]): Current exact terms retained by the GoogleSearch workflow
-	        between related operations.
-	    exclude_terms (Optional[str]): Current exclude terms retained by the GoogleSearch workflow
-	        between related operations.
-	    file_type (Optional[str]): Current file type retained by the GoogleSearch workflow between
-	        related operations.
-	    date_restrict (Optional[str]): Current date restrict retained by the GoogleSearch workflow
-	        between related operations.
-	    gl (Optional[str]): Current gl retained by the GoogleSearch workflow between related
-	        operations.
-	    lr (Optional[str]): Current lr retained by the GoogleSearch workflow between related
-	        operations.
-	    safe (Optional[str]): Current safe retained by the GoogleSearch workflow between related
-	        operations.
-	    search_type (Optional[str]): Current search type retained by the GoogleSearch workflow
-	        between related operations.
-	    site_search (Optional[str]): Current site search retained by the GoogleSearch workflow
-	        between related operations.
-	    site_search_filter (Optional[str]): Current site search filter retained by the
-	        GoogleSearch workflow between related operations.
-	    sort (Optional[str]): Current sort retained by the GoogleSearch workflow between related
-	        operations.
-	    img_size (Optional[str]): Current img size retained by the GoogleSearch workflow between
-	        related operations.
-	    img_type (Optional[str]): Current img type retained by the GoogleSearch workflow between
-	        related operations.
-	    img_color_type (Optional[str]): Current img color type retained by the GoogleSearch
-	        workflow between related operations.
-	    img_dominant_color (Optional[str]): Current img dominant color retained by the
-	        GoogleSearch workflow between related operations.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	        instance.
-	    headers (Any): HTTP headers sent with the current request.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
+	    keywords (Optional[str]): Latest search query.
+	    url (Optional[str]): Custom Search JSON API endpoint.
+	    re_tag (Optional[Pattern]): Compiled markup-removal expression retained by the wrapper.
+	    re_ws (Optional[Pattern]): Compiled whitespace expression retained by the wrapper.
+	    response (Optional[Response]): Latest HTTP response.
+	    api_key (Optional[str]): Google API key loaded from configuration.
+	    cse_id (Optional[str]): Configured or subsequently supplied programmable search engine
+	        identifier.
+	    params (Optional[Dict[str, Any]]): Latest request parameters, including credentials and
+	        filters.
+	    payload (Optional[Any]): Latest decoded JSON response.
+	    results (Optional[int]): Requested number of results.
+	    start (Optional[int]): One-based result start index.
+	    exact_terms (Optional[str]): Required exact phrase.
+	    exclude_terms (Optional[str]): Terms excluded from results.
+	    file_type (Optional[str]): Requested file extension.
+	    date_restrict (Optional[str]): Relative date restriction expression.
+	    gl (Optional[str]): Country code used for geographic relevance.
+	    lr (Optional[str]): Language restriction expression.
+	    safe (Optional[str]): SafeSearch setting.
+	    search_type (Optional[str]): Search type, including image search.
+	    site_search (Optional[str]): Site to include or exclude.
+	    site_search_filter (Optional[str]): Site inclusion or exclusion setting.
+	    sort (Optional[str]): Provider sort expression.
+	    img_size (Optional[str]): Image size filter.
+	    img_type (Optional[str]): Image type filter.
+	    img_color_type (Optional[str]): Image color type filter.
+	    img_dominant_color (Optional[str]): Dominant image color filter.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    result (Optional[Dict[str, Any]]): Decoded JSON response assigned by fetch.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
 	"""
 	keywords: Optional[ str ]
 	url: Optional[ str ]
@@ -2126,15 +2098,14 @@ class GoogleSearch( Fetcher ):
 	result: Optional[ Dict[ str, Any ] ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize Custom Search configuration.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the Google API key and search engine identifier from configuration, initialize the
+		    endpoint, regular expressions, headers, and search defaults without issuing a request.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		        value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.api_key = cfg.GOOGLE_API_KEY
@@ -2175,14 +2146,13 @@ class GoogleSearch( Fetcher ):
 			self.headers[ 'Accept' ] = 'application/json'
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed Custom Search members.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member names returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered search configuration and retrieval member names.
 		"""
 		return [ 'keywords', 'url', 'timeout', 'headers', 'fetch', 'api_key', 'response',
 				'payload', 'result', 'cse_id', 'params', 'agents', 'results',
@@ -2191,56 +2161,43 @@ class GoogleSearch( Fetcher ):
 				'sort', 'img_size', 'img_type', 'img_color_type', 'img_dominant_color' ]
 	
 	def fetch( self, keywords: str, results: int=10, start: int=1, exact_terms: str='', exclude_terms: str='', file_type: str='', date_restrict: str='', gl: str='', lr: str='', safe: str='off', search_type: str='', site_search: str='', site_search_filter: str='', sort: str='', img_size: str='', img_type: str='', img_color_type: str='', img_dominant_color: str='', time: int=10, cse_id: str=None ) ->  Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Execute a Google Custom Search request.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Validate the nonblank query and requested result bounds, retain any supplied search engine
+		    override, assemble search filters, send an HTTP GET request, and store the decoded JSON
+		    response. Image filters are included only for image searches.
 
 		Args:
-		    keywords (str): Keywords supplied by the caller and interpreted according to the
-		        method contract.
-		    results (int): Results supplied by the caller and interpreted according to the method
-		        contract.
-		    start (int): One-based index of the first search result, default 1.
-		    exact_terms (str): Exact terms supplied by the caller and interpreted according to the
-		        method contract.
-		    exclude_terms (str): Exclude terms supplied by the caller and interpreted according to
-		        the method contract.
-		    file_type (str): File type supplied by the caller and interpreted according to the
-		        method contract.
-		    date_restrict (str): Date restrict supplied by the caller and interpreted according to
-		        the method contract.
-		    gl (str): Gl supplied by the caller and interpreted according to the method contract.
-		    lr (str): Lr supplied by the caller and interpreted according to the method contract.
-		    safe (str): Safe supplied by the caller and interpreted according to the method
-		        contract.
-		    search_type (str): Search type supplied by the caller and interpreted according to the
-		        method contract.
-		    site_search (str): Site search supplied by the caller and interpreted according to the
-		        method contract.
-		    site_search_filter (str): Site search filter supplied by the caller and interpreted
-		        according to the method contract.
-		    sort (str): Sort supplied by the caller and interpreted according to the method
-		        contract.
-		    img_size (str): Img size supplied by the caller and interpreted according to the
-		        method contract.
-		    img_type (str): Img type supplied by the caller and interpreted according to the
-		        method contract.
-		    img_color_type (str): Img color type supplied by the caller and interpreted according
-		        to the method contract.
-		    img_dominant_color (str): Img dominant color supplied by the caller and interpreted
-		        according to the method contract.
-		    time (int): Maximum request duration in seconds.
-		    cse_id (str): Provider identifier of the target cse resource.
+		    keywords (str): Nonblank search query.
+		    results (int): Requested number of results, from 1 through 10. Defaults to 10.
+		    start (int): One-based start index, from 1 through 91. Defaults to 1.
+		    exact_terms (str): Required exact phrase. Defaults to an empty string.
+		    exclude_terms (str): Excluded search terms. Defaults to an empty string.
+		    file_type (str): File extension restriction. Defaults to an empty string.
+		    date_restrict (str): Relative date restriction expression. Defaults to an empty string.
+		    gl (str): Country code for geographic relevance. Defaults to an empty string.
+		    lr (str): Language restriction expression. Defaults to an empty string.
+		    safe (str): SafeSearch setting. Defaults to 'off'.
+		    search_type (str): Search type; 'image' enables image filters. Defaults to an empty string
+		        for web search.
+		    site_search (str): Site to include or exclude. Defaults to an empty string.
+		    site_search_filter (str): Site inclusion or exclusion setting. Defaults to an empty
+		        string.
+		    sort (str): Provider sort expression. Defaults to an empty string.
+		    img_size (str): Image size filter. Defaults to an empty string.
+		    img_type (str): Image type filter. Defaults to an empty string.
+		    img_color_type (str): Image color type filter. Defaults to an empty string.
+		    img_dominant_color (str): Dominant image color filter. Defaults to an empty string.
+		    time (int): HTTP request timeout in seconds. Defaults to 10.
+		    cse_id (str | None): Optional search engine override retained by the instance; defaults to
+		        None to keep the current identifier.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Decoded Custom Search JSON response, without record normalization.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, HTTP retrieval, or JSON decoding fails.
 		"""
 		try:
 
@@ -2353,45 +2310,36 @@ class GoogleSearch( Fetcher ):
 			raise exception
 
 class GoogleMaps( Fetcher ):
-	"""GoogleMaps component.
+	"""Google Maps geocoding, address validation, and directions adapter.
 
 	Purpose:
-	    Wraps Google Maps geocoding, address validation, and directions endpoints behind a
-	    consistent Foo retrieval interface.
+	    Perform forward and reverse geocoding, validate postal address lines, and retrieve the
+	    first available route using configured Google credentials.
 
 	Attributes:
-	    file_path (Optional[str]): Resolved filesystem path of the current source or output file.
-	    headers (Optional[Dict[str, Any]]): HTTP headers sent with the current request.
-	    num_results (Optional[int]): Current num results retained by the GoogleMaps workflow
-	        between related operations.
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    mode (Optional[str]): Current mode retained by the GoogleMaps workflow between related
-	        operations.
-	    latitude (Optional[float]): Current latitude retained by the GoogleMaps workflow between
-	        related operations.
-	    longitude (Optional[float]): Current longitude retained by the GoogleMaps workflow between
-	        related operations.
-	    coordinates (Optional[Tuple[float, float]]): Current coordinates retained by the
-	        GoogleMaps workflow between related operations.
-	    address (Optional[str]): Current address retained by the GoogleMaps workflow between
-	        related operations.
-	    address_lines (Optional[List[str]]): Current address lines retained by the GoogleMaps
-	        workflow between related operations.
-	    origin (Optional[str]): Current origin retained by the GoogleMaps workflow between related
-	        operations.
-	    destination (Optional[str]): Current destination retained by the GoogleMaps workflow
-	        between related operations.
-	    directions (Optional[Dict[str, Any]]): Current directions retained by the GoogleMaps
-	        workflow between related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	        provider call.
-	    payload (Optional[Any]): Current payload retained by the GoogleMaps workflow between
-	        related operations.
-	    result (Optional[Any]): Most recent normalized Foo result produced by the instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    timeout (Optional[int]): Maximum request duration, in seconds, applied to provider calls.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    response (Any): Most recent raw response returned by the provider client.
+	    file_path (Optional[str]): Reserved filesystem path, initialized to None.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    num_results (Optional[int]): Reserved result count, initialized to None.
+	    api_key (Optional[str]): Google API key loaded from configuration.
+	    mode (Optional[str]): Requested directions travel mode.
+	    latitude (Optional[float]): Current geographic latitude in decimal degrees.
+	    longitude (Optional[float]): Current geographic longitude in decimal degrees.
+	    coordinates (Optional[Tuple[float, float]]): Current latitude and longitude pair.
+	    address (Optional[str]): Address submitted to or returned by geocoding.
+	    address_lines (Optional[List[str]]): Postal address lines submitted for address validation.
+	    origin (Optional[str]): Directions starting location.
+	    destination (Optional[str]): Directions destination.
+	    directions (Optional[Dict[str, Any]]): First route returned by the directions API, or an
+	        empty dictionary.
+	    params (Optional[Dict[str, Any]]): Latest HTTP query parameters, including the API key.
+	    payload (Optional[Any]): Latest decoded provider response or address-validation request
+	        body.
+	    result (Optional[Any]): Latest coordinates, formatted address, validation response, or
+	        route.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    url (Optional[str]): Latest service endpoint URL.
+	    response (Optional[Response]): Latest HTTP response.
 	"""
 	file_path: Optional[ str ]
 	headers: Optional[ Dict[ str, Any ] ]
@@ -2413,15 +2361,14 @@ class GoogleMaps( Fetcher ):
 	timeout: Optional[ int ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize Google Maps service configuration.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the configured Google API key and user-agent, establish JSON headers and a ten-second
+		    timeout, and initialize geocoding, address validation, and route state.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		        value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.api_key = cfg.GOOGLE_API_KEY
@@ -2452,14 +2399,13 @@ class GoogleMaps( Fetcher ):
 			self.headers[ 'Accept' ] = 'application/json'
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed Google Maps members.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit attribute and service method names returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered Google Maps member names.
 		"""
 		return [ 'file_path', 'headers', 'num_results', 'api_key', 'mode', 'latitude', 'longitude',
 				'coordinates', 'address', 'address_lines', 'origin', 'destination', 'directions',
@@ -2469,22 +2415,21 @@ class GoogleMaps( Fetcher ):
 				'create_schema' ]
 	
 	def geocode_location( self, address: str ) -> Tuple[ float, float ]:
-		"""Geocode location.
+		"""Resolve an address to geographic coordinates.
 
 		Purpose:
-		    Resolves location through the configured geocoding service and returns geographic
-		    results.
+		    Submit an address to the Geocoding API, check HTTP and provider status, select the first
+		    result, and store its latitude and longitude.
 
 		Args:
-		    address (str): Address supplied by the caller and interpreted according to the method
-		        contract.
+		    address (str): Nonblank address or location text.
 
 		Returns:
-		    Tuple[float, float]: Ordered values or records produced by the operation.
+		    Tuple[float, float]: Latitude followed by longitude in decimal degrees.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, HTTP retrieval, provider status, response structure, or
+		        coordinate extraction fails.
 		"""
 		try:
 			throw_if( 'address', address )
@@ -2528,24 +2473,23 @@ class GoogleMaps( Fetcher ):
 			raise exception
 	
 	def geocode_coordinates( self, lat: float, long: float ) -> str | None:
-		"""Geocode coordinates.
+		"""Resolve geographic coordinates to an address.
 
 		Purpose:
-		    Resolves coordinates through the configured geocoding service and returns geographic
-		    results.
+		    Submit the latitude and longitude to the Geocoding API and retain the formatted address
+		    from the first returned result.
 
 		Args:
-		    lat (float): Geographic lat expressed in decimal degrees.
-		    long (float): Long supplied by the caller and interpreted according to the method
-		        contract.
+		    lat (float): Latitude in decimal degrees.
+		    long (float): Longitude in decimal degrees.
 
 		Returns:
-		    str | None: Normalized text produced by the operation, or ``None`` when no text is
-		        available.
+		    str: Formatted address from the first result, or an empty string if that result has no
+		        formatted address.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, HTTP retrieval, JSON decoding, or address extraction fails,
+		        including when no results are returned.
 		"""
 		try:
 			throw_if( 'lat', lat )
@@ -2585,22 +2529,21 @@ class GoogleMaps( Fetcher ):
 			raise exception
 	
 	def validate_address( self, address: List[ str ] ) -> Dict[ Any, Any ] | None:
-		"""Validate address.
+		"""Submit postal address lines for validation.
 
 		Purpose:
-		    Validates the address against provider constraints and returns the accepted value.
+		    Send the supplied address lines as JSON to the Address Validation API and retain its
+		    decoded response.
 
 		Args:
-		    address (List[str]): Address supplied by the caller and interpreted according to the
-		        method contract.
+		    address (List[str]): Nonempty list of postal address lines.
 
 		Returns:
-		    Dict[Any, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[Any, Any]: Decoded Address Validation API response, including any provider validation
+		        findings.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation, HTTP retrieval, or JSON decoding fails.
 		"""
 		try:
 			throw_if( 'address', address )
@@ -2630,26 +2573,22 @@ class GoogleMaps( Fetcher ):
 			raise exception
 	
 	def request_directions( self, origin: str, destination: str, mode: str='driving' ) -> Dict[ str, Any ] | None:
-		"""Request directions.
+		"""Retrieve directions between two locations.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Submit origin, destination, and travel mode to the Directions API and retain the first
+		    route when one is available.
 
 		Args:
-		    origin (str): Origin supplied by the caller and interpreted according to the method
-		        contract.
-		    destination (str): Destination supplied by the caller and interpreted according to the
-		        method contract.
-		    mode (str): Provider or loader operating mode selected for the request.
+		    origin (str): Nonblank starting location.
+		    destination (str): Nonblank destination location.
+		    mode (str): Nonblank provider travel mode. Defaults to 'driving'.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: First route dictionary, or an empty dictionary when no route is returned.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, HTTP retrieval, JSON decoding, or route extraction fails.
 		"""
 		try:
 			throw_if( 'origin', origin )
@@ -2683,26 +2622,24 @@ class GoogleMaps( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible tool schema with the function name, service-qualified
+		    description, parameter properties, and required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Function name, description, and nested parameter schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
