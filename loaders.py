@@ -2096,7 +2096,7 @@ class WikiLoader( Loader ):
 		    List[Document] | None: LangChain documents produced or transformed by the operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
+		    Error: Wraps the source exception.
 		"""
 		try:
 			if self.documents is None:
@@ -2113,8 +2113,7 @@ class WikiLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'WikiLoader'
-			exception.method = ('split( self, chunk: int=800, overlap: int=50 ) -> '
-			                    'List[ Document ] | None')
+			exception.method = ('split( self, **args ) -> List[ Document ]')
 			Logger( ).write( exception )
 			raise exception
 
