@@ -24008,7 +24008,7 @@ class OpenSky( Fetcher ):
 				'lomax', 'extended', 'params', 'payload', 'agents', 'validate_mode',
 				'validate_endpoint', 'validate_icao24', 'validate_airport', 'validate_epoch',
 				'validate_time_range', 'validate_latitude', 'validate_longitude', 'validate_bbox',
-				'assign_credentials', 'authenticate', 'request', 'normalize_states',
+				'authenticate', 'request', 'normalize_states',
 				'normalize_flights', 'normalize_track', 'fetch_states', 'fetch_flights_aircraft',
 				'fetch_arrivals_airport', 'fetch_departures_airport', 'fetch_track_aircraft',
 				'fetch', 'create_schema' ]
@@ -24192,13 +24192,12 @@ class OpenSky( Fetcher ):
 			throw_if( 'name', name )
 			throw_if( name, value )
 			
-			number = int( value )
-			if isinstance( value, float ) and not value.is_integer( ):
+			if type( value ) is not int:
 				raise ValueError( f'{name} must be an integer epoch.' )
-			if number < 0:
+			if value < 0:
 				raise ValueError( f'{name} must be greater than or equal to 0.' )
 			
-			return number
+			return value
 		
 		except Error:
 			raise
@@ -24269,12 +24268,12 @@ class OpenSky( Fetcher ):
 			throw_if( 'name', name )
 			throw_if( name, value )
 			
-			number = float( value )
-			
-			if not math.isfinite( number ) or number < -90.0 or number > 90.0:
+			if isinstance( value, bool ) or not isinstance( value, (int, float) ):
+				raise ValueError( f'{name} must be numeric.' )
+			if not math.isfinite( value ) or value < -90.0 or value > 90.0:
 				raise ValueError( f'{name} must be between -90 and 90.' )
 			
-			return number
+			return value
 		
 		except Error:
 			raise
@@ -24308,12 +24307,12 @@ class OpenSky( Fetcher ):
 			throw_if( 'name', name )
 			throw_if( name, value )
 			
-			number = float( value )
-			
-			if not math.isfinite( number ) or number < -180.0 or number > 180.0:
+			if isinstance( value, bool ) or not isinstance( value, (int, float) ):
+				raise ValueError( f'{name} must be numeric.' )
+			if not math.isfinite( value ) or value < -180.0 or value > 180.0:
 				raise ValueError( f'{name} must be between -180 and 180.' )
 			
-			return number
+			return value
 		
 		except Error:
 			raise
@@ -24374,48 +24373,6 @@ class OpenSky( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def assign_credentials( self, client_id: str=None, client_secret: str=None ) -> None:
-		"""Assign credentials.
-
-		Purpose:
-		    Assign credentials using the class state and returns data required by the surrounding
-		    workflow.
-
-		Args:
-		    client_id (str): Provider identifier of the target client resource.
-		    client_secret (str): Client secret supplied by the caller and interpreted according to
-		    the method contract.
-
-		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
-
-		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
-		"""
-		try:
-			if client_id is not None and client_id.strip( ):
-				self.client_id = client_id.strip( )
-			else:
-				self.client_id = cfg.OPENSKY_API_CLIENT_ID
-			
-			if client_secret is not None and client_secret.strip( ):
-				self.client_secret = client_secret.strip( )
-			else:
-				self.client_secret = cfg.OPENSKY_API_CLIENT_SECRET or cfg.OPENSKY_API_CREDENTIALS
-		
-		except Error:
-			raise
-		
-		except Exception as exc:
-			exception = Error( exc )
-			exception.module = 'fetchers'
-			exception.cause = 'OpenSky'
-			exception.method = 'assign_credentials( self, client_id: str=None, client_secret: str=None ) -> None'
-			Logger( ).write( exception )
-			raise exception
-	
 	def authenticate( self ) -> str | None:
 		"""Authenticate.
 
@@ -24462,7 +24419,7 @@ class OpenSky( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def request( self, endpoint: str, params: Dict[ str, Any ] | None = None, client_id: str=None, client_secret: str=None ) -> Any:
+	def request( self, endpoint: str, params: Dict[ str, Any ] | None = None ) -> Any:
 		"""Request.
 
 		Purpose:
@@ -24474,9 +24431,7 @@ class OpenSky( Fetcher ):
 		    method contract.
 		    params (Dict[str, Any] | None): Params supplied by the caller and interpreted
 		    according to the method contract.
-		    client_id (str): Provider identifier of the target client resource.
-		    client_secret (str): Client secret supplied by the caller and interpreted according to
-		    the method contract.
+
 
 		Returns:
 		    Any: Provider, loader, or normalized application value produced by the operation.
@@ -24491,7 +24446,6 @@ class OpenSky( Fetcher ):
 				raise ValueError( 'params must be a dictionary.' )
 			self.headers.pop( 'Authorization', None )
 			self.access_token = None
-			self.assign_credentials( client_id=client_id, client_secret=client_secret )
 			self.authenticate( )
 			self.url = f'{self.base_url}{self.endpoint}'
 			self.params = { }
@@ -24525,7 +24479,7 @@ class OpenSky( Fetcher ):
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'OpenSky'
-			exception.method = 'request( self, endpoint: str, params: Dict[ str, Any ] | None = None, client_id: str=None, client_secret: str=None ) -> Any'
+			exception.method = 'request( self, endpoint: str, params: Dict[ str, Any ] | None = None ) -> Any'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -24711,7 +24665,7 @@ class OpenSky( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_states( self, icao24: str='', time_value: int=None, lamin: float | None = None, lomin: float | None = None, lamax: float | None = None, lomax: float | None = None, extended: bool=False, client_id: str=None, client_secret: str=None ) -> Dict[ str, Any ] | None:
+	def fetch_states( self, icao24: str='', time_value: int=None, lamin: float | None = None, lomin: float | None = None, lamax: float | None = None, lomax: float | None = None, extended: bool=False ) -> Dict[ str, Any ] | None:
 		"""Fetch states.
 
 		Purpose:
@@ -24731,9 +24685,7 @@ class OpenSky( Fetcher ):
 		    lomax (float | None): Lomax supplied by the caller and interpreted according to the
 		    method contract.
 		    extended (bool): Whether extended behavior is enabled for the operation.
-		    client_id (str): Provider identifier of the target client resource.
-		    client_secret (str): Client secret supplied by the caller and interpreted according to
-		    the method contract.
+
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
@@ -24749,6 +24701,8 @@ class OpenSky( Fetcher ):
 			self.time_value = (
 					self.validate_epoch( 'time_value', time_value ) if time_value is not None else
 					None)
+			if type( extended ) is not bool:
+				raise ValueError( 'extended must be a boolean.' )
 			self.extended = extended
 			
 			self.params = { }
@@ -24776,8 +24730,7 @@ class OpenSky( Fetcher ):
 			if self.extended:
 				self.params[ 'extended' ] = 1
 			
-			self.payload = self.request( '/states/all', params=self.params, client_id=client_id,
-				client_secret=client_secret )
+			self.payload = self.request( '/states/all', params=self.params )
 			
 			return self.normalize_states( self.payload )
 		
@@ -24788,11 +24741,11 @@ class OpenSky( Fetcher ):
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'OpenSky'
-			exception.method = "fetch_states( self, icao24: str='', time_value: int=None, lamin: float | None = None, lomin: float | None = None, lamax: float | None = None, lomax: float | None = None, extended: bool=False, client_id: str=None, client_secret: str=None ) -> Dict[ str, Any ] | None"
+			exception.method = "fetch_states( self, icao24: str='', time_value: int=None, lamin: float | None = None, lomin: float | None = None, lamax: float | None = None, lomax: float | None = None, extended: bool=False ) -> Dict[ str, Any ] | None"
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_flights_aircraft( self, icao24: str, begin: int, end: int, client_id: str=None, client_secret: str=None ) -> Dict[ str, Any ] | None:
+	def fetch_flights_aircraft( self, icao24: str, begin: int, end: int ) -> Dict[ str, Any ] | None:
 		"""Fetch flights aircraft.
 
 		Purpose:
@@ -24804,9 +24757,7 @@ class OpenSky( Fetcher ):
 		    contract.
 		    begin (int): Date boundary or date value used by the request.
 		    end (int): Date boundary or date value used by the request.
-		    client_id (str): Provider identifier of the target client resource.
-		    client_secret (str): Client secret supplied by the caller and interpreted according to
-		    the method contract.
+
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
@@ -24823,8 +24774,7 @@ class OpenSky( Fetcher ):
 			if self.end - self.begin > 172800:
 				raise ValueError( 'Aircraft flights interval cannot exceed two days.' )
 			self.params = { 'icao24': self.icao24, 'begin': self.begin, 'end': self.end, }
-			self.payload = self.request( '/flights/aircraft', params=self.params,
-				client_id=client_id, client_secret=client_secret )
+			self.payload = self.request( '/flights/aircraft', params=self.params )
 			
 			return self.normalize_flights( self.payload, self.mode )
 		
@@ -24835,11 +24785,11 @@ class OpenSky( Fetcher ):
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'OpenSky'
-			exception.method = 'fetch_flights_aircraft( self, icao24: str, begin: int, end: int, client_id: str=None, client_secret: str=None ) -> Dict[ str, Any ] | None'
+			exception.method = 'fetch_flights_aircraft( self, icao24: str, begin: int, end: int ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_arrivals_airport( self, airport: str, begin: int, end: int, client_id: str=None, client_secret: str=None ) -> Dict[ str, Any ] | None:
+	def fetch_arrivals_airport( self, airport: str, begin: int, end: int ) -> Dict[ str, Any ] | None:
 		"""Fetch arrivals airport.
 
 		Purpose:
@@ -24851,9 +24801,7 @@ class OpenSky( Fetcher ):
 		    contract.
 		    begin (int): Date boundary or date value used by the request.
 		    end (int): Date boundary or date value used by the request.
-		    client_id (str): Provider identifier of the target client resource.
-		    client_secret (str): Client secret supplied by the caller and interpreted according to
-		    the method contract.
+
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
@@ -24870,8 +24818,7 @@ class OpenSky( Fetcher ):
 			if self.end - self.begin > 172800:
 				raise ValueError( 'Airport arrival interval cannot exceed two days.' )
 			self.params = { 'airport': self.airport, 'begin': self.begin, 'end': self.end, }
-			self.payload = self.request( '/flights/arrival', params=self.params,
-				client_id=client_id, client_secret=client_secret )
+			self.payload = self.request( '/flights/arrival', params=self.params )
 			
 			return self.normalize_flights( self.payload, self.mode )
 		
@@ -24882,11 +24829,11 @@ class OpenSky( Fetcher ):
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'OpenSky'
-			exception.method = 'fetch_arrivals_airport( self, airport: str, begin: int, end: int, client_id: str=None, client_secret: str=None ) -> Dict[ str, Any ] | None'
+			exception.method = 'fetch_arrivals_airport( self, airport: str, begin: int, end: int ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_departures_airport( self, airport: str, begin: int, end: int, client_id: str=None, client_secret: str=None ) -> Dict[ str, Any ] | None:
+	def fetch_departures_airport( self, airport: str, begin: int, end: int ) -> Dict[ str, Any ] | None:
 		"""Fetch departures airport.
 
 		Purpose:
@@ -24898,9 +24845,7 @@ class OpenSky( Fetcher ):
 		    contract.
 		    begin (int): Date boundary or date value used by the request.
 		    end (int): Date boundary or date value used by the request.
-		    client_id (str): Provider identifier of the target client resource.
-		    client_secret (str): Client secret supplied by the caller and interpreted according to
-		    the method contract.
+
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
@@ -24916,8 +24861,7 @@ metadata, or generated schema content.
 			self.begin, self.end = self.validate_time_range( begin, end )
 			self.params = { 'airport': self.airport, 'begin': self.begin, 'end': self.end, }
 			
-			self.payload = self.request( '/flights/departure', params=self.params,
-				client_id=client_id, client_secret=client_secret )
+			self.payload = self.request( '/flights/departure', params=self.params )
 			
 			return self.normalize_flights( self.payload, self.mode )
 		
@@ -24928,11 +24872,11 @@ metadata, or generated schema content.
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'OpenSky'
-			exception.method = 'fetch_departures_airport( self, airport: str, begin: int, end: int, client_id: str=None, client_secret: str=None ) -> Dict[ str, Any ] | None'
+			exception.method = 'fetch_departures_airport( self, airport: str, begin: int, end: int ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_track_aircraft( self, icao24: str, time_value: int=None, client_id: str=None, client_secret: str=None ) -> Dict[ str, Any ] | None:
+	def fetch_track_aircraft( self, icao24: str, time_value: int=None ) -> Dict[ str, Any ] | None:
 		"""Fetch track aircraft.
 
 		Purpose:
@@ -24944,9 +24888,7 @@ metadata, or generated schema content.
 		    contract.
 		    time_value (int): Time value supplied by the caller and interpreted according to the
 		    method contract.
-		    client_id (str): Provider identifier of the target client resource.
-		    client_secret (str): Client secret supplied by the caller and interpreted according to
-		    the method contract.
+
 
 		Returns:
 		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
@@ -24962,8 +24904,7 @@ metadata, or generated schema content.
 			self.time_value = (
 				self.validate_epoch( 'time_value', time_value ) if time_value is not None else 0)
 			self.params = { 'icao24': self.icao24, 'time': self.time_value, }
-			self.payload = self.request( '/tracks/all', params=self.params, client_id=client_id,
-				client_secret=client_secret )
+			self.payload = self.request( '/tracks/all', params=self.params )
 			
 			return self.normalize_track( self.payload )
 		
@@ -24974,11 +24915,11 @@ metadata, or generated schema content.
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'OpenSky'
-			exception.method = 'fetch_track_aircraft( self, icao24: str, time_value: int=None, client_id: str=None, client_secret: str=None ) -> Dict[ str, Any ] | None'
+			exception.method = 'fetch_track_aircraft( self, icao24: str, time_value: int=None ) -> Dict[ str, Any ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='states_bbox', icao24: str='', airport: str='', begin: int = None, end: int=None, time_value: int=None, lamin: float | None = None, lomin: float | None = None, lamax: float | None = None, lomax: float | None = None, extended: bool=False, client_id: str=None, client_secret: str=None, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='states_bbox', icao24: str='', airport: str='', begin: int = None, end: int=None, time_value: int=None, lamin: float | None = None, lomin: float | None = None, lamax: float | None = None, lomax: float | None = None, extended: bool=False, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Fetch.
 
 		Purpose:
@@ -25004,9 +24945,7 @@ metadata, or generated schema content.
 		    lomax (float | None): Lomax supplied by the caller and interpreted according to the
 		        method contract.
 		    extended (bool): Whether extended behavior is enabled for the operation.
-	        client_id (str): Provider identifier of the target client resource.
-		    client_secret (str): Client secret supplied by the caller and interpreted according to
-		        the method contract.
+
 		    time (int): Maximum request duration in seconds.
 
 		Returns:
@@ -25018,31 +24957,26 @@ metadata, or generated schema content.
 		    to the application logger, and re-raises it.
 		"""
 		try:
+			if type( time ) is not int or time < 1:
+				raise ValueError( 'time must be a positive integer.' )
 			self.timeout = time
 			self.mode = self.validate_mode( mode )
-			if self.timeout < 1:
-				raise ValueError( 'time must be greater than or equal to 1.' )
 			
 			if self.mode == 'states_bbox':
 				return self.fetch_states( icao24=icao24, time_value=time_value, lamin=lamin,
-					lomin=lomin, lamax=lamax, lomax=lomax, extended=extended, client_id=client_id,
-					client_secret=client_secret )
+					lomin=lomin, lamax=lamax, lomax=lomax, extended=extended )
 			
 			if self.mode == 'flights_aircraft':
-				return self.fetch_flights_aircraft( icao24=icao24, begin=begin, end=end,
-					client_id=client_id, client_secret=client_secret )
+				return self.fetch_flights_aircraft( icao24=icao24, begin=begin, end=end )
 			
 			if self.mode == 'arrivals_airport':
-				return self.fetch_arrivals_airport( airport=airport, begin=begin, end=end,
-					client_id=client_id, client_secret=client_secret )
+				return self.fetch_arrivals_airport( airport=airport, begin=begin, end=end )
 			
 			if self.mode == 'departures_airport':
-				return self.fetch_departures_airport( airport=airport, begin=begin, end=end,
-					client_id=client_id, client_secret=client_secret )
+				return self.fetch_departures_airport( airport=airport, begin=begin, end=end )
 			
 			if self.mode == 'track_aircraft':
-				return self.fetch_track_aircraft( icao24=icao24, time_value=time_value,
-					client_id=client_id, client_secret=client_secret )
+				return self.fetch_track_aircraft( icao24=icao24, time_value=time_value )
 			
 			raise ValueError( "Unsupported mode. Use 'states_bbox', 'flights_aircraft', "
 			                  "'arrivals_airport', 'departures_airport', or 'track_aircraft'." )
@@ -25054,7 +24988,7 @@ metadata, or generated schema content.
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'OpenSky'
-			exception.method = "fetch( self, mode: str='states_bbox', icao24: str='', airport: str='', begin: int = None, end: int=None, time_value: int=None, lamin: float | None = None, lomin: float | None = None, lamax: float | None = None, lomax: float | None = None, extended: bool=False, client_id: str=None, client_secret: str=None, time: int=20 ) -> Dict[ str, Any ] | None"
+			exception.method = "fetch( self, mode: str='states_bbox', icao24: str='', airport: str='', begin: int = None, end: int=None, time_value: int=None, lamin: float | None = None, lomin: float | None = None, lamax: float | None = None, lomax: float | None = None, extended: bool=False, time: int=20 ) -> Dict[ str, Any ] | None"
 			Logger( ).write( exception )
 			raise exception
 	
