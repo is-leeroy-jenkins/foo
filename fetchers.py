@@ -2592,7 +2592,7 @@ class GoogleMaps( Fetcher ):
 		"""
 		try:
 			throw_if( 'address', address )
-			self.address = address.strip( )
+			self.address = address
 			self.url = 'https://maps.googleapis.com/maps/api/geocode/json'
 			self.params = { 'address': self.address, 'key': self.api_key }
 			
@@ -2652,10 +2652,9 @@ class GoogleMaps( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'latitude', lat )
-			throw_if( 'longitude', long )
-			
+			throw_if( 'lat', lat )
 			self.latitude = lat
+			throw_if( 'long', long )
 			self.longitude = long
 			self.coordinates = (self.latitude, self.longitude)
 			self.url = 'https://maps.googleapis.com/maps/api/geocode/json'
@@ -2709,15 +2708,8 @@ class GoogleMaps( Fetcher ):
 		"""
 		try:
 			throw_if( 'address', address )
-			if not isinstance( address, list ):
-				raise TypeError( 'address must be a list of address-line strings.' )
-			
+			self.address_lines = address
 			self.url = 'https://addressvalidation.googleapis.com/v1:validateAddress'
-			self.address_lines = [ str( line ).strip( ) for line in address if
-					line is not None and str( line ).strip( ) ]
-			
-			if not self.address_lines:
-				raise ValueError( 'At least one address line is required.' )
 			
 			self.params = { 'key': self.api_key }
 			self.payload = { 'address': { 'addressLines': self.address_lines } }
@@ -2765,12 +2757,11 @@ class GoogleMaps( Fetcher ):
 		"""
 		try:
 			throw_if( 'origin', origin )
+			self.origin = origin
 			throw_if( 'destination', destination )
+			self.destination = destination
 			throw_if( 'mode', mode )
-			
-			self.mode = mode.strip( ).lower( )
-			self.origin = origin.strip( )
-			self.destination = destination.strip( )
+			self.mode = mode
 			self.url = 'https://maps.googleapis.com/maps/api/directions/json'
 			self.params = { 'origin': self.origin, 'destination': self.destination,
 					'mode': self.mode, 'key': self.api_key }
@@ -2885,6 +2876,7 @@ class GoogleWeather( Fetcher ):
 	    agents (Optional[str]): Configured user-agent string sent with web requests.
 	    url (Any): Most recent endpoint or resource URL used by the instance.
 	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
+	    request_url (str): Complete URL for the current weather request.
 	"""
 	gmaps: Optional[ GoogleMaps ]
 	headers: Optional[ Dict[ str, Any ] ]
@@ -2903,6 +2895,7 @@ class GoogleWeather( Fetcher ):
 	hours: Optional[ int ]
 	days: Optional[ int ]
 	path: Optional[ str ]
+	request_url: str
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
@@ -2936,6 +2929,7 @@ class GoogleWeather( Fetcher ):
 		self.hours = None
 		self.days = None
 		self.path = None
+		self.request_url = ''
 		self.agents = cfg.AGENTS
 		
 		if 'User-Agent' not in self.headers:
@@ -2957,7 +2951,7 @@ class GoogleWeather( Fetcher ):
 		return [ 'api_key', 'url', 'timeout', 'headers', 'gmaps', 'mode', 'latitude', 'longitude',
 				'coordinates', 'address', 'params', 'response', 'payload', 'result',
 				'units_system',
-				'language_code', 'hours', 'days', 'path', 'agents', 'resolve_coordinates',
+				'language_code', 'hours', 'days', 'path', 'request_url', 'agents', 'resolve_coordinates',
 				'request', 'package_response', 'fetch_current', 'fetch_hourly_forecast',
 				'fetch_daily_forecast', 'fetch_hourly_history', 'fetch_alerts' ]
 	
@@ -2981,7 +2975,7 @@ class GoogleWeather( Fetcher ):
 		"""
 		try:
 			throw_if( 'address', address )
-			self.address = address.strip( )
+			self.address = address
 			lat, lng = self.gmaps.geocode_location( address=self.address )
 			self.latitude = lat
 			self.longitude = lng
@@ -3022,10 +3016,8 @@ class GoogleWeather( Fetcher ):
 		"""
 		try:
 			throw_if( 'path', path )
+			self.path = path
 			throw_if( 'params', params )
-			if not isinstance( params, dict ):
-				raise TypeError( 'params must be a dictionary.' )
-			self.path = path.strip( ).lstrip( '/' )
 
 			throw_if( 'time', time )
 			self.timeout = time
@@ -3041,8 +3033,8 @@ class GoogleWeather( Fetcher ):
 				self.params[ key ] = value
 			
 			self.params[ 'key' ] = self.api_key
-			request_url = f'{self.url}/{self.path}'
-			self.response = requests.get( url=request_url, params=self.params, headers=self.headers,
+			self.request_url = f'{self.url}/{self.path.lstrip( "/" )}'
+			self.response = requests.get( url=self.request_url, params=self.params, headers=self.headers,
 				timeout=self.timeout )
 			
 			self.response.raise_for_status( )
@@ -3050,7 +3042,7 @@ class GoogleWeather( Fetcher ):
 			if not isinstance( self.payload, dict ):
 				raise ValueError( 'Google Weather response must be a JSON object.' )
 
-			self.result = { 'mode': self.mode, 'url': request_url,
+			self.result = { 'mode': self.mode, 'url': self.request_url,
 				'params': { key: value for key, value in self.params.items( )
 					if key != 'key' }, 'data': self.payload }
 			
@@ -3127,15 +3119,16 @@ class GoogleWeather( Fetcher ):
 		"""
 		try:
 			throw_if( 'address', address )
+			self.address = address
 			throw_if( 'units_system', units_system )
 			throw_if( 'language_code', language_code )
 
 			self.mode = 'current'
-			self.units_system = units_system.strip( )
-			self.language_code = language_code.strip( )
+			self.units_system = units_system
+			self.language_code = language_code
 			throw_if( 'time', time )
 			self.timeout = time
-			self.latitude, self.longitude = self.resolve_coordinates( address )
+			self.latitude, self.longitude = self.resolve_coordinates( self.address )
 			
 			self.params = { 'location.latitude': self.latitude,
 					'location.longitude': self.longitude, 'unitsSystem': self.units_system,
@@ -3183,20 +3176,21 @@ class GoogleWeather( Fetcher ):
 		"""
 		try:
 			throw_if( 'address', address )
+			self.address = address
 			throw_if( 'hours', hours )
 			throw_if( 'units_system', units_system )
 			throw_if( 'language_code', language_code )
 
 			self.mode = 'hourly_forecast'
 			self.hours = hours
-			self.units_system = units_system.strip( )
-			self.language_code = language_code.strip( )
+			self.units_system = units_system
+			self.language_code = language_code
 			throw_if( 'time', time )
 			self.timeout = time
 			if self.hours < 1 or self.hours > 240:
 				raise ValueError( 'hours must be between 1 and 240.' )
 			
-			self.latitude, self.longitude = self.resolve_coordinates( address )
+			self.latitude, self.longitude = self.resolve_coordinates( self.address )
 			self.params = { 'location.latitude': self.latitude,
 					'location.longitude': self.longitude, 'hours': self.hours,
 					'unitsSystem': self.units_system, 'languageCode': self.language_code }
@@ -3243,20 +3237,21 @@ class GoogleWeather( Fetcher ):
 		"""
 		try:
 			throw_if( 'address', address )
+			self.address = address
 			throw_if( 'days', days )
 			throw_if( 'units_system', units_system )
 			throw_if( 'language_code', language_code )
 
 			self.mode = 'daily_forecast'
 			self.days = days
-			self.units_system = units_system.strip( )
-			self.language_code = language_code.strip( )
+			self.units_system = units_system
+			self.language_code = language_code
 			throw_if( 'time', time )
 			self.timeout = time
 			if self.days < 1 or self.days > 10:
 				raise ValueError( 'days must be between 1 and 10.' )
 			
-			self.latitude, self.longitude = self.resolve_coordinates( address )
+			self.latitude, self.longitude = self.resolve_coordinates( self.address )
 			self.params = { 'location.latitude': self.latitude,
 					'location.longitude': self.longitude, 'days': self.days,
 					'unitsSystem': self.units_system, 'languageCode': self.language_code }
@@ -3303,20 +3298,21 @@ class GoogleWeather( Fetcher ):
 		"""
 		try:
 			throw_if( 'address', address )
+			self.address = address
 			throw_if( 'hours', hours )
 			throw_if( 'units_system', units_system )
 			throw_if( 'language_code', language_code )
 
 			self.mode = 'hourly_history'
 			self.hours = hours
-			self.units_system = units_system.strip( )
-			self.language_code = language_code.strip( )
+			self.units_system = units_system
+			self.language_code = language_code
 			throw_if( 'time', time )
 			self.timeout = time
 			if self.hours < 1 or self.hours > 24:
 				raise ValueError( 'hours must be between 1 and 24 for hourly history.' )
 			
-			self.latitude, self.longitude = self.resolve_coordinates( address )
+			self.latitude, self.longitude = self.resolve_coordinates( self.address )
 			self.params = { 'location.latitude': self.latitude,
 					'location.longitude': self.longitude, 'hours': self.hours,
 					'unitsSystem': self.units_system, 'languageCode': self.language_code }
@@ -3358,14 +3354,15 @@ class GoogleWeather( Fetcher ):
 		"""
 		try:
 			throw_if( 'address', address )
+			self.address = address
 			throw_if( 'language_code', language_code )
 
 			
 			self.mode = 'alerts'
-			self.language_code = language_code.strip( )
+			self.language_code = language_code
 			throw_if( 'time', time )
 			self.timeout = time
-			self.latitude, self.longitude = self.resolve_coordinates( address )
+			self.latitude, self.longitude = self.resolve_coordinates( self.address )
 			self.params = { 'location.latitude': self.latitude,
 					'location.longitude': self.longitude, 'languageCode': self.language_code }
 			
@@ -3477,11 +3474,10 @@ class NavalObservatory( Fetcher ):
 		"""
 		try:
 			throw_if( 'date_value', date_value )
-			value = date_value.strip( )
-			calendar_date = dt.datetime.strptime( value, '%Y-%m-%d' )
+			calendar_date = dt.datetime.strptime( date_value, '%Y-%m-%d' )
 			if calendar_date.year < 1800 or calendar_date.year > 2050:
 				raise ValueError( 'Celestial navigation dates must be between 1800 and 2050.' )
-			return value
+			return date_value
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'fetchers'
@@ -3508,17 +3504,16 @@ class NavalObservatory( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-			value = time_value.strip( )
-			throw_if( 'time_value', value )
+			throw_if( 'time_value', time_value )
 			pattern = (r'^(?:[01]\d|2[0-3]):[0-5]\d'
 			           r'(?:'
 			           r':[0-5]\d(?:\.\d{1,6})?'
 			           r')?$')
 			
-			if not re.fullmatch( pattern, value ):
+			if not re.fullmatch( pattern, time_value ):
 				raise ValueError( "Invalid time format. Use HH:MM, HH:MM:SS, or HH:MM:SS.S" )
 			
-			return value
+			return time_value
 		
 		except Exception as e:
 			exception = Error( e )
@@ -3589,11 +3584,6 @@ class NavalObservatory( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'date_value', date_value )
-			throw_if( 'time_value', time_value )
-			throw_if( 'latitude', latitude )
-			throw_if( 'longitude', longitude )
-
 			throw_if( 'time', time )
 			self.timeout = time
 
@@ -3601,7 +3591,7 @@ class NavalObservatory( Fetcher ):
 			self.time_value = self.validate_time( time_value )
 			self.latitude, self.longitude = self.validate_coordinates( latitude=latitude,
 				longitude=longitude )
-			self.location_label = ( location_label or '' ).strip( )
+			self.location_label = location_label
 			self.url = f'{self.base_url}/celnav'
 			self.params = { 'date': self.date_value, 'time': self.time_value,
 			                'coords': f'{self.latitude},{self.longitude}' }
@@ -3734,6 +3724,12 @@ class SatelliteCenter( Fetcher ):
 	    timeout (Optional[int]): Maximum request duration, in seconds, applied to provider calls.
 	    headers (Any): HTTP headers sent with the current request.
 	    agents (Any): Configured user-agent string sent with web requests.
+	    observatory_ids (str): Comma-separated observatory identifiers.
+	    start_time (str): Beginning UTC timestamp.
+	    end_time (str): Ending UTC timestamp.
+	    coordinate_systems (str): Requested SSC coordinate systems.
+	    resolution_factor (int): Requested sampling resolution factor.
+	    request_url (str): Complete URL for the current location request.
 	"""
 	ssc: Optional[ SscWs ]
 	url: Optional[ str ]
@@ -3741,6 +3737,12 @@ class SatelliteCenter( Fetcher ):
 	observatories: Optional[ List[ Dict[ str, Any ] ] ]
 	ground_stations: Optional[ List[ Dict[ str, Any ] ] ]
 	timeout: Optional[ int ]
+	observatory_ids: str
+	start_time: str
+	end_time: str
+	coordinate_systems: str
+	resolution_factor: int
+	request_url: str
 	
 	def __init__( self ) -> None:
 		"""Initialize the instance.
@@ -3760,6 +3762,12 @@ class SatelliteCenter( Fetcher ):
 		self.observatories = [ ]
 		self.ground_stations = [ ]
 		self.timeout = 20
+		self.observatory_ids = ''
+		self.start_time = ''
+		self.end_time = ''
+		self.coordinate_systems = 'gse'
+		self.resolution_factor = 1
+		self.request_url = ''
 		self.headers = { }
 		self.agents = cfg.AGENTS
 		
@@ -3877,12 +3885,14 @@ class SatelliteCenter( Fetcher ):
 		"""
 		try:
 			throw_if( 'observatories', observatories )
+			self.observatory_ids = observatories
 			throw_if( 'start_time', start_time )
+			self.start_time = start_time
 			throw_if( 'end_time', end_time )
-			self.observatory_ids = observatories.strip( )
-			self.start_time = start_time.strip( )
-			self.end_time = end_time.strip( )
-			self.coordinate_systems = coordinate_systems.strip( ).lower( )
+			self.end_time = end_time
+			throw_if( 'coordinate_systems', coordinate_systems )
+			self.coordinate_systems = coordinate_systems
+			throw_if( 'resolution_factor', resolution_factor )
 			self.resolution_factor = resolution_factor
 
 			throw_if( 'time', time )
