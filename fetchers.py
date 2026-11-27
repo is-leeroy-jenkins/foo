@@ -90,47 +90,29 @@ from boogr import Error, Logger
 from core import Result
 import xml.etree.ElementTree as ET
 
-def throw_if( name: str, value: object, expected_type: type | tuple[ type, ... ] | None=None, minimum: int | float | None=None, maximum: int | float | None=None, allow_none: bool=False ) -> None:
-	"""Validate a caller-supplied argument before use.
+def throw_if( name: str, value: object ) -> None:
+	"""Throw if.
 
 	Purpose:
-	    Centralizes presence, type, and inclusive numeric-bound validation without
-	    converting or repairing caller-supplied values.
+	    Validates that a required argument contains a usable value so failures occur before
+	    provider, filesystem, or parsing work begins.
 
 	Args:
-	    name (str): Argument name used in validation errors.
-	    value (object): Candidate argument.
-	    expected_type (type | tuple[type, ...] | None): Accepted runtime types; defaults to
-	        None for presence-only validation. Boolean values are not numeric arguments.
-	    minimum (int | float | None): Inclusive lower bound, or None.
-	    maximum (int | float | None): Inclusive upper bound, or None.
-	    allow_none (bool): Whether None is an accepted optional value; defaults to False.
+	    name (str): Argument name included in validation error messages.
+	    value (object): Candidate value to validate or normalize.
 
 	Returns:
-	    None: Returns normally when the argument satisfies the specified constraints.
+	    None: This method updates instance state or validates input and does not return a value.
 
 	Raises:
-	    ValueError: If the argument is missing, has an incompatible type, or violates a bound.
+	    ValueError: Raised when the method cannot satisfy its documented value requirement.
 	"""
-	if value is None and allow_none:
-		return
 	if value is None:
 		raise ValueError( f'Argument "{name}" cannot be empty!' )
 	if isinstance( value, str ) and not value.strip( ):
 		raise ValueError( f'Argument "{name}" cannot be empty!' )
 	if isinstance( value, (list, tuple, dict, set) ) and len( value ) == 0:
 		raise ValueError( f'Argument "{name}" cannot be empty!' )
-	if expected_type is not None:
-		types = expected_type if isinstance( expected_type, tuple ) else ( expected_type, )
-		if not isinstance( value, types ) or ( isinstance( value, bool ) and bool not in types ):
-			raise ValueError( f'Argument "{name}" has an invalid type.' )
-	if minimum is not None or maximum is not None:
-		if isinstance( value, bool ) or not isinstance( value, (int, float) ) or not math.isfinite( value ):
-			raise ValueError( f'Argument "{name}" must be a finite number.' )
-		if minimum is not None and value < minimum:
-			raise ValueError( f'Argument "{name}" must be greater than or equal to {minimum}.' )
-		if maximum is not None and value > maximum:
-			raise ValueError( f'Argument "{name}" must be less than or equal to {maximum}.' )
 
 def encode_image( path: str ) -> str:
 	"""Encode image.
@@ -149,7 +131,7 @@ def encode_image( path: str ) -> str:
 	    ValueError: Raised when the method cannot satisfy its documented value requirement.
 	"""
 
-	throw_if( 'path', path, expected_type=str )
+	throw_if( 'path', path )
 
 	data = Path( path ).read_bytes( )
 	return base64.b64encode( data ).decode( "utf-8" )
@@ -337,11 +319,11 @@ class WebFetcher( Fetcher ):
 		"""
 		try:
 
-			throw_if( 'url', url, expected_type=str )
+			throw_if( 'url', url )
 
 			self.url = url
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.response = requests.get( url=self.url, headers=self.headers,
@@ -479,7 +461,7 @@ class WebFetcher( Fetcher ):
 		"""
 		try:
 
-			throw_if( 'limit', limit, expected_type=int, minimum=1 )
+			throw_if( 'limit', limit )
 
 			throw_if( 'text', text )
 			self.text = text
@@ -1153,7 +1135,7 @@ class WebCrawler( WebFetcher ):
 			if self.use_playwright:
 				self.url = url.strip( )
 
-				throw_if( 'time', time, expected_type=int, minimum=1 )
+				throw_if( 'time', time )
 
 				self.timeout = time
 				self.raw_url = self.url
@@ -1193,9 +1175,9 @@ class WebCrawler( WebFetcher ):
 		try:
 
 
-			throw_if( 'url', url, expected_type=str )
+			throw_if( 'url', url )
 
-			throw_if( 'timeout', timeout, expected_type=int, minimum=1 )
+			throw_if( 'timeout', timeout )
 
 			self.url = url
 			self.timeout = timeout
@@ -1246,11 +1228,11 @@ class WebCrawler( WebFetcher ):
 				'errors': [ ], 'content_bytes': 0, 'truncated_by_max_bytes': False, }
 		
 		try:
-			throw_if( 'include_title', include_title, expected_type=bool )
+			throw_if( 'include_title', include_title )
 
-			throw_if( 'include_basic_text', include_basic_text, expected_type=bool )
+			throw_if( 'include_basic_text', include_basic_text )
 
-			throw_if( 'include_raw_html', include_raw_html, expected_type=bool )
+			throw_if( 'include_raw_html', include_raw_html )
 
 			methods = selected_methods or [ ]
 			self.fetch( url=url, time=request_timeout )
@@ -1327,15 +1309,15 @@ class WebCrawler( WebFetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'include_title', include_title, expected_type=bool )
+			throw_if( 'include_title', include_title )
 
-			throw_if( 'include_basic_text', include_basic_text, expected_type=bool )
+			throw_if( 'include_basic_text', include_basic_text )
 
-			throw_if( 'include_raw_html', include_raw_html, expected_type=bool )
+			throw_if( 'include_raw_html', include_raw_html )
 
-			throw_if( 'recursive', recursive, expected_type=bool )
+			throw_if( 'recursive', recursive )
 
-			throw_if( 'same_domain_only', same_domain_only, expected_type=bool )
+			throw_if( 'same_domain_only', same_domain_only )
 
 			throw_if( 'seed_url', seed_url )
 			started_at = dt.datetime.now( )
@@ -1491,9 +1473,11 @@ class ArXiv( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'full_documents', full_documents, expected_type=bool, allow_none=True )
+			if full_documents is not None:
+				throw_if( 'full_documents', full_documents )
 
-			throw_if( 'include_metadata', include_metadata, expected_type=bool, allow_none=True )
+			if include_metadata is not None:
+				throw_if( 'include_metadata', include_metadata )
 
 			throw_if( 'question', question )
 			self.query = question.strip( )
@@ -1671,7 +1655,7 @@ class GoogleDrive( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'results', results, expected_type=int, minimum=1 )
+			throw_if( 'results', results )
 
 			throw_if( 'template', template )
 			throw_if( 'folder_id', folder_id )
@@ -1808,7 +1792,8 @@ class Wikipedia( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'include_metadata', include_metadata, expected_type=bool, allow_none=True )
+			if include_metadata is not None:
+				throw_if( 'include_metadata', include_metadata )
 
 			throw_if( 'question', question )
 			self.query = question.strip( )
@@ -1958,14 +1943,14 @@ class TheNews( Fetcher ):
 		"""
 		try:
 
-			throw_if( 'limit', limit, expected_type=int, minimum=1 )
+			throw_if( 'limit', limit )
 
 
-			throw_if( 'page', page, expected_type=int, minimum=1 )
+			throw_if( 'page', page )
 
 			self.endpoint = endpoint
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.limit = limit
@@ -2042,12 +2027,12 @@ class TheNews( Fetcher ):
 				if published_on and published_on.strip( ):
 					self.params[ 'published_on' ] = published_on.strip( )
 				
-				throw_if( 'headlines_per_category', headlines_per_category, expected_type=int, minimum=1, maximum=10 )
+				throw_if( 'headlines_per_category', headlines_per_category )
 
 				self.headlines_per_category = headlines_per_category
 				self.params[ 'headlines_per_category' ] = self.headlines_per_category
 				
-				throw_if( 'include_similar', include_similar, expected_type=bool )
+				throw_if( 'include_similar', include_similar )
 
 				self.include_similar = include_similar
 				self.params[ 'include_similar' ] = 'true' if self.include_similar else 'false'
@@ -2288,10 +2273,10 @@ class GoogleSearch( Fetcher ):
 		"""
 		try:
 
-			throw_if( 'results', results, expected_type=int, minimum=1 )
+			throw_if( 'results', results )
 
 
-			throw_if( 'start', start, expected_type=int, minimum=1 )
+			throw_if( 'start', start )
 
 			throw_if( 'keywords', keywords )
 
@@ -2300,7 +2285,7 @@ class GoogleSearch( Fetcher ):
 			if cse_id:
 				self.cse_id = cse_id.strip( )
 			
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.keywords = keywords.strip( )
@@ -2967,7 +2952,7 @@ class GoogleWeather( Fetcher ):
 				raise TypeError( 'params must be a dictionary.' )
 			self.path = path.strip( ).lstrip( '/' )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.params = { }
@@ -3074,7 +3059,7 @@ class GoogleWeather( Fetcher ):
 			self.mode = 'current'
 			self.units_system = units_system.strip( )
 			self.language_code = language_code.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.latitude, self.longitude = self.resolve_coordinates( address )
@@ -3133,7 +3118,7 @@ class GoogleWeather( Fetcher ):
 			self.hours = hours
 			self.units_system = units_system.strip( )
 			self.language_code = language_code.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			if self.hours < 1 or self.hours > 240:
@@ -3194,7 +3179,7 @@ class GoogleWeather( Fetcher ):
 			self.days = days
 			self.units_system = units_system.strip( )
 			self.language_code = language_code.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			if self.days < 1 or self.days > 10:
@@ -3255,7 +3240,7 @@ class GoogleWeather( Fetcher ):
 			self.hours = hours
 			self.units_system = units_system.strip( )
 			self.language_code = language_code.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			if self.hours < 1 or self.hours > 24:
@@ -3308,7 +3293,7 @@ class GoogleWeather( Fetcher ):
 			
 			self.mode = 'alerts'
 			self.language_code = language_code.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.latitude, self.longitude = self.resolve_coordinates( address )
@@ -3540,7 +3525,7 @@ class NavalObservatory( Fetcher ):
 			throw_if( 'latitude', latitude )
 			throw_if( 'longitude', longitude )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 
@@ -3832,7 +3817,7 @@ class SatelliteCenter( Fetcher ):
 			self.coordinate_systems = coordinate_systems.strip( ).lower( )
 			self.resolution_factor = resolution_factor
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			if self.resolution_factor < 1:
@@ -4036,7 +4021,7 @@ class EarthObservatory( Fetcher ):
 		"""
 		try:
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.response = requests.get( url=self.url, params=self.params,
@@ -4086,10 +4071,10 @@ class EarthObservatory( Fetcher ):
 		"""
 		try:
 
-			throw_if( 'limit', limit, expected_type=int, minimum=1 )
+			throw_if( 'limit', limit )
 
 
-			throw_if( 'days', days, expected_type=int, minimum=1 )
+			throw_if( 'days', days )
 
 			self.mode = 'events'
 			self.status = status
@@ -4302,7 +4287,7 @@ class EarthObservatory( Fetcher ):
 		try:
 			self.mode = mode
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			if self.mode == 'events':
@@ -4695,7 +4680,7 @@ class GlobalImagery( Fetcher ):
 			self.bbox = bbox
 			self.mode = 'wms_map'
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			request_url = self.build_wms_url( layer=self.layer, image_date=self.image_date,
@@ -4968,7 +4953,7 @@ class NearbyObjects( Fetcher ):
 		"""
 		try:
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.response = requests.get( url=self.url, params=self.params,
@@ -5063,7 +5048,7 @@ class NearbyObjects( Fetcher ):
 		"""
 		try:
 
-			throw_if( 'limit', limit, expected_type=int, minimum=1 )
+			throw_if( 'limit', limit )
 
 			throw_if( 'start_date', start_date )
 			throw_if( 'end_date', end_date )
@@ -5133,11 +5118,11 @@ class NearbyObjects( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'include_physical', include_physical, expected_type=bool )
+			throw_if( 'include_physical', include_physical )
 
-			throw_if( 'include_close_approaches', include_close_approaches, expected_type=bool )
+			throw_if( 'include_close_approaches', include_close_approaches )
 
-			throw_if( 'include_discovery', include_discovery, expected_type=bool )
+			throw_if( 'include_discovery', include_discovery )
 
 			throw_if( 'query', query )
 			self.mode = 'object_lookup'
@@ -5286,7 +5271,7 @@ class NearbyObjects( Fetcher ):
 		"""
 		try:
 
-			throw_if( 'limit', limit, expected_type=int, minimum=1 )
+			throw_if( 'limit', limit )
 
 			self.limit = limit
 			if self.limit < 1:
@@ -5598,7 +5583,7 @@ class OpenScience( Fetcher ):
 		"""
 		try:
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.response = requests.get( url=self.url, params=self.params,
@@ -5996,13 +5981,13 @@ class SpaceWeather( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'most_accurate_only', most_accurate_only, expected_type=bool )
+			throw_if( 'most_accurate_only', most_accurate_only )
 
-			throw_if( 'complete_entry_only', complete_entry_only, expected_type=bool )
+			throw_if( 'complete_entry_only', complete_entry_only )
 
 			throw_if( 'endpoint', endpoint )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.endpoint = endpoint.strip( )
@@ -6396,7 +6381,7 @@ class AstroCatalog( Fetcher ):
 		try:
 			throw_if( 'route', route )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.route = route.strip( ).lstrip( '/' )
@@ -6514,7 +6499,7 @@ class AstroCatalog( Fetcher ):
 			if self.format:
 				self.params[ 'format' ] = self.format
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			return self.request( route=self.route, params=self.params, time=self.timeout )
@@ -6579,7 +6564,7 @@ class AstroCatalog( Fetcher ):
 			if self.format:
 				self.params[ 'format' ] = self.format
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			return self.request( route=self.route, params=self.params, time=self.timeout )
@@ -6629,7 +6614,7 @@ class AstroCatalog( Fetcher ):
 			self.arguments = arguments
 			self.format = data_format
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			if self.mode == 'object_query':
@@ -7072,7 +7057,7 @@ class StarMap( Fetcher ):
 		"""
 		try:
 
-			throw_if( 'value', value, expected_type=bool )
+			throw_if( 'value', value )
 
 			return '1' if value else '0'
 		except Exception as exc:
@@ -7149,7 +7134,7 @@ class StarMap( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'show_box', show_box, expected_type=bool )
+			throw_if( 'show_box', show_box )
 
 			throw_if( 'name', name )
 			
@@ -7158,7 +7143,7 @@ class StarMap( Fetcher ):
 			self.box_color = box_color
 			self.show_box = show_box
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -7215,13 +7200,13 @@ class StarMap( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'show_box', show_box, expected_type=bool )
+			throw_if( 'show_box', show_box )
 
-			throw_if( 'show_grid', show_grid, expected_type=bool )
+			throw_if( 'show_grid', show_grid )
 
-			throw_if( 'show_lines', show_lines, expected_type=bool )
+			throw_if( 'show_lines', show_lines )
 
-			throw_if( 'show_boundaries', show_boundaries, expected_type=bool )
+			throw_if( 'show_boundaries', show_boundaries )
 
 			throw_if( 'ra', ra )
 			throw_if( 'dec', dec )
@@ -7235,7 +7220,7 @@ class StarMap( Fetcher ):
 			self.show_lines = show_lines
 			self.show_boundaries = show_boundaries
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -7295,13 +7280,13 @@ class StarMap( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'show_grid', show_grid, expected_type=bool )
+			throw_if( 'show_grid', show_grid )
 
-			throw_if( 'show_lines', show_lines, expected_type=bool )
+			throw_if( 'show_lines', show_lines )
 
-			throw_if( 'show_boundaries', show_boundaries, expected_type=bool )
+			throw_if( 'show_boundaries', show_boundaries )
 
-			throw_if( 'show_const_names', show_const_names, expected_type=bool )
+			throw_if( 'show_const_names', show_const_names )
 
 			throw_if( 'ra', ra )
 			throw_if( 'dec', dec )
@@ -7315,7 +7300,7 @@ class StarMap( Fetcher ):
 			self.show_boundaries = show_boundaries
 			self.show_const_names = show_const_names
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -7534,7 +7519,7 @@ class GovData( Fetcher ):
 		try:
 			
 
-			throw_if( 'page_size', page_size, expected_type=int )
+			throw_if( 'page_size', page_size )
 
 			if page_size < 1 or page_size > 1000:
 				raise ValueError( 'page_size must be between 1 and 1000.' )
@@ -7653,7 +7638,7 @@ class GovData( Fetcher ):
 			self.offset_mark = ( offset_mark or '*' ).strip( )
 			self.sort_field = self.validate_sort_field( sort_field )
 			self.sort_order = self.validate_sort_order( sort_order )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = f'{self.base_url}/search'
@@ -7707,7 +7692,7 @@ class GovData( Fetcher ):
 			
 			self.mode = 'package_summary'
 			self.package_id = package_id.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = f'{self.base_url}/packages/{self.package_id}/summary'
@@ -7765,7 +7750,7 @@ class GovData( Fetcher ):
 			self.start_date = start_date.strip( )
 			self.page_size = self.validate_page_size( page_size )
 			self.offset_mark = ( offset_mark or '*' ).strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = f'{self.base_url}/collections/{self.collection}/{self.start_date}'
@@ -8034,9 +8019,9 @@ class StarChart( Fetcher ):
 		"""
 		try:
 
-			throw_if( 'value', value, expected_type=bool )
+			throw_if( 'value', value )
 
-			throw_if( 'invert', invert, expected_type=bool )
+			throw_if( 'invert', invert )
 
 			if invert:
 				return 0 if value else 1
@@ -8072,9 +8057,9 @@ class StarChart( Fetcher ):
 		try:
 
 
-			throw_if( 'name', name, expected_type=str )
+			throw_if( 'name', name )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.query = name
 			self.timeout = time
@@ -8142,7 +8127,7 @@ class StarChart( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'show_box', show_box, expected_type=bool )
+			throw_if( 'show_box', show_box )
 
 			throw_if( 'name', name )
 			self.mode = 'object_chart'
@@ -8205,13 +8190,13 @@ class StarChart( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'show_box', show_box, expected_type=bool )
+			throw_if( 'show_box', show_box )
 
-			throw_if( 'show_grid', show_grid, expected_type=bool )
+			throw_if( 'show_grid', show_grid )
 
-			throw_if( 'show_lines', show_lines, expected_type=bool )
+			throw_if( 'show_lines', show_lines )
 
-			throw_if( 'show_boundaries', show_boundaries, expected_type=bool )
+			throw_if( 'show_boundaries', show_boundaries )
 
 			self.mode = 'coordinate_chart'
 			self.ra = ra
@@ -8283,13 +8268,13 @@ class StarChart( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'show_grid', show_grid, expected_type=bool )
+			throw_if( 'show_grid', show_grid )
 
-			throw_if( 'show_lines', show_lines, expected_type=bool )
+			throw_if( 'show_lines', show_lines )
 
-			throw_if( 'show_boundaries', show_boundaries, expected_type=bool )
+			throw_if( 'show_boundaries', show_boundaries )
 
-			throw_if( 'show_const_names', show_const_names, expected_type=bool )
+			throw_if( 'show_const_names', show_const_names )
 
 			self.mode = 'static_chart'
 			self.ra = ra
@@ -8588,7 +8573,7 @@ class Congress( Fetcher ):
 		try:
 			
 
-			throw_if( 'limit', limit, expected_type=int )
+			throw_if( 'limit', limit )
 
 			if limit < 1 or limit > 250:
 				raise ValueError( 'limit must be between 1 and 250.' )
@@ -8622,7 +8607,7 @@ class Congress( Fetcher ):
 		try:
 			
 
-			throw_if( 'offset', offset, expected_type=int )
+			throw_if( 'offset', offset )
 
 			if offset < 0:
 				raise ValueError( 'offset must be greater than or equal to 0.' )
@@ -8816,7 +8801,7 @@ class Congress( Fetcher ):
 			
 			self.mode = mode.strip( )
 			self.url = url.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.params = params
@@ -9106,7 +9091,7 @@ class Congress( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'conference', conference, expected_type=bool )
+			throw_if( 'conference', conference )
 
 			throw_if( 'congress', congress )
 			
@@ -9449,7 +9434,7 @@ class InternetArchive( Fetcher ):
 		"""
 		try:
 
-			throw_if( 'page', page, expected_type=int )
+			throw_if( 'page', page )
 
 			if page < 1:
 				raise ValueError( 'page must be greater than or equal to 1.' )
@@ -9541,7 +9526,7 @@ class InternetArchive( Fetcher ):
 			throw_if( 'keywords', self.keywords )
 			
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.rows = self.validate_rows( rows )
@@ -10542,9 +10527,9 @@ class Grokipedia( Fetcher ):
 		    Error: Wraps the source exception with module, class, and method metadata.
 		"""
 		try:
-			throw_if( 'limit', limit, expected_type=int, minimum=1 )
+			throw_if( 'limit', limit )
 
-			throw_if( 'offset', offset, expected_type=int, minimum=0 )
+			throw_if( 'offset', offset )
 
 			throw_if( 'query', query )
 			throw_if( 'limit', limit )
@@ -10588,7 +10573,7 @@ class Grokipedia( Fetcher ):
 		    Error: Wraps the source exception with module, class, and method metadata.
 		"""
 		try:
-			throw_if( 'include_content', include_content, expected_type=bool )
+			throw_if( 'include_content', include_content )
 
 			throw_if( 'page', page )
 			self.page = page.strip( )
@@ -10811,7 +10796,7 @@ class GoogleGeocoding( Fetcher ):
 			
 			
 			
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			if not isinstance( params, dict ):
@@ -10891,7 +10876,7 @@ class GoogleGeocoding( Fetcher ):
 			self.query = query.strip( )
 			self.language = ( language or 'en' ).strip( )
 			self.region = ( region or '' ).strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.params = { 'address': self.query, 'language': self.language }
@@ -10950,7 +10935,7 @@ class GoogleGeocoding( Fetcher ):
 			self.language = ( language or 'en' ).strip( )
 			self.result_type = ( result_type or '' ).strip( )
 			self.location_type = ( location_type or '' ).strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.params = { 'latlng': f'{self.latitude},{self.longitude}',
@@ -11006,7 +10991,7 @@ class GoogleGeocoding( Fetcher ):
 			self.place_id = place_id.strip( )
 			self.language = ( language or 'en' ).strip( )
 			self.region = ( region or '' ).strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.params = { 'place_id': self.place_id, 'language': self.language }
@@ -11384,7 +11369,7 @@ class CensusData( Fetcher ):
 			self.mode = 'variables'
 			self.year = year.strip( )
 			self.dataset = dataset.strip( ).strip( '/' )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			if not re.fullmatch( r'\d{4}', self.year ):
@@ -11457,7 +11442,7 @@ class CensusData( Fetcher ):
 			self.geography_for = ( geography_for or '' ).strip( )
 			self.geography_in = ( geography_in or '' ).strip( )
 			self.predicates = self.parse_predicates( predicates )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			if not re.fullmatch( r'\d{4}', self.year ):
@@ -11796,7 +11781,7 @@ class Socrata( Fetcher ):
 		try:
 			
 
-			throw_if( 'limit', limit, expected_type=int )
+			throw_if( 'limit', limit )
 
 			if limit < 1 or limit > 50000:
 				raise ValueError( 'limit must be between 1 and 50000.' )
@@ -11830,7 +11815,7 @@ class Socrata( Fetcher ):
 		try:
 			
 
-			throw_if( 'offset', offset, expected_type=int )
+			throw_if( 'offset', offset )
 
 			if offset < 0:
 				raise ValueError( 'offset must be greater than or equal to 0.' )
@@ -11871,7 +11856,7 @@ class Socrata( Fetcher ):
 			self.mode = 'metadata'
 			self.domain = self.normalize_domain( domain )
 			self.dataset_id = self.normalize_dataset_id( dataset_id )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = self.metadata_url.format( domain=self.domain, dataset=self.dataset_id )
@@ -11941,7 +11926,7 @@ class Socrata( Fetcher ):
 			self.group_clause = ( group or '' ).strip( )
 			self.limit_value = self.validate_limit( limit )
 			self.offset_value = self.validate_offset( offset )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -12284,7 +12269,7 @@ class HealthData( Fetcher ):
 		try:
 			
 
-			throw_if( 'limit', limit, expected_type=int )
+			throw_if( 'limit', limit )
 
 			if limit < 1 or limit > 50000:
 				raise ValueError( 'limit must be between 1 and 50000.' )
@@ -12318,7 +12303,7 @@ class HealthData( Fetcher ):
 		try:
 			
 
-			throw_if( 'offset', offset, expected_type=int )
+			throw_if( 'offset', offset )
 
 			if offset < 0:
 				raise ValueError( 'offset must be greater than or equal to 0.' )
@@ -12359,7 +12344,7 @@ class HealthData( Fetcher ):
 			self.mode = 'metadata'
 			self.domain = self.normalize_domain( domain )
 			self.dataset_id = self.normalize_dataset_id( dataset_id )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = self.metadata_url.format( domain=self.domain, dataset=self.dataset_id )
@@ -12429,7 +12414,7 @@ class HealthData( Fetcher ):
 			self.group_clause = ( group or '' ).strip( )
 			self.limit_value = self.validate_limit( limit )
 			self.offset_value = self.validate_offset( offset )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -12718,7 +12703,7 @@ class GlobalHealthData( Fetcher ):
 
 			
 			self.mode = 'indicator_registry'
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = f'{self.base_url}/indicator-metadata-registry'
@@ -12779,7 +12764,7 @@ method contract.
 			self.mode = 'athena'
 			self.query_path = self.normalize_query_path( query_path )
 			self.fmt = ( fmt or 'json' ).strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = f'{self.athena_base_url}/{self.query_path}'
@@ -13041,7 +13026,7 @@ class UnitedNations( Fetcher ):
 
 			
 			self.mode = 'datasets'
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = self.catalog_url
@@ -13097,7 +13082,7 @@ class UnitedNations( Fetcher ):
 			
 			self.mode = 'sdmx_query'
 			self.query_path = self.normalize_query_path( query_path )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -13363,7 +13348,7 @@ class WorldPopulation( Fetcher ):
 		try:
 			
 
-			throw_if( 'page', page, expected_type=int )
+			throw_if( 'page', page )
 
 			if page < 1:
 				raise ValueError( 'page must be greater than or equal to 1.' )
@@ -13397,7 +13382,7 @@ class WorldPopulation( Fetcher ):
 		try:
 			
 
-			throw_if( 'page_size', page_size, expected_type=int )
+			throw_if( 'page_size', page_size )
 
 			if page_size < 1 or page_size > 500:
 				raise ValueError( 'page_size must be between 1 and 500.' )
@@ -13433,7 +13418,7 @@ class WorldPopulation( Fetcher ):
 
 			
 			self.mode = 'catalog'
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = self.base_url
@@ -13493,7 +13478,7 @@ class WorldPopulation( Fetcher ):
 			self.query_text = ( query or '' ).strip( )
 			self.page = self.validate_page( page )
 			self.page_size = self.validate_page_size( page_size )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = f'{self.base_url}/search'
@@ -13550,7 +13535,7 @@ class WorldPopulation( Fetcher ):
 			
 			self.mode = 'raster_metadata'
 			self.asset_path = self.normalize_asset_path( asset_path )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.asset_path}'
@@ -13905,7 +13890,7 @@ class Wonder( Fetcher ):
 			self.mode = 'query_xml'
 			self.dataset_id = self.normalize_dataset_id( dataset_id )
 			self.request_xml = request_xml.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.dataset_id}'
@@ -14202,7 +14187,7 @@ class USGSEarthquakes( Fetcher ):
 		try:
 			
 
-			throw_if( 'limit', limit, expected_type=int )
+			throw_if( 'limit', limit )
 
 			if limit < 1 or limit > 20000:
 				raise ValueError( 'limit must be between 1 and 20000.' )
@@ -14612,7 +14597,7 @@ class USGSEarthquakes( Fetcher ):
 			
 			self.mode = 'feed'
 			self.feed = self.validate_feed( feed )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.params = { }
@@ -14698,7 +14683,7 @@ class USGSEarthquakes( Fetcher ):
 			self.limit = self.validate_limit( limit )
 			self.order_by = self.validate_order_by( order_by )
 			self.event_type = event_type.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = self.search_url
@@ -15021,7 +15006,7 @@ value.
 		try:
 			
 
-			throw_if( 'limit', limit, expected_type=int )
+			throw_if( 'limit', limit )
 
 			if limit < 1 or limit > 10000:
 				raise ValueError( 'limit must be between 1 and 10000.' )
@@ -15407,7 +15392,7 @@ value.
 			if not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
 			self.collection = self.validate_collection( collection )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.collection}/items'
@@ -15483,7 +15468,7 @@ value.
 			self.county_code = ( county_code or '' ).strip( )
 			self.site_type = ( site_type or '' ).strip( )
 			self.limit = self.validate_limit( limit )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -15536,7 +15521,7 @@ value.
 			self.monitoring_location_id = monitoring_location_id.strip( )
 			self.parameter_code = self.validate_parameter_code( parameter_code )
 			self.limit = self.validate_limit( limit )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -15589,7 +15574,7 @@ value.
 			self.monitoring_location_id = monitoring_location_id.strip( )
 			self.parameter_code = self.validate_parameter_code( parameter_code )
 			self.limit = self.validate_limit( limit )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -15642,7 +15627,7 @@ value.
 			self.monitoring_location_id = monitoring_location_id.strip( )
 			self.parameter_code = self.validate_parameter_code( parameter_code )
 			self.limit = self.validate_limit( limit )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -15928,7 +15913,7 @@ class USGSTheNationalMap( Fetcher ):
 		try:
 			
 
-			throw_if( 'max_items', max_items, expected_type=int )
+			throw_if( 'max_items', max_items )
 
 			if max_items < 1 or max_items > 500:
 				raise ValueError( 'max_items must be between 1 and 500.' )
@@ -15962,7 +15947,7 @@ class USGSTheNationalMap( Fetcher ):
 		try:
 			
 
-			throw_if( 'offset', offset, expected_type=int )
+			throw_if( 'offset', offset )
 
 			if offset < 0 or offset > 10000:
 				raise ValueError( 'offset must be between 0 and 10000.' )
@@ -16277,7 +16262,7 @@ class USGSTheNationalMap( Fetcher ):
 				raise ValueError( 'params must be a dictionary.' )
 			
 			self.endpoint = self.validate_endpoint( endpoint )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
@@ -16334,7 +16319,7 @@ class USGSTheNationalMap( Fetcher ):
 
 			
 			self.mode = 'datasets'
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -16392,7 +16377,7 @@ class USGSTheNationalMap( Fetcher ):
 			self.prod_formats = ( prod_formats or '' ).strip( )
 			self.max_items = self.validate_max_items( max_items )
 			self.offset = self.validate_offset( offset )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -16667,7 +16652,7 @@ class USGSScienceBase( Fetcher ):
 		try:
 			
 
-			throw_if( 'max_items', max_items, expected_type=int )
+			throw_if( 'max_items', max_items )
 
 			if max_items < 5 or max_items > 1000 or max_items % 5 != 0:
 				raise ValueError( 'max_items must be a multiple of 5 between 5 and 1000.' )
@@ -16701,7 +16686,7 @@ class USGSScienceBase( Fetcher ):
 		try:
 			
 
-			throw_if( 'offset', offset, expected_type=int )
+			throw_if( 'offset', offset )
 
 			if offset < 0 or offset > 150000 or offset % 5 != 0:
 				raise ValueError( 'offset must be a multiple of 5 between 0 and 150000.' )
@@ -16945,7 +16930,7 @@ class USGSScienceBase( Fetcher ):
 
 			
 			self.endpoint = self.validate_endpoint( endpoint )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
@@ -17016,7 +17001,7 @@ class USGSScienceBase( Fetcher ):
 			self.max_items = self.validate_max_items( max_items )
 			self.offset = self.validate_offset( offset )
 			self.fields = ( fields or '' ).strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -17057,7 +17042,7 @@ class USGSScienceBase( Fetcher ):
 
 			self.mode = 'item'
 			self.item_id = item_id.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.request( endpoint=f'item/{self.item_id}', params={ }, time=self.timeout )
@@ -17285,7 +17270,7 @@ class AirNow( Fetcher ):
 
 			
 			self.endpoint = endpoint.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			if params is not None and not isinstance( params, dict ):
@@ -17491,7 +17476,7 @@ class AirNow( Fetcher ):
 			self.distance = distance
 			if self.distance < 1:
 				raise ValueError( 'distance must be greater than zero.' )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -17546,7 +17531,7 @@ class AirNow( Fetcher ):
 			self.distance = distance
 			if self.distance < 1:
 				raise ValueError( 'distance must be greater than zero.' )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -17601,7 +17586,7 @@ class AirNow( Fetcher ):
 			self.distance = distance
 			if self.distance < 1:
 				raise ValueError( 'distance must be greater than zero.' )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -17660,7 +17645,7 @@ class AirNow( Fetcher ):
 			self.distance = distance
 			if self.distance < 1:
 				raise ValueError( 'distance must be greater than zero.' )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -17899,7 +17884,7 @@ class ClimateData( Fetcher ):
 		try:
 			
 
-			throw_if( 'limit', limit, expected_type=int )
+			throw_if( 'limit', limit )
 
 			if limit < 1 or limit > 500:
 				raise ValueError( 'limit must be between 1 and 500.' )
@@ -17933,7 +17918,7 @@ class ClimateData( Fetcher ):
 		try:
 			
 
-			throw_if( 'offset', offset, expected_type=int )
+			throw_if( 'offset', offset )
 
 			if offset < 0 or offset > 10000:
 				raise ValueError( 'offset must be between 0 and 10000.' )
@@ -18215,7 +18200,7 @@ class ClimateData( Fetcher ):
 				raise ValueError( 'params must be a dictionary.' )
 			
 			self.url = url.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.params = { }
@@ -18288,7 +18273,7 @@ class ClimateData( Fetcher ):
 			self.end_date = ( end_date or '' ).strip( )
 			self.limit = self.validate_limit( limit )
 			self.offset = self.validate_offset( offset )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			if self.start_date and self.end_date:
@@ -18356,7 +18341,7 @@ class ClimateData( Fetcher ):
 			self.stations = ( stations or '' ).strip( )
 			self.data_types = ( data_types or '' ).strip( )
 			self.limit = self.validate_limit( limit )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -18677,7 +18662,7 @@ related operations.
 		try:
 			
 
-			throw_if( 'limit', limit, expected_type=int )
+			throw_if( 'limit', limit )
 
 			if limit < 1 or limit > 500:
 				raise ValueError( 'limit must be between 1 and 500.' )
@@ -19038,7 +19023,7 @@ related operations.
 				raise ValueError( 'params must be a dictionary.' )
 			
 			self.endpoint = self.validate_endpoint( endpoint )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
@@ -19122,7 +19107,7 @@ related operations.
 			self.start_date, self.end_date = self.validate_date_pair( start_date=start_date,
 				end_date=end_date )
 			self.bbox = self.validate_bbox( bbox )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -19166,7 +19151,7 @@ related operations.
 
 			
 			self.mode = 'categories'
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -19471,7 +19456,7 @@ to the application logger, and re-raises it.
 		try:
 			
 
-			throw_if( 'limit', limit, expected_type=int )
+			throw_if( 'limit', limit )
 
 			if limit < 1 or limit > 500:
 				raise ValueError( 'limit must be between 1 and 500.' )
@@ -19686,7 +19671,7 @@ to the application logger, and re-raises it.
 
 			
 			self.url = url.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -20410,7 +20395,7 @@ metadata, or generated schema content.
 
 			
 			self.url = url.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.params = { }
@@ -20479,7 +20464,7 @@ metadata, or generated schema content.
 			
 			self.mode = 'station'
 			self.station_id = self.validate_station_id( station_id )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -20537,7 +20522,7 @@ metadata, or generated schema content.
 			self.datum = self.validate_datum( datum )
 			self.units = self.validate_units( units )
 			self.time_zone = self.validate_time_zone( time_zone )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -20601,7 +20586,7 @@ metadata, or generated schema content.
 			self.units = self.validate_units( units )
 			self.time_zone = self.validate_time_zone( time_zone )
 			self.interval = self.validate_interval( interval )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -21117,7 +21102,7 @@ class UvIndex( Fetcher ):
 			if not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
 			self.params = params
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -21165,7 +21150,7 @@ class UvIndex( Fetcher ):
 			self.mode = 'daily-zip'
 			self.zip_code = self.validate_zip_code( zip_code )
 			self.endpoint = 'getEnvirofactsUVDAILY'
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.params = { 'zip_code': self.zip_code }
@@ -21218,7 +21203,7 @@ class UvIndex( Fetcher ):
 			self.city = self.validate_city( city )
 			self.state = self.validate_state( state )
 			self.endpoint = 'getEnvirofactsUVDAILY'
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.params = { 'city': self.city, 'state': self.state }
@@ -21266,7 +21251,7 @@ class UvIndex( Fetcher ):
 			self.mode = 'hourly-zip'
 			self.zip_code = self.validate_zip_code( zip_code )
 			self.endpoint = 'getEnvirofactsUVHOURLY'
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.params = { 'zip_code': self.zip_code }
@@ -21319,7 +21304,7 @@ class UvIndex( Fetcher ):
 			self.city = self.validate_city( city )
 			self.state = self.validate_state( state )
 			self.endpoint = 'getEnvirofactsUVHOURLY'
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.params = { 'city': self.city, 'state': self.state }
@@ -22118,7 +22103,7 @@ class PurpleAir( Fetcher ):
 			if params is not None and not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
 			
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
@@ -22207,7 +22192,7 @@ class PurpleAir( Fetcher ):
 				modified_since )
 			self.fields = self.normalize_fields( fields=fields, default_fields=default_fields )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -22258,7 +22243,7 @@ class PurpleAir( Fetcher ):
 			self.sensor_index = self.validate_sensor_index( sensor_index )
 			self.fields = self.normalize_fields( fields=fields, default_fields=default_fields )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -22332,7 +22317,7 @@ class PurpleAir( Fetcher ):
 				self.modified_since = modified_since
 				self.fields = fields
 
-				throw_if( 'time', time, expected_type=int, minimum=1 )
+				throw_if( 'time', time )
 
 				self.timeout = time
 				return self.fetch_sensors( nwlng=self.nwlng, nwlat=self.nwlat,
@@ -22624,9 +22609,10 @@ class OpenAQ( Fetcher ):
 			throw_if( 'name', name )
 
 			
-			throw_if( name, value, expected_type=int )
+			throw_if( name, value )
 
-			throw_if( 'maximum', maximum, expected_type=int, minimum=1, allow_none=True )
+			if maximum is not None:
+				throw_if( 'maximum', maximum )
 
 			
 			if value < 1:
@@ -23093,7 +23079,7 @@ class OpenAQ( Fetcher ):
 			if params is not None and not isinstance( params, dict ):
 				raise ValueError( 'params must be a dictionary.' )
 			
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.endpoint}'
@@ -23158,7 +23144,7 @@ class OpenAQ( Fetcher ):
 			self.limit = self.validate_positive_integer( 'limit', limit, maximum=1000 )
 			self.page = self.validate_positive_integer( 'page', page )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -23202,7 +23188,7 @@ class OpenAQ( Fetcher ):
 			self.limit = self.validate_positive_integer( 'limit', limit, maximum=1000 )
 			self.page = self.validate_positive_integer( 'page', page )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -23245,7 +23231,7 @@ class OpenAQ( Fetcher ):
 			self.limit = self.validate_positive_integer( 'limit', limit, maximum=1000 )
 			self.page = self.validate_positive_integer( 'page', page )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -23292,7 +23278,7 @@ class OpenAQ( Fetcher ):
 			self.limit = self.validate_positive_integer( 'limit', limit, maximum=1000 )
 			self.page = self.validate_positive_integer( 'page', page )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -23350,7 +23336,7 @@ class OpenAQ( Fetcher ):
 			self.limit = self.validate_positive_integer( 'limit', limit, maximum=1000 )
 			self.page = self.validate_positive_integer( 'page', page )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -23394,7 +23380,7 @@ class OpenAQ( Fetcher ):
 			self.location_id = self.validate_positive_integer( name='location_id',
 				value=location_id )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -24001,7 +23987,7 @@ class Firms( Fetcher ):
 			throw_if( 'url', url )
 
 			self.url = url.strip( )
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			
@@ -24055,7 +24041,7 @@ class Firms( Fetcher ):
 			self.day_range = self.validate_day_range( day_range )
 			self.date = self.validate_date( date )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.params = { 'source': self.source, 'area_coordinates': self.area_coordinates,
@@ -24103,7 +24089,7 @@ class Firms( Fetcher ):
 			self.mode = 'data-availability'
 			self.sensor = self.validate_sensor( sensor )
 
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.params = { 'sensor': self.sensor }
@@ -24528,7 +24514,7 @@ class OpenSky( Fetcher ):
 			throw_if( 'name', name )
 
 			
-			throw_if( name, value, expected_type=int )
+			throw_if( name, value )
 
 			if value < 0:
 				raise ValueError( f'{name} must be greater than or equal to 0.' )
@@ -24604,7 +24590,7 @@ class OpenSky( Fetcher ):
 			throw_if( 'name', name )
 
 			
-			throw_if( name, value, expected_type=(int, float) )
+			throw_if( name, value )
 
 			if not math.isfinite( value ) or value < -90.0 or value > 90.0:
 				raise ValueError( f'{name} must be between -90 and 90.' )
@@ -24643,7 +24629,7 @@ class OpenSky( Fetcher ):
 			throw_if( 'name', name )
 
 			
-			throw_if( name, value, expected_type=(int, float) )
+			throw_if( name, value )
 
 			if not math.isfinite( value ) or value < -180.0 or value > 180.0:
 				raise ValueError( f'{name} must be between -180 and 180.' )
@@ -25037,7 +25023,7 @@ class OpenSky( Fetcher ):
 			self.time_value = (
 					self.validate_epoch( 'time_value', time_value ) if time_value is not None else
 					None)
-			throw_if( 'extended', extended, expected_type=bool )
+			throw_if( 'extended', extended )
 
 			self.extended = extended
 			
@@ -25293,7 +25279,7 @@ metadata, or generated schema content.
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'time', time, expected_type=int, minimum=1 )
+			throw_if( 'time', time )
 
 			self.timeout = time
 			self.mode = self.validate_mode( mode )
