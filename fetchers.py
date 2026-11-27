@@ -1632,13 +1632,12 @@ class GoogleDrive( Fetcher ):
 			throw_if( 'folder_id', folder_id )
 			throw_if( 'results', results )
 			throw_if( 'mode', mode )
-			self.query = ( question or '' ).strip( )
-			self.folder_id = ( folder_id or 'root' ).strip( ) or 'root'
+			self.query = question
+			self.folder_id = folder_id
 			self.num_results = results
-			self.template = template.strip( )
-			self.mime_type = ( mime_type.strip( ) if isinstance(
-				mime_type, str ) and mime_type.strip( ) else None)
-			self.mode = mode.strip( )
+			self.template = template
+			self.mime_type = mime_type
+			self.mode = mode
 			self.credentials_path = cfg.GOOGLE_ACCOUNT_FILE
 			self.token_path = cfg.GOOGLE_DRIVE_TOKEN_PATH
 			if self.num_results < 1 or self.num_results > 100:
@@ -4035,13 +4034,13 @@ class EarthObservatory( Fetcher ):
 		"""
 		try:
 			self.mode = 'events'
-			self.status = status.strip( ).lower( )
-			self.category = ( category or '' ).strip( )
-			self.source = ( source or '' ).strip( )
+			self.status = status
+			self.category = category
+			self.source = source
 			self.limit = limit
 			self.days = days
-			self.start_date = ( start_date or '' ).strip( )
-			self.end_date = ( end_date or '' ).strip( )
+			self.start_date = start_date
+			self.end_date = end_date
 			if self.status not in ( 'open', 'closed', 'all' ):
 				raise ValueError( 'status must be open, closed, or all.' )
 			if self.limit < 1 or self.days < 1:
@@ -4178,7 +4177,7 @@ class EarthObservatory( Fetcher ):
 		"""
 		try:
 			self.mode = 'layers'
-			self.category = ( category or '' ).strip( )
+			self.category = category
 			if self.category and not re.fullmatch( r'[A-Za-z0-9_-]+', self.category ):
 				raise ValueError( 'category must be a valid EONET category identifier.' )
 			self.url = f'{self.base_url}/layers'
@@ -4245,7 +4244,7 @@ class EarthObservatory( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.mode = ( mode or 'events' ).strip( ).lower( )
+			self.mode = mode
 			self.timeout = time
 			if self.mode == 'events':
 				self.status = status
@@ -6757,8 +6756,8 @@ class AstroQuery( Fetcher ):
 		"""
 		try:
 			throw_if( 'name', name )
-			self.name = name.strip( )
-			self.row_limit = max( 1, row_limit )			
+			self.name = name
+			self.row_limit = row_limit			
 			simbad = Simbad( )
 			simbad.ROW_LIMIT = self.row_limit
 			result_table = simbad.query_object( self.name )
@@ -6796,8 +6795,8 @@ class AstroQuery( Fetcher ):
 		"""
 		try:
 			throw_if( 'name', name )
-			self.name = name.strip( )
-			self.row_limit = max( 1, row_limit )
+			self.name = name
+			self.row_limit = row_limit
 			
 			simbad = Simbad( )
 			simbad.ROW_LIMIT = self.row_limit
@@ -6844,14 +6843,14 @@ class AstroQuery( Fetcher ):
 		try:
 			throw_if( 'ra', ra )
 			throw_if( 'dec', dec )			
-			self.right_ascension = ra.strip( )
-			self.declination = dec.strip( )
+			self.right_ascension = ra
+			self.declination = dec
 			self.radius = radius
-			self.row_limit = max( 1, row_limit )
+			self.row_limit = row_limit
 			
 			unit_map = { 'deg': u.deg, 'arcmin': u.arcmin, 'arcsec': u.arcsec, }
 			
-			active_unit = unit_map.get( (radius_unit or 'deg').strip( ).lower( ), u.deg )			
+			active_unit = unit_map[ radius_unit ]			
 			coord = SkyCoord( ra=self.right_ascension, dec=self.declination, unit=(u.hourangle,
 					u.deg) )
 			
@@ -6860,7 +6859,7 @@ class AstroQuery( Fetcher ):
 			result_table = simbad.query_region( coordinates=coord, radius=self.radius * active_unit)
 			
 			return { 'mode': 'region_search', 'ra': self.right_ascension, 'dec': self.declination,
-					'radius': self.radius, 'radius_unit': (radius_unit or 'deg').strip( ).lower( ),
+					'radius': self.radius, 'radius_unit': radius_unit,
 					'row_limit': self.row_limit,
 					'columns': list( result_table.colnames ) if result_table is not None else [ ],
 					'rows': self.table_to_records( result_table ), }
@@ -7107,9 +7106,9 @@ class StarMap( Fetcher ):
 		try:
 			throw_if( 'name', name )
 			
-			self.object = name.strip( )
-			self.zoom = max( 1, min( zoom, 18 ) )
-			self.box_color = box_color or 'yellow'
+			self.object = name
+			self.zoom = zoom
+			self.box_color = box_color
 			self.show_box = show_box
 			self.timeout = time
 			
@@ -7176,8 +7175,8 @@ class StarMap( Fetcher ):
 			
 			self.right_ascension = ra
 			self.declination = dec
-			self.zoom = max( 1, min( zoom, 18 ) )
-			self.box_color = box_color or 'yellow'
+			self.zoom = zoom
+			self.box_color = box_color
 			self.show_box = show_box
 			self.show_grid = show_grid
 			self.show_lines = show_lines
@@ -7248,8 +7247,8 @@ class StarMap( Fetcher ):
 			
 			self.right_ascension = ra
 			self.declination = dec
-			self.zoom = max( 1, min( zoom, 18 ) )
-			self.image_source = (image_source or 'DSS2').strip( )
+			self.zoom = zoom
+			self.image_source = image_source
 			self.show_grid = show_grid
 			self.show_lines = show_lines
 			self.show_boundaries = show_boundaries
