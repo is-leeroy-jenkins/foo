@@ -246,7 +246,12 @@ class TextParser( Processor ):
 		lowercase: Runtime state used by ``TextParser`` during processing operations.
 		cleaned_text: Runtime state used by ``TextParser`` during processing operations.
 		cleaned_lines: Runtime state used by ``TextParser`` during processing operations.
-		cleaned_tokens: Runtime state used by ``TextParser`` during processing operations.
+		cleaned_tokens (Optional[List[str]]): Lemmatized tokens prepared for encoding.
+		model_name (Optional[str]): SentenceTransformer model identifier.
+		transformer (Optional[SentenceTransformer]): Active sentence embedding model.
+		query (Optional[str]): Semantic search query.
+		embeddings (Optional[np.ndarray]): Encoded document vectors.
+		top (int): Requested number of semantic search results.
 		cleaned_pages: Runtime state used by ``TextParser`` during processing operations.
 		cleaned_html: Runtime state used by ``TextParser`` during processing operations.
 		conditional_distribution: Runtime state used by ``TextParser`` during processing
@@ -263,6 +268,11 @@ class TextParser( Processor ):
 	cleaned_text: Optional[ str ]
 	cleaned_lines: Optional[ List[ str ] ]
 	cleaned_tokens: Optional[ List[ str ] ]
+	model_name: Optional[ str ]
+	transformer: Optional[ SentenceTransformer ]
+	query: Optional[ str ]
+	embeddings: Optional[ np.ndarray ]
+	top: int
 	cleaned_pages: Optional[ List[ str ] ]
 	cleaned_html: Optional[ str ]
 	conditional_distribution: Optional[ DataFrame ]
@@ -273,7 +283,7 @@ class TextParser( Processor ):
 	SYMBOLS: Optional[ Set[ str ] ]
 	NUMERALS: Optional[ str ]
 	
-	def __init__( self ):
+	def __init__( self ) -> None:
 		"""Initialize the TextParser instance.
 		
 		Purpose:
@@ -313,6 +323,12 @@ class TextParser( Processor ):
 		self.translator = None
 		self.tokenizer = None
 		self.vectorizer = None
+		self.cleaned_tokens = [ ]
+		self.model_name = None
+		self.transformer = None
+		self.query = None
+		self.embeddings = None
+		self.top = 5
 	
 	def __dir__( self ) -> List[ str ]:
 		"""Return public parser members.
@@ -1791,17 +1807,17 @@ class TextParser( Processor ):
 		try:
 			throw_if( 'tokens', tokens )
 			throw_if( 'model', model )
-			_transformer = SentenceTransformer( model )
-			_tokens = [ self.lemmatizer.lemmatize( t ) for t in tokens ]
-			_encoding = _transformer.encode( _tokens, show_progress_bar=True )
-			self.cleaned_tokens = _tokens
-			return self.cleaned_tokens, _encoding
+			self.tokens = tokens
+			self.model_name = model
+			self.transformer = SentenceTransformer( self.model_name )
+			self.cleaned_tokens = [ self.lemmatizer.lemmatize( t ) for t in self.tokens ]
+			self.embeddings = self.transformer.encode( self.cleaned_tokens, show_progress_bar=True )
+			return self.cleaned_tokens, self.embeddings
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'processors'
 			exception.cause = 'TextParser'
-			exception.method = ('encode_sentences( self, sentences: List[ str ], model_name ) -> '
-			                    '( )')
+			exception.method = 'encode_sentences( self, tokens: List[ str ], model: str ) -> Tuple[ List[ str ], np.ndarray ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -1833,19 +1849,24 @@ class TextParser( Processor ):
 		try:
 			throw_if( 'query', query )
 			throw_if( 'tokens', tokens )
-			throw_if( 'embedding', embeddings )
+			throw_if( 'embeddings', embeddings )
 			throw_if( 'model', model )
-			query_vec = model.encode( [ query ] )
-			sims = cosine_similarity( query_vec, embeddings )[ 0 ]
-			top_indices = sims.argsort( )[ ::-1 ][ : top ]
-			return [ (tokens[ i ], sims[ i ]) for i in top_indices ]
+			self.query = query
+			self.tokens = tokens
+			self.embeddings = embeddings
+			self.transformer = model
+			self.top = top
+			query_vec = self.transformer.encode( [ self.query ] )
+			sims = cosine_similarity( query_vec, self.embeddings )[ 0 ]
+			top_indices = sims.argsort( )[ ::-1 ][ : self.top ]
+			return [ (self.tokens[ i ], sims[ i ]) for i in top_indices ]
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'processors'
 			exception.cause = 'TextParser'
 			exception.method = ('semantic_search( self, query: str, tokens: List[ str ], '
 			                    'embeddings: np.ndarray, model: SentenceTransformer,  '
-			                    'top_k: int=5 ) -> List[ tuple[ str, float ] ]')
+			                    'top: int=5 ) -> List[ tuple[ str, float ] ]')
 			Logger( ).write( exception )
 			raise exception
 
