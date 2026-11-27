@@ -15245,40 +15245,30 @@ class USGSWaterData( Fetcher ):
 			raise exception
 
 class USGSTheNationalMap( Fetcher ):
-	"""USGSTheNationalMap component.
+	"""USGS The National Map TNMAccess adapter.
 
 	Purpose:
-	    Queries The National Map datasets and products, shaping catalog responses for mapping and
-	    download workflows.
+	    Retrieve dataset metadata and product search results through TNMAccess v1, apply
+	    geographic and paging filters, and shape records with download and metadata URLs.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    mode (Optional[str]): Current mode retained by the USGSTheNationalMap workflow between
-	    related operations.
-	    endpoint (Optional[str]): Current endpoint retained by the USGSTheNationalMap workflow
-	    between related operations.
-	    dataset (Optional[str]): Current dataset retained by the USGSTheNationalMap workflow
-	    between related operations.
-	    query_text (Optional[str]): Current query text retained by the USGSTheNationalMap workflow
-	    between related operations.
-	    bbox (Optional[str]): Current bbox retained by the USGSTheNationalMap workflow between
-	    related operations.
-	    prod_formats (Optional[str]): Current prod formats retained by the USGSTheNationalMap
-	    workflow between related operations.
-	    max_items (Optional[int]): Upper bound applied to items.
-	    offset (Optional[int]): Current offset retained by the USGSTheNationalMap workflow between
-	    related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the USGSTheNationalMap workflow
-	    between related operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
+	    base_url (Optional[str]): Base provider API URL.
+	    mode (Optional[str]): Selected retrieval operation.
+	    endpoint (Optional[str]): Selected relative API endpoint.
+	    dataset (Optional[str]): Requested dataset identifier or filter.
+	    query_text (Optional[str]): Latest search expression.
+	    bbox (Optional[str]): Normalized geographic bounding-box string.
+	    prod_formats (Optional[str]): Requested product format filter.
+	    max_items (Optional[int]): Requested maximum number of records.
+	    offset (Optional[int]): Requested pagination offset.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    payload (Optional[Any]): Latest decoded provider response.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest request URL.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	base_url: Optional[ str ]
 	mode: Optional[ str ]
@@ -15295,15 +15285,14 @@ class USGSTheNationalMap( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure the TNMAccess v1 base URL, products mode, default maximum of 25 records, zero
+		    offset, JSON headers, and twenty-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.base_url = 'https://tnmaccess.nationalmap.gov/api/v1'
@@ -15325,14 +15314,13 @@ class USGSTheNationalMap( Fetcher ):
 		self.headers = { 'Accept': 'application/json', 'User-Agent': self.agents }
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'mode', 'endpoint', 'dataset', 'query_text', 'bbox', 'prod_formats',
 				'max_items', 'offset', 'params', 'payload', 'result', 'response', 'url', 'timeout',
@@ -15343,21 +15331,20 @@ class USGSTheNationalMap( Fetcher ):
 				'fetch', 'create_schema' ]
 	
 	def validate_endpoint( self, endpoint: str ) -> str:
-		"""Validate endpoint.
+		"""Validate a TNMAccess endpoint.
 
 		Purpose:
-		    Validates the endpoint against provider constraints and returns the accepted value.
+		    Accept only datasets or products without changing the supplied value.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
+		    endpoint (str): datasets or products.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Original accepted endpoint.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value is missing, invalid, or outside the accepted
+		        constraints.
 		"""
 		try:
 			throw_if( 'endpoint', endpoint )
@@ -15379,21 +15366,20 @@ class USGSTheNationalMap( Fetcher ):
 			raise exception
 	
 	def validate_max_items( self, max_items: int ) -> int:
-		"""Validate max items.
+		"""Validate the maximum record count.
 
 		Purpose:
-		    Validates the max items against provider constraints and returns the accepted value.
+		    Enforce the inclusive range from 1 through 500.
 
 		Args:
-		    max_items (int): Max items supplied by the caller and interpreted according to the
-		    method contract.
+		    max_items (int): Requested maximum record count from 1 through 500.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted record count.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value is missing, invalid, or outside the accepted
+		        constraints.
 		"""
 		try:
 			
@@ -15414,20 +15400,20 @@ class USGSTheNationalMap( Fetcher ):
 			raise exception
 	
 	def validate_offset( self, offset: int ) -> int:
-		"""Validate offset.
+		"""Validate the pagination offset.
 
 		Purpose:
-		    Validates the offset against provider constraints and returns the accepted value.
+		    Enforce the inclusive range from 0 through 10000.
 
 		Args:
-		    offset (int): Zero-based record offset used for pagination.
+		    offset (int): Pagination offset from 0 through 10000.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted offset.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value is missing, invalid, or outside the accepted
+		        constraints.
 		"""
 		try:
 			
@@ -15448,21 +15434,22 @@ class USGSTheNationalMap( Fetcher ):
 			raise exception
 	
 	def validate_bbox( self, bbox: str ) -> str:
-		"""Validate bbox.
+		"""Validate and serialize geographic bounds.
 
 		Purpose:
-		    Validates the bbox against provider constraints and returns the accepted value.
+		    Allow an empty selection; otherwise parse four finite coordinates, check geographic
+		    ranges and strict axis ordering, and serialize the numeric values.
 
 		Args:
-		    bbox (str): Bbox supplied by the caller and interpreted according to the method
-		    contract.
+		    bbox (str): Optional comma-separated minx,miny,maxx,maxy bounds; finite longitude within
+		        -180 through 180 and latitude within -90 through 90, with strictly increasing
+		        bounds.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Comma-separated floating-point bounds, or an empty string.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-				to the application logger, and re-raises it.
+		    Error: Raised when the bounds cannot be parsed or violate geographic constraints.
 		"""
 		try:
 			value = ( bbox or '' ).strip( )
@@ -15501,22 +15488,21 @@ class USGSTheNationalMap( Fetcher ):
 			raise exception
 	
 	def coalesce_records( self, payload: Any ) -> List[ Dict[ str, Any ] ]:
-		"""Coalesce records.
+		"""Extract dictionary records from a response.
 
 		Purpose:
-		    Coalesce records using the class state and returns data required by the surrounding
-		    workflow.
+		    Filter list payloads to dictionaries, select the first list under items, datasets, data,
+		    results, or products in a dictionary payload, or wrap a standalone dictionary. Return an
+		    empty list for other payloads.
 
 		Args:
-		    payload (Any): Validated request dictionary forwarded to the provider client.
+		    payload (Any): Decoded provider response.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Extracted dictionary records.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			if payload is None:
@@ -15545,23 +15531,20 @@ class USGSTheNationalMap( Fetcher ):
 			raise exception
 	
 	def shape_dataset_rows( self, records: List[ Dict[ str, Any ] ] ) -> List[ Dict[ str, Any ] ]:
-		"""Shape dataset rows.
+		"""Shape dataset metadata records.
 
 		Purpose:
-		    Transforms provider dataset rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Extract dataset identifier, tag, name, category, type, and description using alternate
+		    provider field names.
 
 		Args:
-		    records (List[Dict[str, Any]]): Records supplied by the caller and interpreted
-		    according to the method contract.
+		    records (List[Dict[str, Any]]): Decoded provider record dictionaries.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Display-oriented dataset metadata rows.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			rows: List[ Dict[ str, Any ] ] = [ ]
@@ -15586,23 +15569,20 @@ class USGSTheNationalMap( Fetcher ):
 			raise exception
 	
 	def shape_product_rows( self, records: List[ Dict[ str, Any ] ] ) -> List[ Dict[ str, Any ] ]:
-		"""Shape product rows.
+		"""Shape product metadata records.
 
 		Purpose:
-		    Transforms provider product rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Extract title, dataset, format, publication date, size, download and metadata URLs, and
+		    bounding box using alternate provider field names.
 
 		Args:
-		    records (List[Dict[str, Any]]): Records supplied by the caller and interpreted
-		    according to the method contract.
+		    records (List[Dict[str, Any]]): Decoded provider record dictionaries.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Display-oriented product rows.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			rows: List[ Dict[ str, Any ] ] = [ ]
@@ -15647,22 +15627,19 @@ class USGSTheNationalMap( Fetcher ):
 			raise exception
 	
 	def summarize_rows( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Summarize rows.
+		"""Summarize shaped TNM records.
 
 		Purpose:
-		    Computes a compact summary of rows so callers can inspect the response without
-		    traversing every record.
+		    Count rows and retain the first row's title, name or dataset and its dataset field.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Count, first_title, and first_dataset.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			count = len( rows or [ ] )
@@ -15686,22 +15663,21 @@ class USGSTheNationalMap( Fetcher ):
 			raise exception
 	
 	def package_response( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Package response.
+		"""Package shaped provider records.
 
 		Purpose:
-		    Combines normalized records, summary metrics, and request metadata into the standard
-		    response payload.
+		    Combine the retained operation and request metadata with row summary statistics, shaped
+		    rows, and the raw response.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
- to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.result = { 'mode': self.mode, 'url': self.url, 'params': self.params,
@@ -15718,26 +15694,23 @@ class USGSTheNationalMap( Fetcher ):
 			raise exception
 	
 	def request( self, endpoint: str, params: Dict[ str, Any ], time: int=20 ) -> (Dict[ str, Any ] | None):
-		"""Request.
+		"""Execute a TNMAccess request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Validate endpoint and parameter dictionary, omit None and blank strings, issue a GET
+		    request, require JSON list or object, and reject reported provider errors.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
-		    params (Dict[str, Any]): Params supplied by the caller and interpreted according to
-		    the method contract.
-		    time (int): Maximum request duration in seconds.
+		    endpoint (str): datasets or products.
+		    params (Dict[str, Any]): Request parameter dictionary; an empty dictionary is used for
+		        dataset retrieval.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Endpoint URL, submitted parameters, and raw decoded response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'endpoint', endpoint )
@@ -15783,21 +15756,21 @@ class USGSTheNationalMap( Fetcher ):
 			raise exception
 	
 	def fetch_datasets( self, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch datasets.
+		"""Retrieve TNMAccess dataset metadata.
 
 		Purpose:
-		    Retrieves datasets from the configured provider and returns normalized response data.
+		    Request the datasets endpoint, extract records, shape dataset rows, and package the
+		    result.
 
 		Args:
-		    time (int): Maximum request duration in seconds.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 
@@ -15822,31 +15795,29 @@ class USGSTheNationalMap( Fetcher ):
 			raise exception
 	
 	def fetch_products( self, dataset: str='', q: str='', bbox: str='', prod_formats: str = '', max_items: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch products.
+		"""Search TNMAccess products.
 
 		Purpose:
-		    Retrieves products from the configured provider and returns normalized response data.
+		    Validate geographic bounds and pagination, attach optional dataset, search and format
+		    filters, retrieve products, and shape metadata rows.
 
 		Args:
-		    dataset (str): Dataset supplied by the caller and interpreted according to the method
-		    contract.
-		    q (str): Q supplied by the caller and interpreted according to the method contract.
-		    bbox (str): Bbox supplied by the caller and interpreted according to the method
-		    contract.
-		    prod_formats (str): Prod formats supplied by the caller and interpreted according to
-		    the method contract.
-		    max_items (int): Max items supplied by the caller and interpreted according to the
-		    method contract.
-		    offset (int): Zero-based record offset used for pagination.
-		    time (int): Maximum request duration in seconds.
+		    dataset (str): Optional dataset filter. Defaults to an empty string.
+		    q (str): Optional search expression. Defaults to an empty string.
+		    bbox (str): Optional comma-separated minx,miny,maxx,maxy bounds; finite longitude within
+		        -180 through 180 and latitude within -90 through 90, with strictly increasing
+		        bounds. Defaults to an empty string.
+		    prod_formats (str): Optional product format filter. Defaults to an empty string.
+		    max_items (int): Requested maximum record count from 1 through 500. Defaults to 25.
+		    offset (int): Pagination offset from 0 through 10000. Defaults to 0.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'products'
@@ -15877,33 +15848,29 @@ class USGSTheNationalMap( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='products', dataset: str='', q: str='', bbox: str='', prod_formats: str='', max_items: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a TNMAccess operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select datasets or products retrieval and forward applicable search filters.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    dataset (str): Dataset supplied by the caller and interpreted according to the method
-		    contract.
-		    q (str): Q supplied by the caller and interpreted according to the method contract.
-		    bbox (str): Bbox supplied by the caller and interpreted according to the method
-		    contract.
-		    prod_formats (str): Prod formats supplied by the caller and interpreted according to
-		    the method contract.
-		    max_items (int): Max items supplied by the caller and interpreted according to the
-		    method contract.
-		    offset (int): Zero-based record offset used for pagination.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): datasets or products. Defaults to 'products'.
+		    dataset (str): Optional dataset filter. Defaults to an empty string.
+		    q (str): Optional search expression. Defaults to an empty string.
+		    bbox (str): Optional comma-separated minx,miny,maxx,maxy bounds; finite longitude within
+		        -180 through 180 and latitude within -90 through 90, with strictly increasing
+		        bounds. Defaults to an empty string.
+		    prod_formats (str): Optional product format filter. Defaults to an empty string.
+		    max_items (int): Requested maximum record count from 1 through 500. Defaults to 25.
+		    offset (int): Pagination offset from 0 through 10000. Defaults to 0.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -15928,26 +15895,25 @@ class USGSTheNationalMap( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -15976,36 +15942,29 @@ class USGSTheNationalMap( Fetcher ):
 			raise exception
 
 class USGSScienceBase( Fetcher ):
-	"""USGSScienceBase component.
+	"""USGS ScienceBase catalog retrieval adapter.
 
 	Purpose:
-	    Retrieves ScienceBase items and item collections with paging, shaping, and summary support.
+	    Search ScienceBase items or retrieve a single item, validate catalog paths and
+	    pagination, and package shaped metadata and raw records.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    mode (Optional[str]): Current mode retained by the USGSScienceBase workflow between
-	    related operations.
-	    endpoint (Optional[str]): Current endpoint retained by the USGSScienceBase workflow
-	    between related operations.
-	    item_id (Optional[str]): Identifier of the current item resource.
-	    query_text (Optional[str]): Current query text retained by the USGSScienceBase workflow
-	    between related operations.
-	    max_items (Optional[int]): Upper bound applied to items.
-	    offset (Optional[int]): Current offset retained by the USGSScienceBase workflow between
-	    related operations.
-	    fields (Optional[str]): Current fields retained by the USGSScienceBase workflow between
-	    related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Dict[str, Any]]): Current payload retained by the USGSScienceBase
-	    workflow between related operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
+	    base_url (Optional[str]): Base provider API URL.
+	    mode (Optional[str]): Selected retrieval operation.
+	    endpoint (Optional[str]): Selected relative API endpoint.
+	    item_id (Optional[str]): Requested ScienceBase item identifier.
+	    query_text (Optional[str]): Latest search expression.
+	    max_items (Optional[int]): Requested maximum number of records.
+	    offset (Optional[int]): Requested pagination offset.
+	    fields (Optional[str]): Requested provider field-selection expression.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    payload (Optional[Dict[str, Any]]): Latest decoded provider response.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest request URL.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	base_url: Optional[ str ]
 	mode: Optional[ str ]
@@ -16021,15 +15980,14 @@ class USGSScienceBase( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure the ScienceBase catalog base URL, items mode, default maximum of 25 records,
+		    zero offset, JSON headers, and twenty-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.base_url = 'https://www.sciencebase.gov/catalog'
@@ -16050,14 +16008,13 @@ class USGSScienceBase( Fetcher ):
 		self.headers = { 'Accept': 'application/json', 'User-Agent': self.agents }
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'mode', 'endpoint', 'item_id', 'query_text', 'max_items', 'offset',
 				'fields', 'params', 'payload', 'result', 'response', 'url', 'timeout', 'agents',
@@ -16067,21 +16024,21 @@ class USGSScienceBase( Fetcher ):
 				'create_schema' ]
 	
 	def validate_endpoint( self, endpoint: str ) -> str:
-		"""Validate endpoint.
+		"""Validate a relative ScienceBase endpoint.
 
 		Purpose:
-		    Validates the endpoint against provider constraints and returns the accepted value.
+		    Trim surrounding whitespace and slashes, reject full HTTP(S) URLs and parent-directory
+		    markers, and require items or a single nonempty item ID path without query or fragment.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
+		    endpoint (str): Relative path 'items' or 'item/{id}', with one nonempty ID segment and
+		        no query, fragment, or parent-directory marker.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted endpoint.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when endpoint validation fails.
 		"""
 		try:
 			throw_if( 'endpoint', endpoint )
@@ -16111,21 +16068,20 @@ class USGSScienceBase( Fetcher ):
 			raise exception
 	
 	def validate_max_items( self, max_items: int ) -> int:
-		"""Validate max items.
+		"""Validate the requested maximum record count.
 
 		Purpose:
-		    Validates the max items against provider constraints and returns the accepted value.
+		    Require a multiple of five from 5 through 1000.
 
 		Args:
-		    max_items (int): Max items supplied by the caller and interpreted according to the
-		    method contract.
+		    max_items (int): Requested maximum record count, a multiple of five from 5 through 1000.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted record count.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value is missing, invalid, or outside the accepted
+		        constraints.
 		"""
 		try:
 			
@@ -16146,20 +16102,20 @@ class USGSScienceBase( Fetcher ):
 			raise exception
 	
 	def validate_offset( self, offset: int ) -> int:
-		"""Validate offset.
+		"""Validate the pagination offset.
 
 		Purpose:
-		    Validates the offset against provider constraints and returns the accepted value.
+		    Require a multiple of five from 0 through 150000.
 
 		Args:
-		    offset (int): Zero-based record offset used for pagination.
+		    offset (int): Pagination offset, a multiple of five from 0 through 150000.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted offset.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value is missing, invalid, or outside the accepted
+		        constraints.
 		"""
 		try:
 			
@@ -16180,22 +16136,21 @@ class USGSScienceBase( Fetcher ):
 			raise exception
 	
 	def coalesce_records( self, payload: Any ) -> List[ Dict[ str, Any ] ]:
-		"""Coalesce records.
+		"""Extract dictionary records from a response.
 
 		Purpose:
-		    Coalesce records using the class state and returns data required by the surrounding
-		    workflow.
+		    Filter list payloads to dictionaries, select the first list under items, results, or
+		    data in a dictionary payload, or wrap a standalone dictionary. Return an empty list for
+		    other payloads.
 
 		Args:
-		    payload (Any): Validated request dictionary forwarded to the provider client.
+		    payload (Any): Decoded provider response.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Extracted dictionary records.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			if payload is None:
@@ -16224,23 +16179,22 @@ class USGSScienceBase( Fetcher ):
 			raise exception
 	
 	def shape_single_item( self, item: Dict[ str, Any ] ) -> Dict[ str, Any ]:
-		"""Shape single item.
+		"""Shape a ScienceBase item.
 
 		Purpose:
-		    Transforms provider single item into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Extract item metadata, flag non-None spatial metadata, count file, web-link and contact
+		    lists, and retain the raw item. Non-dictionary input is replaced with an empty
+		    dictionary.
 
 		Args:
-		    item (Dict[str, Any]): Item supplied by the caller and interpreted according to the
-		    method contract.
+		    item (Dict[str, Any]): Decoded ScienceBase item dictionary.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Item ID, title, type, updated date, summary, spatial flag, counts, and
+		        raw item.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			if not isinstance( item, dict ):
@@ -16272,23 +16226,19 @@ class USGSScienceBase( Fetcher ):
 			raise exception
 	
 	def shape_item_rows( self, records: List[ Dict[ str, Any ] ] ) -> List[ Dict[ str, Any ] ]:
-		"""Shape item rows.
+		"""Shape ScienceBase item records.
 
 		Purpose:
-		    Transforms provider item rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Apply single-item shaping to each supplied record.
 
 		Args:
-		    records (List[Dict[str, Any]]): Records supplied by the caller and interpreted
-		    according to the method contract.
+		    records (List[Dict[str, Any]]): Decoded provider record dictionaries.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Shaped ScienceBase item rows.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			rows: List[ Dict[ str, Any ] ] = [ ]
@@ -16307,22 +16257,19 @@ class USGSScienceBase( Fetcher ):
 			raise exception
 	
 	def summarize_rows( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Summarize rows.
+		"""Summarize shaped ScienceBase records.
 
 		Purpose:
-		    Computes a compact summary of rows so callers can inspect the response without
-		    traversing every record.
+		    Count rows and rows with spatial metadata, and retain the first title and type.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Count, first_title, first_type, and spatial_count.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			count = len( rows or [ ] )
@@ -16350,22 +16297,21 @@ class USGSScienceBase( Fetcher ):
 			raise exception
 	
 	def package_response( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Package response.
+		"""Package shaped provider records.
 
 		Purpose:
-		    Combines normalized records, summary metrics, and request metadata into the standard
-		    response payload.
+		    Combine the retained operation and request metadata with row summary statistics, shaped
+		    rows, and the raw response.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.result = { 'mode': self.mode, 'url': self.url, 'params': self.params,
@@ -16382,26 +16328,24 @@ class USGSScienceBase( Fetcher ):
 			raise exception
 	
 	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Request.
+		"""Execute a ScienceBase catalog request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Validate the relative endpoint and optional dictionary, omit None and blank strings,
+		    issue a GET request, require a JSON object, and reject provider errors or integer status
+		    values of at least 400.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
-		    params (Optional[Dict[str, Any]]): Params supplied by the caller and interpreted
-		    according to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    endpoint (str): Relative path 'items' or 'item/{id}', with one nonempty ID segment and
+		        no query, fragment, or parent-directory marker.
+		    params (Dict[str, Any] | None): Optional query parameter dictionary. Defaults to None.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Endpoint URL, submitted parameters, and raw decoded response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'endpoint', endpoint )
@@ -16447,27 +16391,27 @@ class USGSScienceBase( Fetcher ):
 			raise exception
 	
 	def fetch_items( self, q: str='', max_items: int=25, offset: int=0, fields: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch items.
+		"""Search ScienceBase catalog items.
 
 		Purpose:
-		    Retrieves items from the configured provider and returns normalized response data.
+		    Validate pagination, request JSON with optional query and fields, extract records, and
+		    package shaped item rows.
 
 		Args:
-		    q (str): Q supplied by the caller and interpreted according to the method contract.
-		    max_items (int): Max items supplied by the caller and interpreted according to the
-		    method contract.
-		    offset (int): Zero-based record offset used for pagination.
-		    fields (str): Fields supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    q (str): Optional search expression. Defaults to an empty string.
+		    max_items (int): Requested maximum record count, a multiple of five from 5 through 1000.
+		        Defaults to 25.
+		    offset (int): Pagination offset, a multiple of five from 0 through 150000. Defaults to
+		        0.
+		    fields (str): Optional provider field-selection expression. Defaults to an empty string.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'items'
@@ -16493,22 +16437,22 @@ class USGSScienceBase( Fetcher ):
 			raise exception
 	
 	def fetch_item( self, item_id: str, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch item.
+		"""Retrieve a single ScienceBase catalog item.
 
 		Purpose:
-		    Retrieves item from the configured provider and returns normalized response data.
+		    Require an item identifier, request its catalog path, shape the decoded item, and
+		    package one row.
 
 		Args:
-		    item_id (str): Provider identifier of the target item resource.
-		    time (int): Maximum request duration in seconds.
+		    item_id (str): Nonblank ScienceBase item identifier.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'item_id', item_id )
@@ -16529,30 +16473,28 @@ class USGSScienceBase( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='items', q: str='', item_id: str='', max_items: int=25, offset: int=0, fields: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a ScienceBase retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select items search or individual item retrieval and forward relevant parameters.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    q (str): Q supplied by the caller and interpreted according to the method contract.
-		    item_id (str): Provider identifier of the target item resource.
-		    max_items (int): Max items supplied by the caller and interpreted according to the
-		    method contract.
-		    offset (int): Zero-based record offset used for pagination.
-		    fields (str): Fields supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): items or item. Defaults to 'items'.
+		    q (str): Optional search expression. Defaults to an empty string.
+		    item_id (str): Item identifier. Defaults to an empty string; required in item mode.
+		    max_items (int): Requested maximum record count, a multiple of five from 5 through 1000.
+		        Defaults to 25.
+		    offset (int): Pagination offset, a multiple of five from 0 through 150000. Defaults to
+		        0.
+		    fields (str): Optional provider field-selection expression. Defaults to an empty string.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -16574,26 +16516,25 @@ class USGSScienceBase( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -16621,39 +16562,31 @@ class USGSScienceBase( Fetcher ):
 			raise exception
 
 class AirNow( Fetcher ):
-	"""AirNow component.
+	"""AirNow observation and forecast retrieval adapter.
 
 	Purpose:
-	    Retrieves AirNow current conditions and forecasts by ZIP code or coordinates and
-	    summarizes air-quality observations.
+	    Retrieve current air-quality observations or forecasts by ZIP code or geographic
+	    coordinates, shape AQI records, and summarize maximum AQI while excluding the API key
+	    from returned parameters.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    mode (Optional[str]): Current mode retained by the AirNow workflow between related
-	    operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the AirNow workflow between related
-	    operations.
-	    timeout (Optional[int]): Maximum request duration, in seconds, applied to provider calls.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    endpoint (Optional[str]): Current endpoint retained by the AirNow workflow between related
-	    operations.
-	    zip_code (Optional[str]): Current zip code retained by the AirNow workflow between related
-	    operations.
-	    latitude (Optional[float]): Current latitude retained by the AirNow workflow between
-	    related operations.
-	    longitude (Optional[float]): Current longitude retained by the AirNow workflow between
-	    related operations.
-	    date (Optional[str]): Current date retained by the AirNow workflow between related
-	    operations.
-	    distance (Optional[int]): Current distance retained by the AirNow workflow between related
-	    operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    response (Any): Most recent raw response returned by the provider client.
-	    headers (Any): HTTP headers sent with the current request.
+	    base_url (Optional[str]): Base provider API URL.
+	    api_key (Optional[str]): AirNow API key loaded from configuration.
+	    mode (Optional[str]): Selected retrieval operation.
+	    params (Optional[Dict[str, Any]]): Latest submitted parameters, including API_KEY.
+	    payload (Optional[Any]): Latest decoded list of observation or forecast dictionaries.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    endpoint (Optional[str]): Selected relative API endpoint.
+	    zip_code (Optional[str]): Latest five-digit ZIP code.
+	    latitude (Optional[float]): Latest search latitude.
+	    longitude (Optional[float]): Latest search longitude.
+	    date (Optional[str]): Latest forecast date string.
+	    distance (Optional[int]): Requested positive integer search distance.
+	    response (Optional[Response]): Latest HTTP response.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    url (Optional[str]): Latest request URL.
 	"""
 	base_url: Optional[ str ]
 	api_key: Optional[ str ]
@@ -16671,15 +16604,15 @@ class AirNow( Fetcher ):
 	result: Optional[ Dict[ str, Any ] ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the configured AirNow key and user-agent, configure the API base URL and JSON
+		    headers, initialize current-zip mode and empty observation state, and set a
+		    twenty-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.base_url = 'https://www.airnowapi.org/aq'
@@ -16700,14 +16633,13 @@ class AirNow( Fetcher ):
 		self.headers = { 'Accept': 'application/json', 'User-Agent': self.agents }
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'api_key', 'mode', 'params', 'payload', 'timeout', 'agents',
 				'endpoint', 'zip_code', 'latitude', 'longitude', 'date', 'distance', 'response',
@@ -16716,26 +16648,25 @@ class AirNow( Fetcher ):
 				'fetch_forecast_latlon', 'fetch', 'create_schema' ]
 	
 	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Request.
+		"""Execute an AirNow observation or forecast request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Validate endpoint, positive integer timeout and optional dictionary; omit None and blank
+		    strings, attach format and API_KEY, issue a GET request, and require a list of
+		    dictionaries.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
-		    params (Optional[Dict[str, Any]]): Params supplied by the caller and interpreted
-		    according to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    endpoint (str): Nonblank relative AirNow API endpoint path.
+		    params (Dict[str, Any] | None): Optional query parameter dictionary. Defaults to None.
+		    time (int): Positive integer HTTP request timeout in seconds; booleans are rejected.
+		        Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Endpoint URL, submitted parameters excluding API_KEY, and raw record
+		        list.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'endpoint', endpoint )
@@ -16783,23 +16714,20 @@ class AirNow( Fetcher ):
 			raise exception
 	
 	def shape_rows( self, records: List[ Dict[ str, Any ] ] ) -> List[ Dict[ str, Any ] ]:
-		"""Shape rows.
+		"""Shape AirNow observation or forecast records.
 
 		Purpose:
-		    Transforms provider rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Extract observed date and hour, reporting area, state, coordinates, pollutant, AQI,
+		    category name, action day, and discussion.
 
 		Args:
-		    records (List[Dict[str, Any]]): Records supplied by the caller and interpreted
-		    according to the method contract.
+		    records (List[Dict[str, Any]]): Decoded provider record dictionaries.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Display-oriented air-quality rows.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			rows: List[ Dict[ str, Any ] ] = [ ]
@@ -16831,22 +16759,20 @@ class AirNow( Fetcher ):
 			raise exception
 	
 	def summarize_rows( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Summarize rows.
+		"""Summarize air-quality rows.
 
 		Purpose:
-		    Computes a compact summary of rows so callers can inspect the response without
-		    traversing every record.
+		    Count rows, retain the first nonempty reporting area, and find the maximum convertible
+		    AQI with its associated pollutant and category.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Count, max_aqi, dominant_parameter, top_category, and reporting_area.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			count = len( rows or [ ] )
@@ -16883,19 +16809,18 @@ class AirNow( Fetcher ):
 			raise exception
 	
 	def package_response( self ) -> Dict[ str, Any ]:
-		"""Package response.
+		"""Package the latest AirNow records.
 
 		Purpose:
-		    Combines normalized records, summary metrics, and request metadata into the standard
-		    response payload.
+		    Extract raw records from the current result, shape and summarize them, and return
+		    request metadata without API_KEY.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, request parameters excluding API_KEY, AQI summary, shaped
+		        rows, and raw record list.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			records = self.result.get( 'raw', [ ] ) if isinstance( self.result, dict ) else [ ]
@@ -16917,25 +16842,25 @@ class AirNow( Fetcher ):
 			raise exception
 	
 	def fetch_current_zip( self, zip_code: str, distance: int=25, time: int=20 ) -> (Dict[ str, Any ] | None):
-		"""Fetch current zip.
+		"""Retrieve current observations by ZIP code.
 
 		Purpose:
-		    Retrieves current zip from the configured provider and returns normalized response
-		    data.
+		    Trim and validate the ZIP code, validate positive integer distance, request current
+		    observations, and package the records.
 
 		Args:
-		    zip_code (str): Code identifying the requested zip value.
-		    distance (int): Distance supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    zip_code (str): ZIP code containing exactly five digits after trimming whitespace.
+		    distance (int): Positive integer search distance passed to AirNow; booleans are
+		        rejected. Defaults to 25.
+		    time (int): Positive integer HTTP request timeout in seconds; booleans are rejected.
+		        Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, request parameters excluding API_KEY, AQI summary, shaped
+		        rows, and raw record list.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'zip_code', zip_code )
@@ -16966,26 +16891,27 @@ class AirNow( Fetcher ):
 			raise exception
 	
 	def fetch_current_latlon( self, latitude: float, longitude: float, distance: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch current latlon.
+		"""Retrieve current observations by coordinates.
 
 		Purpose:
-		    Retrieves current latlon from the configured provider and returns normalized response
-		    data.
+		    Validate finite geographic coordinates and positive integer distance, request current
+		    observations, and package the records.
 
 		Args:
-		    latitude (float): Geographic latitude expressed in decimal degrees.
-		    longitude (float): Geographic longitude expressed in decimal degrees.
-		    distance (int): Distance supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    latitude (float): Finite latitude from -90 through 90 degrees; booleans are rejected.
+		    longitude (float): Finite longitude from -180 through 180 degrees; booleans are
+		        rejected.
+		    distance (int): Positive integer search distance passed to AirNow; booleans are
+		        rejected. Defaults to 25.
+		    time (int): Positive integer HTTP request timeout in seconds; booleans are rejected.
+		        Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, request parameters excluding API_KEY, AQI summary, shaped
+		        rows, and raw record list.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'latitude', latitude )
@@ -17021,27 +16947,27 @@ class AirNow( Fetcher ):
 			raise exception
 	
 	def fetch_forecast_zip( self, zip_code: str, date: str, distance: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch forecast zip.
+		"""Retrieve forecasts by ZIP code.
 
 		Purpose:
-		    Retrieves forecast zip from the configured provider and returns normalized response
-		    data.
+		    Validate ZIP code and positive integer distance, trim the required forecast date,
+		    request forecasts, and package the records.
 
 		Args:
-		    zip_code (str): Code identifying the requested zip value.
-		    date (str): Date supplied by the caller and interpreted according to the method
-		    contract.
-		    distance (int): Distance supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    zip_code (str): ZIP code containing exactly five digits after trimming whitespace.
+		    date (str): Nonblank forecast date string, trimmed before submission; no calendar
+		        parsing is performed.
+		    distance (int): Positive integer search distance passed to AirNow; booleans are
+		        rejected. Defaults to 25.
+		    time (int): Positive integer HTTP request timeout in seconds; booleans are rejected.
+		        Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, request parameters excluding API_KEY, AQI summary, shaped
+		        rows, and raw record list.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'zip_code', zip_code )
@@ -17074,28 +17000,29 @@ class AirNow( Fetcher ):
 			raise exception
 	
 	def fetch_forecast_latlon( self, latitude: float, longitude: float, date: str, distance: int = 25, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch forecast latlon.
+		"""Retrieve forecasts by coordinates.
 
 		Purpose:
-		    Retrieves forecast latlon from the configured provider and returns normalized response
-		    data.
+		    Validate geographic coordinates and positive integer distance, trim the required
+		    forecast date, request forecasts, and package the records.
 
 		Args:
-		    latitude (float): Geographic latitude expressed in decimal degrees.
-		    longitude (float): Geographic longitude expressed in decimal degrees.
-		    date (str): Date supplied by the caller and interpreted according to the method
-		    contract.
-		    distance (int): Distance supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    latitude (float): Finite latitude from -90 through 90 degrees; booleans are rejected.
+		    longitude (float): Finite longitude from -180 through 180 degrees; booleans are
+		        rejected.
+		    date (str): Nonblank forecast date string, trimmed before submission; no calendar
+		        parsing is performed.
+		    distance (int): Positive integer search distance passed to AirNow; booleans are
+		        rejected. Defaults to 25.
+		    time (int): Positive integer HTTP request timeout in seconds; booleans are rejected.
+		        Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, request parameters excluding API_KEY, AQI summary, shaped
+		        rows, and raw record list.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'latitude', latitude )
@@ -17133,30 +17060,34 @@ class AirNow( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='current-zip', zip_code: str='', latitude: float | None = None, longitude: float | None = None, date: str='', distance: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch an AirNow retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Normalize the mode to lowercase and select current or forecast retrieval by ZIP code or
+		    coordinates.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    zip_code (str): Code identifying the requested zip value.
-		    latitude (float | None): Geographic latitude expressed in decimal degrees.
-		    longitude (float | None): Geographic longitude expressed in decimal degrees.
-		    date (str): Date supplied by the caller and interpreted according to the method
-		    contract.
-		    distance (int): Distance supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): current-zip, current-latlon, forecast-zip, or forecast-latlon. Defaults to
+		        'current-zip'.
+		    zip_code (str): ZIP code containing exactly five digits after trimming whitespace.
+		        Defaults to an empty string; required in ZIP modes.
+		    latitude (float | None): Finite latitude from -90 through 90 degrees; booleans are
+		        rejected. Defaults to None; required in coordinate modes.
+		    longitude (float | None): Finite longitude from -180 through 180 degrees; booleans are
+		        rejected. Defaults to None; required in coordinate modes.
+		    date (str): Nonblank forecast date string, trimmed before submission; no calendar
+		        parsing is performed. Defaults to an empty string; required in forecast modes.
+		    distance (int): Positive integer search distance passed to AirNow; booleans are
+		        rejected. Defaults to 25.
+		    time (int): Positive integer HTTP request timeout in seconds; booleans are rejected.
+		        Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, request parameters excluding API_KEY, AQI summary, shaped
+		        rows, and raw record list.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -17186,26 +17117,25 @@ class AirNow( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -17231,43 +17161,32 @@ class AirNow( Fetcher ):
 			raise exception
 
 class ClimateData( Fetcher ):
-	"""ClimateData component.
+	"""NOAA NCEI Access Services climate retrieval adapter.
 
 	Purpose:
-	    Retrieves NOAA climate datasets and observations with validated date ranges and pagination.
+	    Search NCEI datasets and retrieve climate data through separate search and data
+	    endpoints, validate time intervals and pagination, and shape decoded records.
 
 	Attributes:
-	    data_url (Optional[str]): URL associated with the current data resource or endpoint.
-	    search_url (Optional[str]): URL associated with the current search resource or endpoint.
-	    mode (Optional[str]): Current mode retained by the ClimateData workflow between related
-	    operations.
-	    keyword (Optional[str]): Current keyword retained by the ClimateData workflow between
-	    related operations.
-	    dataset (Optional[str]): Current dataset retained by the ClimateData workflow between
-	    related operations.
-	    start_date (Optional[str]): Current start date retained by the ClimateData workflow
-	    between related operations.
-	    end_date (Optional[str]): Current end date retained by the ClimateData workflow between
-	    related operations.
-	    stations (Optional[str]): Current stations retained by the ClimateData workflow between
-	    related operations.
-	    data_types (Optional[str]): Current data types retained by the ClimateData workflow
-	    between related operations.
-	    limit (Optional[int]): Current limit retained by the ClimateData workflow between related
-	    operations.
-	    offset (Optional[int]): Current offset retained by the ClimateData workflow between
-	    related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the ClimateData workflow between
-	    related operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
+	    data_url (Optional[str]): NCEI Access Data Service endpoint.
+	    search_url (Optional[str]): NCEI Access Search Service base URL.
+	    mode (Optional[str]): Selected retrieval operation.
+	    keyword (Optional[str]): Dataset search keyword.
+	    dataset (Optional[str]): Requested climate dataset identifier.
+	    start_date (Optional[str]): Latest lower date or datetime bound.
+	    end_date (Optional[str]): Latest upper date or datetime bound.
+	    stations (Optional[str]): Requested station selection.
+	    data_types (Optional[str]): Requested data-type selection.
+	    limit (Optional[int]): Requested record limit.
+	    offset (Optional[int]): Requested dataset-search offset.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    payload (Optional[Any]): Latest decoded JSON object or list.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest request URL.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	data_url: Optional[ str ]
 	search_url: Optional[ str ]
@@ -17286,15 +17205,14 @@ class ClimateData( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure NCEI search and data URLs, datasets mode, default limit of 25, zero offset,
+		    JSON headers, and twenty-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.data_url = 'https://www.ncei.noaa.gov/access/services/data/v1'
@@ -17318,14 +17236,13 @@ class ClimateData( Fetcher ):
 		self.headers = { 'Accept': 'application/json', 'User-Agent': self.agents }
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'data_url', 'search_url', 'mode', 'keyword', 'dataset', 'start_date', 'end_date',
 				'stations', 'data_types', 'limit', 'offset', 'params', 'payload', 'result',
@@ -17335,20 +17252,20 @@ class ClimateData( Fetcher ):
 				'fetch_datasets', 'fetch_data', 'fetch', 'create_schema' ]
 	
 	def validate_limit( self, limit: int ) -> int:
-		"""Validate limit.
+		"""Validate the record limit.
 
 		Purpose:
-		    Validates the limit against provider constraints and returns the accepted value.
+		    Require an integer from 1 through 500, excluding booleans.
 
 		Args:
-		    limit (int): Maximum number of records or characters permitted by the operation.
+		    limit (int): Integer record limit from 1 through 500; booleans are rejected.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted limit.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value is missing, invalid, or outside the accepted
+		        constraints.
 		"""
 		try:
 			
@@ -17369,20 +17286,20 @@ class ClimateData( Fetcher ):
 			raise exception
 	
 	def validate_offset( self, offset: int ) -> int:
-		"""Validate offset.
+		"""Validate the pagination offset.
 
 		Purpose:
-		    Validates the offset against provider constraints and returns the accepted value.
+		    Require an integer from 0 through 10000, excluding booleans.
 
 		Args:
-		    offset (int): Zero-based record offset used for pagination.
+		    offset (int): Integer offset from 0 through 10000; booleans are rejected.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted offset.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value is missing, invalid, or outside the accepted
+		        constraints.
 		"""
 		try:
 			
@@ -17403,21 +17320,22 @@ class ClimateData( Fetcher ):
 			raise exception
 	
 	def validate_date_range( self, start_date: str, end_date: str ) -> Tuple[ str, str ]:
-		"""Validate date range.
+		"""Validate a climate observation date range.
 
 		Purpose:
-		    Validates the date range against provider constraints and returns the accepted value.
+		    Trim both values, parse ISO 8601 dates or datetimes with Z/z interpreted as UTC, reject
+		    mixed timezone-aware and naive values, and require a nondecreasing interval.
 
 		Args:
-		    start_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
+		    start_date (str): ISO 8601 start date or datetime.
+		    end_date (str): ISO 8601 end date or datetime, no earlier than the start when both are
+		        supplied; both must consistently include or omit timezone information.
 
 		Returns:
-		    Tuple[str, str]: Ordered values or records produced by the operation.
+		    Tuple[str, str]: Trimmed original start and end date strings.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when dates are missing, invalid, incompatible, or reversed.
 		"""
 		try:
 			throw_if( 'start_date', start_date )
@@ -17444,22 +17362,21 @@ class ClimateData( Fetcher ):
 			raise exception
 	
 	def coalesce_records( self, payload: Any ) -> List[ Dict[ str, Any ] ]:
-		"""Coalesce records.
+		"""Extract dictionary records from a response.
 
 		Purpose:
-		    Coalesce records using the class state and returns data required by the surrounding
-		    workflow.
+		    Filter list payloads to dictionaries, select the first list under results, data, items,
+		    or records in a dictionary payload, or wrap a standalone dictionary. Return an empty
+		    list for other payloads.
 
 		Args:
-		    payload (Any): Validated request dictionary forwarded to the provider client.
+		    payload (Any): Decoded provider response.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Extracted dictionary records.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			if payload is None:
@@ -17488,23 +17405,20 @@ class ClimateData( Fetcher ):
 			raise exception
 	
 	def shape_dataset_rows( self, records: List[ Dict[ str, Any ] ] ) -> List[ Dict[ str, Any ] ]:
-		"""Shape dataset rows.
+		"""Shape climate dataset metadata.
 
 		Purpose:
-		    Transforms provider dataset rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Extract identifier, dataset, title, description, and date bounds using alternate
+		    provider field names.
 
 		Args:
-		    records (List[Dict[str, Any]]): Records supplied by the caller and interpreted
-		    according to the method contract.
+		    records (List[Dict[str, Any]]): Decoded provider record dictionaries.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Display-oriented climate dataset rows.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			rows: List[ Dict[ str, Any ] ] = [ ]
@@ -17529,23 +17443,20 @@ class ClimateData( Fetcher ):
 			raise exception
 	
 	def shape_data_rows( self, records: List[ Dict[ str, Any ] ] ) -> List[ Dict[ str, Any ] ]:
-		"""Shape data rows.
+		"""Shape climate data records.
 
 		Purpose:
-		    Transforms provider data rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Replace underscores in each field name with spaces, apply title case, and preserve the
+		    associated values.
 
 		Args:
-		    records (List[Dict[str, Any]]): Records supplied by the caller and interpreted
-		    according to the method contract.
+		    records (List[Dict[str, Any]]): Decoded provider record dictionaries.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Climate data dictionaries with display-oriented field names.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			rows: List[ Dict[ str, Any ] ] = [ ]
@@ -17569,22 +17480,20 @@ class ClimateData( Fetcher ):
 			raise exception
 	
 	def summarize_rows( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Summarize rows.
+		"""Summarize shaped climate records.
 
 		Purpose:
-		    Computes a compact summary of rows so callers can inspect the response without
-		    traversing every record.
+		    Count rows and derive the first title and dataset from the first row's available
+		    metadata fields.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Count, first_title, and first_dataset.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			count = len( rows or [ ] )
@@ -17610,22 +17519,21 @@ class ClimateData( Fetcher ):
 			raise exception
 	
 	def package_response( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Package response.
+		"""Package shaped provider records.
 
 		Purpose:
-		    Combines normalized records, summary metrics, and request metadata into the standard
-		    response payload.
+		    Combine the retained operation and request metadata with row summary statistics, shaped
+		    rows, and the raw response.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.result = { 'mode': self.mode, 'url': self.url, 'params': self.params,
@@ -17641,25 +17549,24 @@ class ClimateData( Fetcher ):
 			raise exception
 	
 	def request( self, url: str, params: Dict[ str, Any ], time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Request.
+		"""Execute an NCEI Access Services request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Validate URL, parameter dictionary and positive integer timeout, omit None and blank
+		    strings, issue a GET request, require a JSON list or object, and reject provider error
+		    fields.
 
 		Args:
-		    url (str): Absolute endpoint or resource URL.
-		    params (Dict[str, Any]): Params supplied by the caller and interpreted according to
-		    the method contract.
-		    time (int): Maximum request duration in seconds.
+		    url (str): Nonblank request URL.
+		    params (Dict[str, Any]): Request parameter dictionary.
+		    time (int): Positive integer HTTP request timeout in seconds; booleans are rejected.
+		        Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Endpoint URL, submitted parameters, and raw decoded response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'url', url )
@@ -17710,27 +17617,30 @@ class ClimateData( Fetcher ):
 			raise exception
 	
 	def fetch_datasets( self, keyword: str='', start_date: str='', end_date: str='', limit: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch datasets.
+		"""Search NCEI climate datasets.
 
 		Purpose:
-		    Retrieves datasets from the configured provider and returns normalized response data.
+		    Validate integer paging and optional ISO date filters, query the datasets search path
+		    with keyword and date parameters, and package shaped metadata.
 
 		Args:
-		    keyword (str): Keyword supplied by the caller and interpreted according to the method
-		    contract.
-		    start_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    offset (int): Zero-based record offset used for pagination.
-		    time (int): Maximum request duration in seconds.
+		    keyword (str): Optional dataset-search keyword. Defaults to an empty string.
+		    start_date (str): ISO 8601 start date or datetime. Defaults to an empty string.
+		    end_date (str): ISO 8601 end date or datetime, no earlier than the start when both are
+		        supplied; both must consistently include or omit timezone information. Defaults to
+		        an empty string.
+		    limit (int): Integer record limit from 1 through 500; booleans are rejected. Defaults to
+		        25.
+		    offset (int): Integer offset from 0 through 10000; booleans are rejected. Defaults to 0.
+		    time (int): Positive integer HTTP request timeout in seconds; booleans are rejected.
+		        Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'limit', limit )
@@ -17772,30 +17682,30 @@ class ClimateData( Fetcher ):
 			raise exception
 	
 	def fetch_data( self, dataset: str, start_date: str, end_date: str, stations: str='', data_types: str='', limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch data.
+		"""Retrieve NCEI climate observations.
 
 		Purpose:
-		    Retrieves data from the configured provider and returns normalized response data.
+		    Validate dataset and required date range, attach optional station and data-type
+		    selectors and limit, request JSON, and package shaped data.
 
 		Args:
-		    dataset (str): Dataset supplied by the caller and interpreted according to the method
-		    contract.
-		    start_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
-		    stations (str): Stations supplied by the caller and interpreted according to the
-		    method contract.
-		    data_types (str): Data types supplied by the caller and interpreted according to the
-		    method contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    time (int): Maximum request duration in seconds.
+		    dataset (str): Nonblank dataset identifier.
+		    start_date (str): ISO 8601 start date or datetime.
+		    end_date (str): ISO 8601 end date or datetime, no earlier than the start when both are
+		        supplied; both must consistently include or omit timezone information.
+		    stations (str): Optional provider station selection. Defaults to an empty string.
+		    data_types (str): Optional provider data-type selection. Defaults to an empty string.
+		    limit (int): Integer record limit from 1 through 500; booleans are rejected. Defaults to
+		        25.
+		    time (int): Positive integer HTTP request timeout in seconds; booleans are rejected.
+		        Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'dataset', dataset )
@@ -17832,35 +17742,36 @@ class ClimateData( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='datasets', keyword: str='', dataset: str='', start_date: str = '', end_date: str='', stations: str='', data_types: str='', limit: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch an NCEI retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Normalize mode and select datasets search or data retrieval; offset applies only to
+		    dataset search.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    keyword (str): Keyword supplied by the caller and interpreted according to the method
-		    contract.
-		    dataset (str): Dataset supplied by the caller and interpreted according to the method
-		    contract.
-		    start_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
-		    stations (str): Stations supplied by the caller and interpreted according to the
-		    method contract.
-		    data_types (str): Data types supplied by the caller and interpreted according to the
-		    method contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    offset (int): Zero-based record offset used for pagination.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): datasets or data. Defaults to 'datasets'.
+		    keyword (str): Optional dataset-search keyword. Defaults to an empty string.
+		    dataset (str): Nonblank dataset identifier. Defaults to an empty string; required in
+		        data mode.
+		    start_date (str): ISO 8601 start date or datetime. Defaults to an empty string. Required
+		        in data mode.
+		    end_date (str): ISO 8601 end date or datetime, no earlier than the start when both are
+		        supplied; both must consistently include or omit timezone information. Defaults to
+		        an empty string. Required in data mode.
+		    stations (str): Optional provider station selection. Defaults to an empty string.
+		    data_types (str): Optional provider data-type selection. Defaults to an empty string.
+		    limit (int): Integer record limit from 1 through 500; booleans are rejected. Defaults to
+		        25.
+		    offset (int): Integer offset from 0 through 10000; booleans are rejected. Defaults to 0.
+		    time (int): Positive integer HTTP request timeout in seconds; booleans are rejected.
+		        Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -17886,26 +17797,25 @@ class ClimateData( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -17934,45 +17844,32 @@ class ClimateData( Fetcher ):
 			raise exception
 
 class EoNet( Fetcher ):
-	"""Queries NASA EONET natural-event and category endpoints.
+	"""NASA EONET natural-event and category adapter.
 
 	Purpose:
-	    Queries NASA EONET natural-event and category endpoints with status, date,
-	    and bounding-box filters.
+	    Retrieve NASA EONET v3 event and category records using optional source, category,
+	    status, date and bounding-box filters, then shape and summarize records.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    mode (Optional[str]): Current mode retained by the EoNet workflow between related
-	    operations.
-	    endpoint (Optional[str]): Current endpoint retained by the EoNet workflow between related
-	    operations.
-	    source (Optional[str]): Current source retained by the EoNet workflow between related
-	    operations.
-	    category (Optional[str]): Current category retained by the EoNet workflow between related
-	    operations.
-	    status (Optional[str]): Current status retained by the EoNet workflow between related
-	    operations.
-	    limit (Optional[int]): Current limit retained by the EoNet workflow between related
-	    operations.
-	    days (Optional[int]): Current days retained by the EoNet workflow between related
-	    operations.
-	    start_date (Optional[str]): Current start date retained by the EoNet workflow between
-related operations.
-	    end_date (Optional[str]): Current end date retained by the EoNet workflow between related
-	    operations.
-	    bbox (Optional[str]): Current bbox retained by the EoNet workflow between related
-	    operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Any]): Current payload retained by the EoNet workflow between related
-	    operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Any): HTTP headers sent with the current request.
+	    base_url (Optional[str]): Base provider API URL.
+	    mode (Optional[str]): Selected retrieval operation.
+	    endpoint (Optional[str]): Selected relative API endpoint.
+	    source (Optional[str]): Requested event source filter.
+	    category (Optional[str]): Requested event category filter.
+	    status (Optional[str]): Requested normalized event status.
+	    limit (Optional[int]): Requested event limit.
+	    days (Optional[int]): Requested lookback period in days.
+	    start_date (Optional[str]): Optional event start date.
+	    end_date (Optional[str]): Optional event end date.
+	    bbox (Optional[str]): Normalized bounding-box string in EONET coordinate order.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    payload (Optional[Any]): Latest decoded EONET JSON object.
+	    result (Optional[Dict[str, Any]]): Latest packaged provider response.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest request URL.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
 	"""
 	base_url: Optional[ str ]
 	mode: Optional[ str ]
@@ -17991,15 +17888,14 @@ related operations.
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure the EONET v3 base URL, events mode, open status, default limit of 25,
+		    thirty-day lookback, JSON headers, and twenty-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.base_url = 'https://eonet.gsfc.nasa.gov/api/v3'
@@ -18023,14 +17919,13 @@ related operations.
 		self.headers = { 'Accept': 'application/json', 'User-Agent': self.agents }
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'mode', 'endpoint', 'source', 'category', 'status', 'limit', 'days',
 				'start_date', 'end_date', 'bbox', 'params', 'payload', 'result', 'response', 'url',
@@ -18040,21 +17935,20 @@ related operations.
 				'request', 'fetch_events', 'fetch_categories', 'fetch', 'create_schema' ]
 	
 	def validate_endpoint( self, endpoint: str ) -> str:
-		"""Validate endpoint.
+		"""Validate an EONET endpoint.
 
 		Purpose:
-		    Validates the endpoint against provider constraints and returns the accepted value.
+		    Trim and lowercase the endpoint, then accept only events or categories.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
+		    endpoint (str): events or categories.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted endpoint.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value is missing, invalid, or outside the accepted
+		        constraints.
 		"""
 		try:
 			throw_if( 'endpoint', endpoint )
@@ -18076,21 +17970,20 @@ related operations.
 			raise exception
 	
 	def validate_status( self, status: str ) -> str:
-		"""Validate status.
+		"""Validate an event status.
 
 		Purpose:
-		    Validates the status against provider constraints and returns the accepted value.
+		    Trim and lowercase the status, then accept open, closed, or all.
 
 		Args:
-		    status (str): Status supplied by the caller and interpreted according to the method
-		    contract.
+		    status (str): open, closed, or all; trimmed and converted to lowercase.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized accepted status.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value is missing, invalid, or outside the accepted
+		        constraints.
 		"""
 		try:
 			throw_if( 'status', status )
@@ -18112,20 +18005,20 @@ related operations.
 			raise exception
 	
 	def validate_limit( self, limit: int ) -> int:
-		"""Validate limit.
+		"""Validate the event limit.
 
 		Purpose:
-		    Validates the limit against provider constraints and returns the accepted value.
+		    Require an integer from 1 through 500, excluding booleans.
 
 		Args:
-		    limit (int): Maximum number of records or characters permitted by the operation.
+		    limit (int): Integer record limit from 1 through 500; booleans are rejected.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted limit.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value is missing, invalid, or outside the accepted
+		        constraints.
 		"""
 		try:
 			
@@ -18146,21 +18039,20 @@ related operations.
 			raise exception
 	
 	def validate_days( self, days: int ) -> int:
-		"""Validate days.
+		"""Validate the event lookback period.
 
 		Purpose:
-		    Validates the days against provider constraints and returns the accepted value.
+		    Require an integer from 1 through 3650, excluding booleans.
 
 		Args:
-		    days (int): Days supplied by the caller and interpreted according to the method
-		    contract.
+		    days (int): Integer lookback period from 1 through 3650; booleans are rejected.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted lookback period.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the supplied value is missing, invalid, or outside the accepted
+		        constraints.
 		"""
 		try:
 			throw_if( 'days', days )
@@ -18180,21 +18072,22 @@ related operations.
 			raise exception
 	
 	def validate_bbox( self, bbox: str ) -> str:
-		"""Validate bbox.
+		"""Validate and serialize EONET bounding coordinates.
 
 		Purpose:
-		    Validates the bbox against provider constraints and returns the accepted value.
+		    Allow empty bounds; otherwise parse four finite values in EONET coordinate order,
+		    enforce geographic ranges and strict axis ordering, and serialize the numeric values.
 
 		Args:
-		    bbox (str): Bbox supplied by the caller and interpreted according to the method
-		    contract.
+		    bbox (str): Optional comma-separated min_lon,max_lat,max_lon,min_lat bounds; finite
+		        longitude within -180 through 180 and latitude within -90 through 90, with strictly
+		        increasing west-to-east and south-to-north bounds.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Comma-separated floating-point bounds in EONET order, or an empty string.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when bounding coordinates cannot be parsed or violate constraints.
 		"""
 		try:
 			value = ( bbox or '' ).strip( )
@@ -18241,21 +18134,23 @@ related operations.
 			raise exception
 	
 	def validate_date_pair( self, start_date: str='', end_date: str='' ) -> Tuple[ str, str ]:
-		"""Validate date pair.
+		"""Validate optional EONET date bounds.
 
 		Purpose:
-		    Validates the date pair against provider constraints and returns the accepted value.
+		    Trim both dates, require both or neither, parse nonempty dates using YYYY-MM-DD, and
+		    reject reversed intervals.
 
 		Args:
-		    start_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
+		    start_date (str): Optional start date parsed with YYYY-MM-DD; supply with end_date.
+		        Defaults to an empty string.
+		    end_date (str): Optional end date parsed with YYYY-MM-DD, on or after start_date.
+		        Defaults to an empty string.
 
 		Returns:
-		    Tuple[str, str]: Ordered values or records produced by the operation.
+		    Tuple[str, str]: Trimmed start and end values, both empty when omitted.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when dates are incomplete, invalid, or reversed.
 		"""
 		try:
 			start_value = ( start_date or '' ).strip( )
@@ -18285,23 +18180,21 @@ related operations.
 			raise exception
 	
 	def shape_event_rows( self, records: List[ Dict[ str, Any ] ] ) -> List[ Dict[ str, Any ] ]:
-		"""Shape event rows.
+		"""Shape EONET natural-event records.
 
 		Purpose:
-		    Transforms provider event rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Extract event metadata and derive status from the closed date. Use the last geometry
+		    list entry and extract coordinates only for point geometry.
 
 		Args:
-		    records (List[Dict[str, Any]]): Records supplied by the caller and interpreted
-		    according to the method contract.
+		    records (List[Dict[str, Any]]): Decoded provider record dictionaries.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Event IDs, titles, status, closed dates, categories, sources,
+		        geometry counts and metadata, point coordinates, links, and descriptions.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			rows: List[ Dict[ str, Any ] ] = [ ]
@@ -18351,23 +18244,19 @@ related operations.
 			raise exception
 	
 	def shape_category_rows( self, records: List[ Dict[ str, Any ] ] ) -> List[ Dict[ str, Any ] ]:
-		"""Shape category rows.
+		"""Shape EONET category records.
 
 		Purpose:
-		    Transforms provider category rows into stable row dictionaries suitable for tables,
-		    serialization, and analysis.
+		    Extract category identifier, title, description, and link.
 
 		Args:
-		    records (List[Dict[str, Any]]): Records supplied by the caller and interpreted
-		    according to the method contract.
+		    records (List[Dict[str, Any]]): Decoded provider record dictionaries.
 
 		Returns:
-		    List[Dict[str, Any]]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    List[Dict[str, Any]]: Display-oriented category metadata rows.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			rows: List[ Dict[ str, Any ] ] = [ ]
@@ -18388,22 +18277,19 @@ related operations.
 			raise exception
 	
 	def summarize_rows( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Summarize rows.
+		"""Summarize shaped EONET records.
 
 		Purpose:
-		    Computes a compact summary of rows so callers can inspect the response without
-		    traversing every record.
+		    Count rows, count rows with open status, and retain the first title and categories.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Count, open_count, first_title, and first_categories.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			count = len( rows or [ ] )
@@ -18431,22 +18317,21 @@ related operations.
 			raise exception
 	
 	def package_response( self, rows: List[ Dict[ str, Any ] ] ) -> Dict[ str, Any ]:
-		"""Package response.
+		"""Package shaped provider records.
 
 		Purpose:
-		    Combines normalized records, summary metrics, and request metadata into the standard
-		    response payload.
+		    Combine the retained operation and request metadata with row summary statistics, shaped
+		    rows, and the raw response.
 
 		Args:
-		    rows (List[Dict[str, Any]]): Maximum number of records requested from the provider.
+		    rows (List[Dict[str, Any]]): Shaped row dictionaries.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.result = { 'mode': self.mode, 'url': self.url, 'params': self.params,
@@ -18463,26 +18348,24 @@ related operations.
 			raise exception
 	
 	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Request.
+		"""Execute an EONET API request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Validate endpoint, optional parameter dictionary and positive integer timeout; omit None
+		    and blank strings, issue a GET request, reject provider errors, and require the
+		    endpoint-specific list of dictionaries.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
-		    params (Optional[Dict[str, Any]]): Params supplied by the caller and interpreted
-		    according to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    endpoint (str): events or categories.
+		    params (Dict[str, Any] | None): Optional query parameter dictionary. Defaults to None.
+		    time (int): Positive integer HTTP request timeout in seconds; booleans are rejected.
+		        Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Endpoint URL, submitted parameters, and raw decoded response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'endpoint', endpoint )
@@ -18532,34 +18415,38 @@ related operations.
 			raise exception
 	
 	def fetch_events( self, source: str='', category: str='', status: str='open', limit: int = 25, days: int=30, start_date: str='', end_date: str='', bbox: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch events.
+		"""Retrieve EONET natural events.
 
 		Purpose:
-		    Retrieves events from the configured provider and returns normalized response data.
+		    Validate status, integer limit and lookback, optional date pair and bounding box, submit
+		    event filters including days even when explicit dates are supplied, and package shaped
+		    events.
 
 		Args:
-		    source (str): Source supplied by the caller and interpreted according to the method
-		    contract.
-		    category (str): Category supplied by the caller and interpreted according to the
-		    method contract.
-		    status (str): Status supplied by the caller and interpreted according to the method
-		    contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    days (int): Days supplied by the caller and interpreted according to the method
-		    contract.
-		    start_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
-		    bbox (str): Bbox supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    source (str): Optional event source filter. Defaults to an empty string.
+		    category (str): Optional event category filter. Defaults to an empty string.
+		    status (str): open, closed, or all; trimmed and converted to lowercase. Defaults to
+		        'open'.
+		    limit (int): Integer record limit from 1 through 500; booleans are rejected. Defaults to
+		        25.
+		    days (int): Integer lookback period from 1 through 3650; booleans are rejected. Defaults
+		        to 30.
+		    start_date (str): Optional start date parsed with YYYY-MM-DD; supply with end_date.
+		        Defaults to an empty string.
+		    end_date (str): Optional end date parsed with YYYY-MM-DD, on or after start_date.
+		        Defaults to an empty string.
+		    bbox (str): Optional comma-separated min_lon,max_lat,max_lon,min_lat bounds; finite
+		        longitude within -180 through 180 and latitude within -90 through 90, with strictly
+		        increasing west-to-east and south-to-north bounds. Defaults to an empty string.
+		    time (int): Positive integer HTTP request timeout in seconds; booleans are rejected.
+		        Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'status', status )
@@ -18599,21 +18486,21 @@ related operations.
 			raise exception
 	
 	def fetch_categories( self, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch categories.
+		"""Retrieve EONET event categories.
 
 		Purpose:
-		    Retrieves categories from the configured provider and returns normalized response data.
+		    Request the categories endpoint without filters and package shaped category metadata.
 
 		Args:
-		    time (int): Maximum request duration in seconds.
+		    time (int): Positive integer HTTP request timeout in seconds; booleans are rejected.
+		        Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 
@@ -18640,36 +18527,38 @@ related operations.
 			raise exception
 	
 	def fetch( self, mode: str='events', source: str='', category: str='', status: str = 'open', limit: int=25, days: int=30, start_date: str='', end_date: str='', bbox: str = '', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch an EONET retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Normalize mode and select events or categories retrieval, forwarding applicable event
+		    filters.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    source (str): Source supplied by the caller and interpreted according to the method
-		    contract.
-		    category (str): Category supplied by the caller and interpreted according to the
-		    method contract.
-		    status (str): Status supplied by the caller and interpreted according to the method
-		    contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    days (int): Days supplied by the caller and interpreted according to the method
-		    contract.
-		    start_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
-		    bbox (str): Bbox supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): events or categories. Defaults to 'events'.
+		    source (str): Optional event source filter. Defaults to an empty string.
+		    category (str): Optional event category filter. Defaults to an empty string.
+		    status (str): open, closed, or all; trimmed and converted to lowercase. Defaults to
+		        'open'.
+		    limit (int): Integer record limit from 1 through 500; booleans are rejected. Defaults to
+		        25.
+		    days (int): Integer lookback period from 1 through 3650; booleans are rejected. Defaults
+		        to 30.
+		    start_date (str): Optional start date parsed with YYYY-MM-DD; supply with end_date.
+		        Defaults to an empty string.
+		    end_date (str): Optional end date parsed with YYYY-MM-DD, on or after start_date.
+		        Defaults to an empty string.
+		    bbox (str): Optional comma-separated min_lon,max_lat,max_lon,min_lat bounds; finite
+		        longitude within -180 through 180 and latitude within -90 through 90, with strictly
+		        increasing west-to-east and south-to-north bounds. Defaults to an empty string.
+		    time (int): Positive integer HTTP request timeout in seconds; booleans are rejected.
+		        Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters, summary, shaped rows, and raw
+		        provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -18695,26 +18584,25 @@ related operations.
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
