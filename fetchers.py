@@ -8182,53 +8182,37 @@ class StarChart( Fetcher ):
 			raise exception
 
 class Congress( Fetcher ):
-	"""Congress component.
+	"""Congress.gov legislative data adapter.
 
 	Purpose:
-	    Wraps Congress.gov endpoints for congresses, bills, laws, and committee reports with
-	    normalized request parameters.
+	    Retrieve Congress records, bills, laws, and committee reports through the Congress.gov v3
+	    API, with pagination, type filters, and individual record identifiers.
 
 	Attributes:
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    payload (Optional[Dict[str, Any]]): Current payload retained by the Congress workflow
-	    between related operations.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result produced by the
-	    instance.
-	    mode (Optional[str]): Current mode retained by the Congress workflow between related
-	    operations.
-	    congress_number (Optional[int]): Current congress number retained by the Congress workflow
-	    between related operations.
-	    bill_type (Optional[str]): Current bill type retained by the Congress workflow between
-	    related operations.
-	    bill_number (Optional[int]): Current bill number retained by the Congress workflow between
-	    related operations.
-	    law_type (Optional[str]): Current law type retained by the Congress workflow between
-	    related operations.
-	    law_number (Optional[int]): Current law number retained by the Congress workflow between
-	    related operations.
-	    report_type (Optional[str]): Current report type retained by the Congress workflow between
-	    related operations.
-	    report_number (Optional[int]): Current report number retained by the Congress workflow
-	    between related operations.
-	    offset (Optional[int]): Current offset retained by the Congress workflow between related
-	    operations.
-	    limit (Optional[int]): Current limit retained by the Congress workflow between related
-	    operations.
-	    sort (Optional[str]): Current sort retained by the Congress workflow between related
-	    operations.
-	    from_date_time (Optional[str]): Current from date time retained by the Congress workflow
-	    between related operations.
-	    to_date_time (Optional[str]): Current to date time retained by the Congress workflow
-	    between related operations.
-	    conference (Optional[bool]): Current conference retained by the Congress workflow between
-	    related operations.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    response (Any): Most recent raw response returned by the provider client.
-	    headers (Any): HTTP headers sent with the current request.
+	    api_key (Optional[str]): Congress.gov API key loaded from configuration.
+	    base_url (Optional[str]): Base provider API URL.
+	    url (Optional[str]): Latest endpoint URL or client operation identifier.
+	    params (Optional[Dict[str, Any]]): Latest request parameters, including the API key.
+	    payload (Optional[Dict[str, Any]]): Latest decoded provider response.
+	    result (Optional[Dict[str, Any]]): Latest packaged response.
+	    mode (Optional[str]): Selected retrieval operation.
+	    congress_number (Optional[int]): Selected Congress number.
+	    bill_type (Optional[str]): Selected bill or resolution type.
+	    bill_number (Optional[int]): Selected bill or resolution number.
+	    law_type (Optional[str]): Selected public or private law type.
+	    law_number (Optional[int]): Selected law number.
+	    report_type (Optional[str]): Selected committee report type.
+	    report_number (Optional[int]): Selected committee report number.
+	    offset (Optional[int]): Requested nonnegative pagination offset.
+	    limit (Optional[int]): Requested page size.
+	    sort (Optional[str]): Provider sort expression.
+	    from_date_time (Optional[str]): Lower bill update-date-time filter.
+	    to_date_time (Optional[str]): Upper bill update-date-time filter.
+	    conference (Optional[bool]): Conference-report filter.
+	    response (Optional[Response]): Latest HTTP response.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
 	"""
 	api_key: Optional[ str ]
 	base_url: Optional[ str ]
@@ -8253,15 +8237,14 @@ class Congress( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the configured Congress.gov API key and user-agent; initialize the v3 endpoint,
+		    JSON headers, congresses mode, and pagination and sorting defaults.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.api_key = cfg.CONGRESS_API_KEY
@@ -8289,14 +8272,13 @@ class Congress( Fetcher ):
 		self.agents = cfg.AGENTS
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'api_key', 'base_url', 'url', 'params', 'payload', 'result', 'mode',
 				'congress_number', 'bill_type', 'bill_number', 'law_type', 'law_number',
@@ -8308,20 +8290,19 @@ class Congress( Fetcher ):
 				'fetch_report', 'fetch', 'create_schema' ]
 	
 	def validate_limit( self, limit: int ) -> int:
-		"""Validate limit.
+		"""Validate the requested record limit.
 
 		Purpose:
-		    Validates the limit against provider constraints and returns the accepted value.
+		    Enforce the inclusive range from 1 through 250.
 
 		Args:
-		    limit (int): Maximum number of records or characters permitted by the operation.
+		    limit (int): Requested record limit from 1 through 250.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted limit.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the limit is missing or outside the range.
 		"""
 		try:
 			
@@ -8342,20 +8323,19 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def validate_offset( self, offset: int ) -> int:
-		"""Validate offset.
+		"""Validate the pagination offset.
 
 		Purpose:
-		    Validates the offset against provider constraints and returns the accepted value.
+		    Reject missing or negative offsets.
 
 		Args:
-		    offset (int): Zero-based record offset used for pagination.
+		    offset (int): Nonnegative result offset.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted offset.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the offset is missing or negative.
 		"""
 		try:
 			
@@ -8376,22 +8356,20 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def normalize_bill_type( self, bill_type: str ) -> str:
-		"""Normalize bill type.
+		"""Validate a bill type.
 
 		Purpose:
-		    Normalizes bill type into the canonical representation expected by the surrounding
-		    workflow.
+		    Accept only supported lowercase bill and resolution type codes without changing their
+		    values.
 
 		Args:
-		    bill_type (str): Bill type supplied by the caller and interpreted according to the
-		    method contract.
+		    bill_type (str): Bill type: hr, s, hjres, sjres, hconres, sconres, hres, or sres.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Original accepted bill type.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the type is missing or unsupported.
 		"""
 		try:
 			throw_if( 'bill_type', bill_type )
@@ -8414,22 +8392,19 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def normalize_law_type( self, law_type: str ) -> str:
-		"""Normalize law type.
+		"""Validate a law type.
 
 		Purpose:
-		    Normalizes law type into the canonical representation expected by the surrounding
-		    workflow.
+		    Accept only pub or priv without changing the supplied value.
 
 		Args:
-		    law_type (str): Law type supplied by the caller and interpreted according to the
-		    method contract.
+		    law_type (str): Law type: pub or priv.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Original accepted law type.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the type is missing or unsupported.
 		"""
 		try:
 			throw_if( 'law_type', law_type )
@@ -8451,22 +8426,19 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def normalize_report_type( self, report_type: str ) -> str:
-		"""Normalize report type.
+		"""Validate a committee report type.
 
 		Purpose:
-		    Normalizes report type into the canonical representation expected by the surrounding
-		    workflow.
+		    Accept only hrpt, srpt, or erpt without changing the supplied value.
 
 		Args:
-		    report_type (str): Report type supplied by the caller and interpreted according to the
-		    method contract.
+		    report_type (str): Report type: hrpt, srpt, or erpt.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Original accepted report type.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the type is missing or unsupported.
 		"""
 		try:
 			throw_if( 'report_type', report_type )
@@ -8488,24 +8460,22 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def build_params( self, limit: int=20, offset: int=0, sort: str='updateDate+desc' ) -> Dict[ str, Any ]:
-		"""Build params.
+		"""Construct common list-request parameters.
 
 		Purpose:
-		    Constructs the params payload required by the downstream provider or loader.
+		    Validate and retain paging and sorting values, then return the API key, JSON format,
+		    limit, offset, and sort parameters.
 
 		Args:
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    offset (int): Zero-based record offset used for pagination.
-		    sort (str): Sort supplied by the caller and interpreted according to the method
-		    contract.
+		    limit (int): Requested record count from 1 through 250. Defaults to 20.
+		    offset (int): Nonnegative result offset. Defaults to 0.
+		    sort (str): Nonblank provider sort expression. Defaults to 'updateDate+desc'.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		                                                                                      metadata, or generated schema content.
+		    Dict[str, Any]: Common request parameters, including the API key.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when pagination or sort validation fails.
 		"""
 		try:
 			
@@ -8526,26 +8496,25 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def request( self, mode: str, url: str, params: Dict[ str, Any ], time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Request.
+		"""Execute a Congress.gov request.
 
 		Purpose:
-		    Executes the provider request with the instance parameters and returns the decoded
-		    response payload.
+		    Retain the operation, URL, timeout and parameters; send a GET request, check HTTP
+		    status, and package the decoded JSON response.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    url (str): Absolute endpoint or resource URL.
-		    params (Dict[str, Any]): Params supplied by the caller and interpreted according to
-		    the method contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): Nonblank operation label.
+		    url (str): Nonblank endpoint URL.
+		    params (Dict[str, Any]): Nonempty request parameter dictionary.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters (including the API key), and
+		        decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -8577,23 +8546,24 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def fetch_congresses( self, limit: int=20, offset: int=0, time: int=20 ) -> (Dict[ str, Any ] | None):
-		"""Fetch congresses.
+		"""Retrieve Congress records.
 
 		Purpose:
-		    Retrieves congresses from the configured provider and returns normalized response data.
+		    Build the congress endpoint with common list parameters and descending update-date
+		    sorting.
 
 		Args:
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    offset (int): Zero-based record offset used for pagination.
-		    time (int): Maximum request duration in seconds.
+		    limit (int): Requested record count from 1 through 250. Defaults to 20.
+		    offset (int): Nonnegative result offset. Defaults to 0.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters (including the API key), and
+		        decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			self.url = f'{self.base_url}/congress'
@@ -8613,33 +8583,32 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def fetch_bills( self, congress: int, bill_type: str='', offset: int=0, limit: int=20, sort: str='updateDate+desc', from_date_time: str='', to_date_time: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch bills.
+		"""Retrieve bills for a Congress.
 
 		Purpose:
-		    Retrieves bills from the configured provider and returns normalized response data.
+		    Build the Congress-specific bill endpoint, optionally restrict bill type, and attach
+		    paging, sort, and nonblank update-date-time filters.
 
 		Args:
-		    congress (int): Congress supplied by the caller and interpreted according to the
-		    method contract.
-		    bill_type (str): Bill type supplied by the caller and interpreted according to the
-		    method contract.
-		    offset (int): Zero-based record offset used for pagination.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    sort (str): Sort supplied by the caller and interpreted according to the method
-		    contract.
-		    from_date_time (str): From date time supplied by the caller and interpreted according
-		    to the method contract.
-		    to_date_time (str): To date time supplied by the caller and interpreted according to
-		    the method contract.
-		    time (int): Maximum request duration in seconds.
+		    congress (int): Congress number used in the endpoint path.
+		    bill_type (str): Bill type: hr, s, hjres, sjres, hconres, sconres, hres, or sres.
+		        Defaults to an empty string for all types.
+		    offset (int): Nonnegative result offset. Defaults to 0.
+		    limit (int): Requested record count from 1 through 250. Defaults to 20.
+		    sort (str): Nonblank provider sort expression. Defaults to 'updateDate+desc'.
+		    from_date_time (str): Optional lower update-date-time filter passed to the provider.
+		        Defaults to an empty string.
+		    to_date_time (str): Optional upper update-date-time filter passed to the provider.
+		        Defaults to an empty string.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters (including the API key), and
+		        decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'congress', congress )
@@ -8674,27 +8643,25 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def fetch_bill( self, congress: int, bill_type: str, bill_number: int, time: int=20 ) -> ( Dict[ str, Any ] | None):
-		"""Fetch bill.
+		"""Retrieve an individual bill.
 
 		Purpose:
-		    Retrieves bill from the configured provider and returns normalized response data.
+		    Validate the bill type and construct the endpoint for the supplied Congress and bill
+		    number.
 
 		Args:
-		    congress (int): Congress supplied by the caller and interpreted according to the
-		    method contract.
-		    bill_type (str): Bill type supplied by the caller and interpreted according to the
-		    method contract.
-		    bill_number (int): Bill number supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    congress (int): Congress number used in the endpoint path.
+		    bill_type (str): Bill type: hr, s, hjres, sjres, hconres, sconres, hres, or sres.
+		    bill_number (int): Bill or resolution number.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters (including the API key), and
+		        decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'congress', congress )
@@ -8722,27 +8689,26 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def fetch_laws( self, congress: int, law_type: str='', offset: int=0, limit: int=20, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch laws.
+		"""Retrieve laws for a Congress.
 
 		Purpose:
-		    Retrieves laws from the configured provider and returns normalized response data.
+		    Build the law collection endpoint, optionally restrict law type, and attach common list
+		    parameters.
 
 		Args:
-		    congress (int): Congress supplied by the caller and interpreted according to the
-		    method contract.
-		    law_type (str): Law type supplied by the caller and interpreted according to the
-		    method contract.
-		    offset (int): Zero-based record offset used for pagination.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    time (int): Maximum request duration in seconds.
+		    congress (int): Congress number used in the endpoint path.
+		    law_type (str): Law type: pub or priv. Defaults to an empty string for all types.
+		    offset (int): Nonnegative result offset. Defaults to 0.
+		    limit (int): Requested record count from 1 through 250. Defaults to 20.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters (including the API key), and
+		        decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'congress', congress )
@@ -8772,27 +8738,25 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def fetch_law( self, congress: int, law_type: str, law_number: int, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch law.
+		"""Retrieve an individual law.
 
 		Purpose:
-		    Retrieves law from the configured provider and returns normalized response data.
+		    Validate the law type and construct the endpoint for the supplied Congress and law
+		    number.
 
 		Args:
-		    congress (int): Congress supplied by the caller and interpreted according to the
-		    method contract.
-		    law_type (str): Law type supplied by the caller and interpreted according to the
-		    method contract.
-		    law_number (int): Law number supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    congress (int): Congress number used in the endpoint path.
+		    law_type (str): Law type: pub or priv.
+		    law_number (int): Law number.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters (including the API key), and
+		        decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'congress', congress )
@@ -8820,28 +8784,28 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def fetch_reports( self, congress: int, report_type: str='', offset: int=0, limit: int = 20, conference: bool=False, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch reports.
+		"""Retrieve committee reports for a Congress.
 
 		Purpose:
-		    Retrieves reports from the configured provider and returns normalized response data.
+		    Build the committee-report collection endpoint, optionally restrict report type, and
+		    attach paging and conference filters.
 
 		Args:
-		    congress (int): Congress supplied by the caller and interpreted according to the
-		    method contract.
-		    report_type (str): Report type supplied by the caller and interpreted according to the
-		    method contract.
-		    offset (int): Zero-based record offset used for pagination.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    conference (bool): Whether conference behavior is enabled for the operation.
-		    time (int): Maximum request duration in seconds.
+		    congress (int): Congress number used in the endpoint path.
+		    report_type (str): Report type: hrpt, srpt, or erpt. Defaults to an empty string for all
+		        types.
+		    offset (int): Nonnegative result offset. Defaults to 0.
+		    limit (int): Requested record count from 1 through 250. Defaults to 20.
+		    conference (bool): Conference-report filter. Defaults to False.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters (including the API key), and
+		        decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'conference', conference )
@@ -8876,27 +8840,25 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def fetch_report( self, congress: int, report_type: str, report_number: int, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch report.
+		"""Retrieve an individual committee report.
 
 		Purpose:
-		    Retrieves report from the configured provider and returns normalized response data.
+		    Validate report type and construct the endpoint for the supplied Congress and report
+		    number.
 
 		Args:
-		    congress (int): Congress supplied by the caller and interpreted according to the
-		    method contract.
-		    report_type (str): Report type supplied by the caller and interpreted according to the
-		    method contract.
-		    report_number (int): Report number supplied by the caller and interpreted according to
-		    the method contract.
-		    time (int): Maximum request duration in seconds.
+		    congress (int): Congress number used in the endpoint path.
+		    report_type (str): Report type: hrpt, srpt, or erpt.
+		    report_number (int): Committee report number.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters (including the API key), and
+		        decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'congress', congress )
@@ -8922,46 +8884,41 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='congresses', congress: int=0, bill_type: str='', bill_number: int=0, law_type: str='', law_number: int=0, report_type: str='', report_number: int=0, offset: int=0, limit: int=20, sort: str = 'updateDate+desc', from_date_time: str='', to_date_time: str='', conference: bool = False, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a legislative retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select the requested list or individual-record method and forward its applicable
+		    identifiers and filters.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    congress (int): Congress supplied by the caller and interpreted according to the
-		    method contract.
-		    bill_type (str): Bill type supplied by the caller and interpreted according to the
-		    method contract.
-		    bill_number (int): Bill number supplied by the caller and interpreted according to the
-		    method contract.
-		    law_type (str): Law type supplied by the caller and interpreted according to the
-		    method contract.
-		    law_number (int): Law number supplied by the caller and interpreted according to the
-		    method contract.
-		    report_type (str): Report type supplied by the caller and interpreted according to the
-		    method contract.
-		    report_number (int): Report number supplied by the caller and interpreted according to
-		    the method contract.
-		    offset (int): Zero-based record offset used for pagination.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    sort (str): Sort supplied by the caller and interpreted according to the method
-		    contract.
-		    from_date_time (str): From date time supplied by the caller and interpreted according
-		    to the method contract.
-		    to_date_time (str): To date time supplied by the caller and interpreted according to
-		    the method contract.
-		    conference (bool): Whether conference behavior is enabled for the operation.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): congresses, bills, bill_detail, laws, law_detail, reports, or report_detail.
+		        Defaults to 'congresses'.
+		    congress (int): Congress number used in the endpoint path. Defaults to 0; supply a valid
+		        Congress for legislative record modes.
+		    bill_type (str): Bill type: hr, s, hjres, sjres, hconres, sconres, hres, or sres.
+		        Defaults to an empty string.
+		    bill_number (int): Individual bill number. Defaults to 0.
+		    law_type (str): Law type: pub or priv. Defaults to an empty string.
+		    law_number (int): Individual law number. Defaults to 0.
+		    report_type (str): Report type: hrpt, srpt, or erpt. Defaults to an empty string.
+		    report_number (int): Individual report number. Defaults to 0.
+		    offset (int): Nonnegative result offset. Defaults to 0.
+		    limit (int): Requested record count from 1 through 250. Defaults to 20.
+		    sort (str): Nonblank provider sort expression. Defaults to 'updateDate+desc'.
+		    from_date_time (str): Optional lower update-date-time filter passed to the provider.
+		        Defaults to an empty string.
+		    to_date_time (str): Optional upper update-date-time filter passed to the provider.
+		        Defaults to an empty string.
+		    conference (bool): Conference-report filter. Defaults to False.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, submitted parameters (including the API key), and
+		        decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -9008,26 +8965,25 @@ class Congress( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -9053,33 +9009,27 @@ class Congress( Fetcher ):
 			raise exception
 
 class InternetArchive( Fetcher ):
-	"""InternetArchive component.
+	"""Internet Archive advanced-search adapter.
 
 	Purpose:
-	    Searches Internet Archive metadata using generated query expressions and controlled paging.
+	    Construct search expressions with optional media-type and collection filters, request
+	    selected metadata fields, and return decoded advanced-search results.
 
 	Attributes:
-	    keywords (Optional[str]): Current keywords retained by the InternetArchive workflow
-	    between related operations.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    response (Optional[Response]): Most recent raw response returned by the provider client.
-	    fields (Optional[List[str]]): Current fields retained by the InternetArchive workflow
-	    between related operations.
-	    rows (Optional[int]): Normalized rows returned by the most recent operation.
-	    page (Optional[int]): Current page retained by the InternetArchive workflow between
-	    related operations.
-	    sort (Optional[str]): Current sort retained by the InternetArchive workflow between
-	    related operations.
-	    media_type (Optional[str]): Current media type retained by the InternetArchive workflow
-	    between related operations.
-	    collection (Optional[str]): Current collection retained by the InternetArchive workflow
-	    between related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    headers (Any): HTTP headers sent with the current request.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    active_fields (List[str]): Fields requested by the current search.
+	    url (Optional[str]): Internet Archive advanced-search endpoint.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    keywords (Optional[str]): Latest search expression.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    fields (Optional[List[str]]): Default metadata field list.
+	    active_fields (List[str]): Metadata fields selected for the current request.
+	    rows (Optional[int]): Requested records per page.
+	    page (Optional[int]): One-based result page.
+	    sort (Optional[str]): Provider sort expression.
+	    media_type (Optional[str]): Optional media-type filter.
+	    collection (Optional[str]): Optional collection filter.
+	    response (Optional[Response]): Latest HTTP response.
+	    agents (Optional[str]): Configured HTTP user-agent.
 	"""
 	keywords: Optional[ str ]
 	url: Optional[ str ]
@@ -9095,15 +9045,14 @@ class InternetArchive( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure the advanced-search endpoint, JSON headers, default metadata fields, ten rows
+		    per page, first page, descending download sort, and twenty-second timeout.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.url = 'https://archive.org/advancedsearch.php'
@@ -9129,33 +9078,31 @@ class InternetArchive( Fetcher ):
 			self.headers[ 'Accept' ] = 'application/json'
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'keywords', 'url', 'timeout', 'headers', 'fields', 'rows', 'page', 'sort',
 				'media_type', 'collection', 'params', 'agents', 'fetch', 'create_schema' ]
 	
 	def validate_rows( self, rows: int ) -> int:
-		"""Validate rows.
+		"""Validate records per page.
 
 		Purpose:
-		    Validates the rows against provider constraints and returns the accepted value.
+		    Enforce the inclusive range from 1 through 100.
 
 		Args:
-		    rows (int): Maximum number of records requested from the provider.
+		    rows (int): Requested rows from 1 through 100.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted row count.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the row count is missing or outside the range.
 		"""
 		try:
 			throw_if( 'rows', rows )
@@ -9173,20 +9120,19 @@ class InternetArchive( Fetcher ):
 			raise exception
 	
 	def validate_page( self, page: int ) -> int:
-		"""Validate page.
+		"""Validate the result page.
 
 		Purpose:
-		    Validates the page against provider constraints and returns the accepted value.
+		    Require a page number of at least one.
 
 		Args:
-		    page (int): One-based result page requested from the provider.
+		    page (int): One-based result page.
 
 		Returns:
-		    int: Computed numeric value produced by the operation.
+		    int: Original accepted page number.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the page is missing or below one.
 		"""
 		try:
 
@@ -9206,25 +9152,22 @@ class InternetArchive( Fetcher ):
 			raise exception
 	
 	def build_query( self, keywords: str, media_type: str='', collection: str='' ) -> str:
-		"""Build query.
+		"""Construct an advanced-search expression.
 
 		Purpose:
-		    Constructs the query payload required by the downstream provider or loader.
+		    Wrap the stripped keyword expression in parentheses and append nonblank media-type and
+		    collection clauses using AND.
 
 		Args:
-		    keywords (str): Keywords supplied by the caller and interpreted according to the
-		    method contract.
-		    media_type (str): Media type supplied by the caller and interpreted according to the
-		    method contract.
-		    collection (str): Collection supplied by the caller and interpreted according to the
-		    method contract.
+		    keywords (str): Nonblank Internet Archive search expression.
+		    media_type (str): Optional media-type filter. Defaults to an empty string.
+		    collection (str): Optional collection filter. Defaults to an empty string.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Combined Internet Archive search expression.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or query construction fails.
 		"""
 		try:
 			throw_if( 'keywords', keywords )
@@ -9248,34 +9191,30 @@ class InternetArchive( Fetcher ):
 			raise exception
 	
 	def fetch( self, keywords: str, fields: List[ str ] | None = None, rows: int=10, page: int = 1, sort: str='downloads desc', media_type: str='', collection: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Search Internet Archive metadata.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Validate paging, select default or caller-supplied fields, construct the search
+		    expression, request JSON, and return it with operation metadata.
 
 		Args:
-		    keywords (str): Keywords supplied by the caller and interpreted according to the
-		    method contract.
-		    fields (List[str] | None): Fields supplied by the caller and interpreted according to
-		    the method contract.
-		    rows (int): Maximum number of records requested from the provider.
-		    page (int): One-based result page requested from the provider.
-		    sort (str): Sort supplied by the caller and interpreted according to the method
-		    contract.
-		    media_type (str): Media type supplied by the caller and interpreted according to the
-		    method contract.
-		    collection (str): Collection supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    keywords (str): Nonblank Internet Archive search expression.
+		    fields (List[str] | None): Nonempty list of metadata fields; defaults to None to use
+		        instance defaults.
+		    rows (int): Records per page from 1 through 100. Defaults to 10.
+		    page (int): One-based page number of at least 1. Defaults to 1.
+		    sort (str): Provider sort expression. Defaults to 'downloads desc'.
+		    media_type (str): Optional media-type filter. Defaults to an empty string.
+		    collection (str): Optional collection filter. Defaults to an empty string.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Advanced-search mode, endpoint URL, request parameters, and decoded JSON
+		        data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'keywords', keywords )
@@ -9320,26 +9259,25 @@ class InternetArchive( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -9365,48 +9303,35 @@ class InternetArchive( Fetcher ):
 			raise exception
 
 class OpenWeather( Fetcher ):
-	"""OpenWeather component.
+	"""Open-Meteo current and forecast weather adapter.
 
 	Purpose:
-	    Retrieves current, hourly, and daily weather observations from OpenWeather after geocoding
-	    a location.
+	    Resolve locations through Open-Meteo geocoding and retrieve current, hourly, or daily
+	    weather variables using configured measurement units.
 
 	Attributes:
-	    geocode_url (Optional[str]): URL associated with the current geocode resource or endpoint.
-	    forecast_url (Optional[str]): URL associated with the current forecast resource or
-	    endpoint.
-	    location (Optional[str]): Current location retained by the OpenWeather workflow between
-	    related operations.
-	    latitude (Optional[float]): Current latitude retained by the OpenWeather workflow between
-	    related operations.
-	    longitude (Optional[float]): Current longitude retained by the OpenWeather workflow
-	    between related operations.
-	    timezone (Optional[str]): Current timezone retained by the OpenWeather workflow between
-	    related operations.
-	    mode (Optional[str]): Current mode retained by the OpenWeather workflow between related
-	    operations.
-	    current_metrics (Optional[List[str]]): Current current metrics retained by the OpenWeather
-	    workflow between related operations.
-	    hourly_metrics (Optional[List[str]]): Current hourly metrics retained by the OpenWeather
-	    workflow between related operations.
-	    daily_metrics (Optional[List[str]]): Current daily metrics retained by the OpenWeather
-	    workflow between related operations.
-	    windspeed_unit (Optional[str]): Current windspeed unit retained by the OpenWeather
-	    workflow between related operations.
-	    temperature_unit (Optional[str]): Current temperature unit retained by the OpenWeather
-	    workflow between related operations.
-	    precipitation_unit (Optional[str]): Current precipitation unit retained by the OpenWeather
-	    workflow between related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    geocode_params (Optional[Dict[str, Any]]): Current geocode params retained by the
-	    OpenWeather workflow between related operations.
-	    result_limit (Optional[int]): Current result limit retained by the OpenWeather workflow
-	    between related operations.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    headers (Any): HTTP headers sent with the current request.
-	    past_days (int): Number of historical days included in the forecast request.
-	    forecast_days (int): Number of forecast days requested.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    location (Optional[str]): Latest location name supplied for geocoding.
+	    latitude (Optional[float]): Current latitude in decimal degrees.
+	    longitude (Optional[float]): Current longitude in decimal degrees.
+	    timezone (Optional[str]): Resolved or explicitly supplied timezone.
+	    mode (Optional[str]): Selected retrieval operation.
+	    result_limit (Optional[int]): Requested number of geocoding candidates.
+	    past_days (int): Requested preceding days.
+	    forecast_days (int): Requested forecast days.
+	    geocode_url (Optional[str]): Open-Meteo geocoding endpoint.
+	    forecast_url (Optional[str]): Open-Meteo forecast endpoint.
+	    temperature_unit (Optional[str]): Temperature unit, initialized to Fahrenheit.
+	    windspeed_unit (Optional[str]): Wind speed unit, initialized to knots.
+	    precipitation_unit (Optional[str]): Precipitation unit, initialized to inches.
+	    geocode_params (Optional[Dict[str, Any]]): Latest geocoding query parameters.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    current_metrics (Optional[List[str]]): Configured current-weather variable identifiers.
+	    hourly_metrics (Optional[List[str]]): Configured hourly weather variable identifiers.
+	    daily_metrics (Optional[List[str]]): Configured daily weather variable identifiers.
+	    url (Optional[str]): Latest endpoint URL or client operation identifier.
+	    response (Optional[Response]): Latest HTTP response.
 	"""
 	geocode_url: Optional[ str ]
 	forecast_url: Optional[ str ]
@@ -9429,15 +9354,14 @@ class OpenWeather( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure Open-Meteo geocoding and forecast endpoints, weather variable lists,
+		    Fahrenheit, knots, inches, automatic timezone, and default forecast settings.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.headers = { }
@@ -9478,14 +9402,13 @@ class OpenWeather( Fetcher ):
 				'wind_direction_10m_dominant' ]
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'geocode_url', 'forecast_url', 'location', 'latitude', 'longitude', 'timezone',
 				'mode', 'current_metrics', 'hourly_metrics', 'daily_metrics', 'windspeed_unit',
@@ -9494,25 +9417,23 @@ class OpenWeather( Fetcher ):
 				'fetch_daily', 'create_schema' ]
 	
 	def geocode_location( self, location: str, count: int=10 ) -> Dict[ str, Any ] | None:
-		"""Geocode location.
+		"""Resolve a location using Open-Meteo geocoding.
 
 		Purpose:
-		    Resolves location through the configured geocoding service and returns geographic
-		    results.
+		    Request location candidates with a fixed twenty-second timeout, validate the response
+		    object and results list, retain coordinates and available timezone from the first
+		    candidate.
 
 		Args:
-		    location (str): Location supplied by the caller and interpreted according to the
-		    method contract.
-		    count (int): Count supplied by the caller and interpreted according to the method
-		    contract.
+		    location (str): Nonblank location name to search.
+		    count (int): Positive number of geocoding candidates requested. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any] | None: First geocoding record, or None when no candidates are returned.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'location', location )
@@ -9559,27 +9480,25 @@ class OpenWeather( Fetcher ):
 			raise exception
 	
 	def fetch_current( self, lat: float, long: float, zone: str='auto', past_days: int=0 ) -> Dict[ str, Any ] | None:
-		"""Fetch current.
+		"""Retrieve current weather by coordinates.
 
 		Purpose:
-		    Retrieves current from the configured provider and returns normalized response data.
+		    Validate coordinates and timezone, submit current variables and preceding-day setting to
+		    the forecast endpoint using a fixed thirty-second timeout, and package the response.
 
 		Args:
-		    lat (float): Geographic lat expressed in decimal degrees.
-		    long (float): Long supplied by the caller and interpreted according to the method
-		    contract.
-		    zone (str): Zone supplied by the caller and interpreted according to the method
-		    contract.
-		    past_days (int): Past days supplied by the caller and interpreted according to the
-		    method contract.
+		    lat (float): Finite latitude in decimal degrees, from -90 through 90.
+		    long (float): Finite longitude in decimal degrees, from -180 through 180.
+		    zone (str): Nonblank provider timezone setting. Defaults to 'auto'.
+		    past_days (int): Requested number of preceding days. Defaults to 0.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, location, latitude, longitude, timezone, endpoint URL, submitted
+		        parameters, and decoded weather data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'lat', lat )
@@ -9626,29 +9545,26 @@ class OpenWeather( Fetcher ):
 			raise exception
 	
 	def fetch_hourly( self, lat: float, long: float, zone: str='auto', forecast_days: int=7, past_days: int=0 ) -> Dict[ str, Any ] | None:
-		"""Fetch hourly.
+		"""Retrieve hourly weather by coordinates.
 
 		Purpose:
-		    Retrieves hourly from the configured provider and returns normalized response data.
+		    Validate coordinates and timezone, submit configured hourly variables and requested
+		    forecast and preceding days using a fixed thirty-second timeout.
 
 		Args:
-		    lat (float): Geographic lat expressed in decimal degrees.
-		    long (float): Long supplied by the caller and interpreted according to the method
-		    contract.
-		    zone (str): Zone supplied by the caller and interpreted according to the method
-		    contract.
-		    forecast_days (int): Forecast days supplied by the caller and interpreted according to
-		    the method contract.
-		    past_days (int): Past days supplied by the caller and interpreted according to the
-		    method contract.
+		    lat (float): Finite latitude in decimal degrees, from -90 through 90.
+		    long (float): Finite longitude in decimal degrees, from -180 through 180.
+		    zone (str): Nonblank provider timezone setting. Defaults to 'auto'.
+		    forecast_days (int): Requested number of forecast days. Defaults to 7.
+		    past_days (int): Requested number of preceding days. Defaults to 0.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, location, latitude, longitude, timezone, endpoint URL, submitted
+		        parameters, and decoded weather data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'lat', lat )
@@ -9696,29 +9612,26 @@ class OpenWeather( Fetcher ):
 			raise exception
 	
 	def fetch_daily( self, lat: float, long: float, zone: str='auto', forecast_days: int=7, past_days: int=0 ) -> Dict[ str, Any ] | None:
-		"""Fetch daily.
+		"""Retrieve daily weather by coordinates.
 
 		Purpose:
-		    Retrieves daily from the configured provider and returns normalized response data.
+		    Validate coordinates and timezone, submit configured daily variables and requested
+		    forecast and preceding days using a fixed thirty-second timeout.
 
 		Args:
-		    lat (float): Geographic lat expressed in decimal degrees.
-		    long (float): Long supplied by the caller and interpreted according to the method
-		    contract.
-		    zone (str): Zone supplied by the caller and interpreted according to the method
-		    contract.
-		    forecast_days (int): Forecast days supplied by the caller and interpreted according to
-		    the method contract.
-		    past_days (int): Past days supplied by the caller and interpreted according to the
-		    method contract.
+		    lat (float): Finite latitude in decimal degrees, from -90 through 90.
+		    long (float): Finite longitude in decimal degrees, from -180 through 180.
+		    zone (str): Nonblank provider timezone setting. Defaults to 'auto'.
+		    forecast_days (int): Requested number of forecast days. Defaults to 7.
+		    past_days (int): Requested number of preceding days. Defaults to 0.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, location, latitude, longitude, timezone, endpoint URL, submitted
+		        parameters, and decoded weather data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'lat', lat )
@@ -9765,32 +9678,27 @@ class OpenWeather( Fetcher ):
 			raise exception
 	
 	def fetch( self, location: str, mode: str='current', zone: str='auto', forecast_days: int=7, past_days: int=0, count: int=10 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Retrieve weather for a named location.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Geocode the location, return a diagnostic dictionary if no usable coordinates are
+		    available, otherwise dispatch the selected weather mode and attach geocoding metadata.
 
 		Args:
-		    location (str): Location supplied by the caller and interpreted according to the
-		    method contract.
-		    mode (str): Provider or loader operating mode selected for the request.
-		    zone (str): Zone supplied by the caller and interpreted according to the method
-		    contract.
-		    forecast_days (int): Forecast days supplied by the caller and interpreted according to
-		    the method contract.
-		    past_days (int): Past days supplied by the caller and interpreted according to the
-		    method contract.
-		    count (int): Count supplied by the caller and interpreted according to the method
-		    contract.
+		    location (str): Nonblank location name to search.
+		    mode (str): current, hourly, or daily. Defaults to 'current'.
+		    zone (str): Nonblank provider timezone setting. Defaults to 'auto'.
+		    forecast_days (int): Requested number of forecast days. Defaults to 7.
+		    past_days (int): Requested number of preceding days. Defaults to 0.
+		    count (int): Positive number of geocoding candidates requested. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-				                                                                             metadata, or generated schema content.
+		    Dict[str, Any]: Packaged weather response with geocoding metadata, or a diagnostic
+		        message and empty data when geocoding fails to resolve coordinates.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'location', location )
@@ -9833,26 +9741,25 @@ class OpenWeather( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -9878,43 +9785,32 @@ class OpenWeather( Fetcher ):
 			raise exception
 
 class HistoricalWeather( Fetcher ):
-	"""HistoricalWeather component.
+	"""Open-Meteo historical weather adapter.
 
 	Purpose:
-	    Retrieves historical weather observations for a geocoded location and requested time
-	    period.
+	    Resolve a named location and retrieve daily and hourly historical weather variables for
+	    one calendar date through the Open-Meteo archive endpoint.
 
 	Attributes:
-	    geocode_url (Optional[str]): URL associated with the current geocode resource or endpoint.
-	    archive_url (Optional[str]): URL associated with the current archive resource or endpoint.
-	    location (Optional[str]): Current location retained by the HistoricalWeather workflow
-	    between related operations.
-	    latitude (Optional[float]): Current latitude retained by the HistoricalWeather workflow
-	    between related operations.
-	    longitude (Optional[float]): Current longitude retained by the HistoricalWeather workflow
-	    between related operations.
-	    timezone (Optional[str]): Current timezone retained by the HistoricalWeather workflow
-	    between related operations.
-	    target_date (Optional[dt.date]): Current target date retained by the HistoricalWeather
-	    workflow between related operations.
-	    daily_metrics (Optional[List[str]]): Current daily metrics retained by the
-	    HistoricalWeather workflow between related operations.
-	    hourly_metrics (Optional[List[str]]): Current hourly metrics retained by the
-	    HistoricalWeather workflow between related operations.
-	    windspeed_unit (Optional[str]): Current windspeed unit retained by the HistoricalWeather
-	    workflow between related operations.
-	    temperature_unit (Optional[str]): Current temperature unit retained by the
-	    HistoricalWeather workflow between related operations.
-	    precipitation_unit (Optional[str]): Current precipitation unit retained by the
-	    HistoricalWeather workflow between related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    geocode_params (Optional[Dict[str, Any]]): Current geocode params retained by the
-	    HistoricalWeather workflow between related operations.
-	    result_limit (Optional[int]): Current result limit retained by the HistoricalWeather
-	    workflow between related operations.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    headers (Any): HTTP headers sent with the current request.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    location (Optional[str]): Latest location name supplied for geocoding.
+	    latitude (Optional[float]): Current latitude in decimal degrees.
+	    longitude (Optional[float]): Current longitude in decimal degrees.
+	    timezone (Optional[str]): Resolved or explicitly supplied timezone.
+	    target_date (Optional[dt.date]): Calendar date selected for historical retrieval.
+	    result_limit (Optional[int]): Requested number of geocoding candidates.
+	    geocode_url (Optional[str]): Open-Meteo geocoding endpoint.
+	    archive_url (Optional[str]): Open-Meteo historical archive endpoint.
+	    temperature_unit (Optional[str]): Temperature unit, initialized to Fahrenheit.
+	    windspeed_unit (Optional[str]): Wind speed unit, initialized to knots.
+	    precipitation_unit (Optional[str]): Precipitation unit, initialized to inches.
+	    geocode_params (Optional[Dict[str, Any]]): Latest geocoding query parameters.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    daily_metrics (Optional[List[str]]): Configured daily weather variable identifiers.
+	    hourly_metrics (Optional[List[str]]): Configured hourly weather variable identifiers.
+	    url (Optional[str]): Latest endpoint URL or client operation identifier.
+	    response (Optional[Response]): Latest HTTP response.
 	"""
 	geocode_url: Optional[ str ]
 	archive_url: Optional[ str ]
@@ -9934,15 +9830,14 @@ class HistoricalWeather( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure Open-Meteo geocoding and archive endpoints, daily and hourly metric lists,
+		    Fahrenheit, knots, inches, and automatic timezone.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.headers = { }
@@ -9976,14 +9871,13 @@ class HistoricalWeather( Fetcher ):
 				'wind_gusts_10m' ]
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'geocode_url', 'archive_url', 'location', 'latitude', 'longitude', 'timezone',
 				'target_date', 'daily_metrics', 'hourly_metrics', 'windspeed_unit',
@@ -9991,22 +9885,23 @@ class HistoricalWeather( Fetcher ):
 				'result_limit', 'fetch', 'geocode_location', 'fetch_historical', 'create_schema' ]
 	
 	def geocode_location( self, location: str, count: int=10 ) -> Dict[ str, Any ] | None:
-		"""Geocode location.
+		"""Resolve a location using Open-Meteo geocoding.
 
 		Purpose:
-		    Resolves location through the configured geocoding service and returns geographic results.
+		    Request location candidates with a fixed twenty-second timeout, validate the response
+		    object and results list, retain coordinates and available timezone from the first
+		    candidate.
 
 		Args:
-		    location (str): Location supplied by the caller according to the method contract.
-		    count (int): Count supplied by the caller and interpreted according to the method.
+		    location (str): Nonblank location name to search.
+		    count (int): Positive number of geocoding candidates requested. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any] | None: First geocoding record, or None when no candidates are returned.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'location', location )
@@ -10048,27 +9943,26 @@ class HistoricalWeather( Fetcher ):
 			raise exception
 	
 	def fetch_historical( self, lat: float, long: float, date: dt.date, zone: str='auto' ) -> Dict[ str, Any ] | None:
-		"""Fetch historical.
+		"""Retrieve historical weather for one date.
 
 		Purpose:
-		    Retrieves historical from the configured provider and returns normalized response data.
+		    Validate geographic bounds and the datetime.date input, use its ISO representation as
+		    both archive start and end date, and request daily and hourly metrics with a fixed
+		    thirty-second timeout.
 
 		Args:
-		    lat (float): Geographic lat expressed in decimal degrees.
-		    long (float): Long supplied by the caller and interpreted according to the method
-		        contract.
-		    date (dt.date): Date supplied by the caller and interpreted according to the method
-		        contract.
-		    zone (str): Zone supplied by the caller and interpreted according to the method
-		        contract.
+		    lat (float): Finite latitude in decimal degrees, from -90 through 90.
+		    long (float): Finite longitude in decimal degrees, from -180 through 180.
+		    date (dt.date): Target calendar date.
+		    zone (str): Nonblank provider timezone setting. Defaults to 'auto'.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Location, coordinates, timezone, target date, endpoint URL, submitted
+		        parameters, and decoded archive data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'lat', lat )
@@ -10116,25 +10010,25 @@ class HistoricalWeather( Fetcher ):
 			raise exception
 	
 	def fetch( self, location: str, date: dt.date, zone: str='auto', count: int=10 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Retrieve historical weather for a named location.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Resolve the location, return a diagnostic dictionary if no usable coordinates are
+		    available, otherwise retrieve the requested date and attach geocoding metadata.
 
 		Args:
-		    location (str): Location supplied by the caller according to the method contract.
-		    date (dt.date): Date supplied by the caller and interpreted according to the method.
-		    zone (str): Zone supplied by the caller and interpreted according to the method.
-		    count (int): Count supplied by the caller and interpreted according to the method.
+		    location (str): Nonblank location name to search.
+		    date (dt.date): Target calendar date.
+		    zone (str): Nonblank provider timezone setting. Defaults to 'auto'.
+		    count (int): Positive number of geocoding candidates requested. Defaults to 10.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Historical response with geocoding metadata, or a diagnostic message and
+		        empty data when coordinates cannot be resolved.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'location', location )
@@ -10167,26 +10061,25 @@ class HistoricalWeather( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error (exception): The source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -10211,25 +10104,29 @@ class HistoricalWeather( Fetcher ):
 			raise exception
 
 class Grokipedia( Fetcher ):
-	"""Grokipedia component.
+	"""Grokipedia search and page retrieval adapter.
 
 	Purpose:
-	    Searches Grokipedia and retrieves page content through its client API.
+	    Invoke GrokipediaClient search and get_page operations and package their responses with
+	    request metadata and a configured-key indicator.
 
 	Attributes:
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    client (Optional[GrokipediaClient]): SDK client used to execute requests.
-	    query (Optional[str]): Most recent search text or model prompt submitted by the instance.
-	    page (Optional[str]): Current page retained by the Grokipedia workflow between operations.
-	    limit (Optional[int]): Current limit retained by the Grokipedia workflow between operations.
-	    offset (Optional[int]): Current offset retained by the Grokipedia workflow between operations.
-	    include_content (Optional[bool]): Flag controlling whether include content.
-	    response (Optional[Dict[str, Any]]): Most recent raw response returned.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent call.
-	    result (Optional[Dict[str, Any]]): Most recent normalized Foo result.
-	    url (Any): Most recent endpoint or resource URL used by the instance.
-	    headers (Any): HTTP headers sent with the current request.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
+	    api_key (Optional[str]): Configured xAI API key used only for the configuration indicator
+	        in this wrapper.
+	    url (Optional[str]): Symbolic Grokipedia client operation identifier.
+	    client (Optional[GrokipediaClient]): GrokipediaClient instance created for the latest
+	        operation.
+	    query (Optional[str]): Latest search text.
+	    page (Optional[str]): Latest requested page identifier.
+	    response (Optional[Dict[str, Any]]): Latest raw GrokipediaClient response.
+	    params (Optional[Dict[str, Any]]): Latest client operation arguments.
+	    result (Optional[Dict[str, Any]]): Latest packaged client response.
+	    limit (Optional[int]): Requested search result count.
+	    offset (Optional[int]): Requested search offset.
+	    include_content (Optional[bool]): Page content inclusion flag.
+	    headers (Optional[Dict[str, Any]]): Reserved HTTP headers, initialized empty.
+	    timeout (Optional[int]): Reserved timeout, initialized to 20; not forwarded to the
+	        client.
 	"""
 	api_key: Optional[ str ]
 	client: Optional[ GrokipediaClient ]
@@ -10243,15 +10140,14 @@ class Grokipedia( Fetcher ):
 	result: Optional[ Dict[ str, Any ] ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Load the configured xAI key and initialize empty client and response state, search limit
+		    of twelve, zero offset, and page-content inclusion.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.api_key = cfg.XAI_API_KEY
@@ -10269,35 +10165,37 @@ class Grokipedia( Fetcher ):
 		self.timeout = 20
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'api_key', 'client', 'query', 'page', 'limit', 'offset', 'include_content',
 				'response', 'params', 'result', 'fetch_search', 'fetch_page', 'fetch',
 				'create_schema' ]
 	
 	def fetch_search( self, query: str, limit: int=12, offset: int=0 ) -> Dict[ str, Any ] | None:
-		"""Fetch search.
+		"""Search Grokipedia pages.
 
 		Purpose:
-		    Retrieves search from the configured provider and returns normalized response data.
+		    Validate required search arguments, instantiate GrokipediaClient without explicit
+		    credentials, invoke search, and package its response.
 
 		Args:
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    offset (int): Zero-based record offset used for pagination.
+		    query (str): Nonblank Grokipedia search text.
+		    limit (int): Requested search result count. Defaults to 12.
+		    offset (int): Search result offset. Defaults to 0.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data.
+		    Dict[str, Any]: Mode, client operation identifier, submitted arguments, API-key
+		        configuration indicator, and client response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'query', query )
@@ -10326,20 +10224,23 @@ class Grokipedia( Fetcher ):
 			raise exception
 	
 	def fetch_page( self, page: str, include_content: bool=True ) -> Dict[ str, Any ] | None:
-		"""Fetch page.
+		"""Retrieve a Grokipedia page.
 
 		Purpose:
-		    Retrieves page from the configured provider and returns normalized response data.
+		    Validate the page and content flag, instantiate GrokipediaClient without explicit
+		    credentials, invoke get_page, and package its response.
 
 		Args:
-		    page (str): One-based result page requested from the provider.
-		    include_content (bool): Whether include content behavior is enabled for the operation.
+		    page (str): Nonblank page identifier passed to get_page.
+		    include_content (bool): Request page content. Defaults to True.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data.
+		    Dict[str, Any]: Mode, client operation identifier, submitted arguments, API-key
+		        configuration indicator, and client response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'include_content', include_content )
@@ -10365,26 +10266,28 @@ class Grokipedia( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='search', query: str='', page: str='', limit: int=12, offset: int=0, include_content: bool=True ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a Grokipedia retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select search or page retrieval and forward the relevant arguments.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    page (str): One-based result page requested from the provider.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    offset (int): Zero-based record offset used for pagination.
-		    include_content (bool): Whether include content behavior is enabled for the operation.
+		    mode (str): search or page. Defaults to 'search'.
+		    query (str): Nonblank Grokipedia search text. Defaults to an empty string; required in
+		        search mode.
+		    page (str): Nonblank page identifier passed to get_page. Defaults to an empty string;
+		        required in page mode.
+		    limit (int): Requested search result count. Defaults to 12.
+		    offset (int): Search result offset. Defaults to 0.
+		    include_content (bool): Request page content. Defaults to True.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data.
+		    Dict[str, Any]: Mode, client operation identifier, submitted arguments, API-key
+		        configuration indicator, and client response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when argument validation, provider retrieval, or response processing
+		        fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -10406,26 +10309,25 @@ class Grokipedia( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter definitions and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
