@@ -260,6 +260,8 @@ class SQLite( DB ):
 		cursor (Optional[Cursor]): Active SQLite cursor.
 		file_path (Optional[str]): Current file path used by import workflows.
 		where (Optional[str]): Current SQL WHERE clause fragment.
+		pairs (Optional[str]): Current SQL assignment clause.
+		sql (Optional[str]): Current SQL statement.
 		file_name (Optional[str]): Current source file name.
 		table_name (Optional[str]): Current table name.
 		placeholders (Optional[str]): Placeholder state used by insert operations.
@@ -272,6 +274,8 @@ class SQLite( DB ):
 	cursor: Optional[ Cursor ]
 	file_path: Optional[ str ]
 	where: Optional[ str ]
+	pairs: Optional[ str ]
+	sql: Optional[ str ]
 	file_name: Optional[ str ]
 	table_name: Optional[ str ]
 	placeholders: Optional[ str ]
@@ -287,7 +291,7 @@ class SQLite( DB ):
 			connection and cursor, and prepares runtime members used by subsequent CRUD,
 			batch-insert, and import operations.
 		"""
-		self.db_path = r'stores\sqlite\datamodels\Data.db'
+		self.db_path = os.path.join( 'stores', 'sqlite', 'datamodels', 'Data.db' )
 		self.connection = sqlite3.connect( self.db_path )
 		self.cursor = self.connection.cursor( )
 		self.file_path = None
@@ -484,14 +488,15 @@ class SQLite( DB ):
 		"""
 		try:
 			throw_if( 'table', table )
-			self.sql = f'SELECT * FROM {table}'
+			self.table_name = table
+			self.sql = f'SELECT * FROM {self.table_name}'
 			self.cursor.execute( self.sql )
 			return self.cursor.fetchall( )
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'data'
 			exception.cause = 'SQLite'
-			exception.method = 'fetch_all( self, df: str ) -> List[ Tuple ]'
+			exception.method = 'fetch_all( self, table: str ) -> List[ Tuple ] | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -845,11 +850,9 @@ class Chroma:
 			Error: Re-raised after the exception is wrapped and written to the application logger.
 		"""
 		try:
-			ids = self.collection.get( include=[ ] )[ 'ids' ]
-			if ids:
-				throw_if( 'ids', ids )
-			self.ids = ids
-			self.collection.delete( ids=self.ids )
+			self.ids = self.collection.get( include=[ ] )[ 'ids' ]
+			if self.ids:
+				self.collection.delete( ids=self.ids )
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'data'

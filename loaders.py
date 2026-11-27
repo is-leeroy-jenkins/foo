@@ -2186,7 +2186,7 @@ class GithubLoader( Loader ):
 		self.github_url = None
 		self.repo = None
 		self.branch = None
-		self.access_token = None
+		self.access_token = cfg.GITHUB_TOKEN
 		self.file_filter = None
 		self.pattern = None
 	
@@ -2204,8 +2204,7 @@ class GithubLoader( Loader ):
 			'access_token', 'github_url', 'file_filter', 'verify_exists', 'resolve_paths',
 			'split_documents', 'load', 'split', ]
 	
-	def load( self, url: str, repo: str, branch: str, filetype: str='.md',
-		access_token: Optional[ str ] = None ) -> List[ Document ] | None:
+	def load( self, url: str, repo: str, branch: str, filetype: str='.md' ) -> List[ Document ] | None:
 		"""Load.
 
 		Purpose:
@@ -2216,7 +2215,6 @@ class GithubLoader( Loader ):
 		    repo (str): Repo supplied by the caller and interpreted according to the method contract.
 		    branch (str): Branch supplied by the caller and interpreted according to the method contract.
 		    filetype (str): Filetype supplied by the caller and interpreted according to the method contract.
-		    access_token (Optional[str]): Access token supplied by the caller and interpreted according to the method contract.
 
 		Returns:
 		    List[Document] | None: LangChain documents produced or transformed by the operation.
@@ -2232,10 +2230,7 @@ class GithubLoader( Loader ):
 			self.github_url = url
 			self.repo = repo
 			self.branch = branch
-			self.access_token = access_token.strip( ) if isinstance( access_token,
-				str ) and access_token.strip( ) else None
-			self.pattern = filetype.strip( ) if isinstance( filetype,
-				str ) and filetype.strip( ) else '.md'
+			self.pattern = filetype
 			self.file_filter = lambda file_path: file_path.endswith( self.pattern )
 			
 			kwargs = { 'repo': self.repo, 'branch': self.branch, 'github_api_url': self.github_url,
@@ -2253,7 +2248,7 @@ class GithubLoader( Loader ):
 			exception.module = 'loaders'
 			exception.cause = 'GithubLoader'
 			exception.method = ('load( self, url: str, repo: str, branch: str, '
-			                    'filetype: str=".md", access_token: Optional[ str ]=None ) '
+			                    'filetype: str=".md" ) '
 			                    '-> List[ Document ] | None')
 			Logger( ).write( exception )
 			raise exception
@@ -3915,6 +3910,10 @@ class AwsFileLoader( Loader ):
 	    aws_secret_access_key (Optional[str]): Current aws secret access key retained by the AwsFileLoader workflow between related operations.
 	    aws_session_token (Optional[str]): Current aws session token retained by the AwsFileLoader workflow between related operations.
 	    region_name (Optional[str]): Current region name retained by the AwsFileLoader workflow between related operations.
+	    api_version (Optional[str]): S3 API version.
+	    use_ssl (bool): Whether SSL is enabled.
+	    verify (str | bool | None): SSL certificate verification setting.
+	    endpoint_url (Optional[str]): Custom S3 endpoint URL.
 	"""
 	loader: Optional[ S3FileLoader ]
 	documents: Optional[ List[ Document ] ]
@@ -3924,6 +3923,10 @@ class AwsFileLoader( Loader ):
 	aws_secret_access_key: Optional[ str ]
 	aws_session_token: Optional[ str ]
 	region_name: Optional[ str ]
+	api_version: Optional[ str ]
+	use_ssl: bool
+	verify: str | bool | None
+	endpoint_url: Optional[ str ]
 	
 	def __init__( self ) -> None:
 		"""Initialize the instance.
@@ -3939,10 +3942,14 @@ class AwsFileLoader( Loader ):
 		self.documents = None
 		self.bucket = None
 		self.key = None
-		self.aws_access_key_id = None
-		self.aws_secret_access_key = None
-		self.aws_session_token = None
+		self.aws_access_key_id = cfg.AWS_ACCESS_KEY_ID
+		self.aws_secret_access_key = cfg.AWS_SECRET_ACCESS_KEY
+		self.aws_session_token = cfg.AWS_SESSION_TOKEN
 		self.region_name = None
+		self.api_version = None
+		self.use_ssl = True
+		self.verify = None
+		self.endpoint_url = None
 	
 	def __dir__( self ) -> List[ str ]:
 		"""Return visible member names.
@@ -3957,12 +3964,10 @@ class AwsFileLoader( Loader ):
 			'aws_secret_access_key', 'aws_session_token', 'region_name', 'chunk_size',
 			'overlap_amount', 'load', 'split', 'split_documents', ]
 	
-	def load( self, bucket: str, key: str, aws_access_key_id: Optional[ str ] = None,
-		aws_secret_access_key: Optional[ str ] = None,
-		aws_session_token: Optional[ str ] = None,
+	def load( self, bucket: str, key: str,
 		region_name: Optional[ str ] = None, api_version: Optional[ str ] = None,
-		use_ssl: bool = True, verify: str | bool | None = None,
-		endpoint_url: Optional[ str ] = None ) -> List[ Document ] | None:
+	use_ssl: bool = True, verify: str | bool | None = None,
+	endpoint_url: Optional[ str ] = None ) -> List[ Document ] | None:
 		"""Load an Amazon S3 object.
 
 		Purpose:
@@ -3972,9 +3977,6 @@ class AwsFileLoader( Loader ):
 		Args:
 			bucket (str): S3 bucket containing the object.
 			key (str): S3 object key to load.
-			aws_access_key_id (Optional[str]): Optional AWS access key identifier.
-			aws_secret_access_key (Optional[str]): Optional AWS secret access key.
-			aws_session_token (Optional[str]): Optional AWS session token.
 			region_name (Optional[str]): Optional AWS region name.
 			api_version (Optional[str]): Optional S3 API version.
 			use_ssl (bool): Whether the S3 client uses SSL.
@@ -3992,9 +3994,6 @@ class AwsFileLoader( Loader ):
 			throw_if( 'key', key )
 			self.bucket = bucket
 			self.key = key
-			self.aws_access_key_id = aws_access_key_id
-			self.aws_secret_access_key = aws_secret_access_key
-			self.aws_session_token = aws_session_token
 			self.region_name = region_name
 			self.api_version = api_version
 			self.use_ssl = use_ssl
@@ -4320,6 +4319,9 @@ class AwsBucketLoader( Loader ):
 	    aws_session_token (Optional[str]): Current aws session token retained by the AwsBucketLoader workflow between related operations.
 	    region_name (Optional[str]): Current region name retained by the AwsBucketLoader workflow between related operations.
 	    endpoint_url (Optional[str]): URL associated with the current endpoint resource or endpoint.
+	    api_version (Optional[str]): S3 API version.
+	    use_ssl (bool): Whether SSL is enabled.
+	    verify (str | bool | None): SSL certificate verification setting.
 	"""
 	loader: Optional[ S3DirectoryLoader ]
 	documents: Optional[ List[ Document ] ]
@@ -4330,6 +4332,9 @@ class AwsBucketLoader( Loader ):
 	aws_session_token: Optional[ str ]
 	region_name: Optional[ str ]
 	endpoint_url: Optional[ str ]
+	api_version: Optional[ str ]
+	use_ssl: bool
+	verify: str | bool | None
 	
 	def __init__( self ) -> None:
 		"""Initialize the instance.
@@ -4345,11 +4350,14 @@ class AwsBucketLoader( Loader ):
 		self.documents = None
 		self.bucket = None
 		self.prefix = None
-		self.aws_access_key_id = None
-		self.aws_secret_access_key = None
-		self.aws_session_token = None
+		self.aws_access_key_id = cfg.AWS_ACCESS_KEY_ID
+		self.aws_secret_access_key = cfg.AWS_SECRET_ACCESS_KEY
+		self.aws_session_token = cfg.AWS_SESSION_TOKEN
 		self.region_name = None
 		self.endpoint_url = None
+		self.api_version = None
+		self.use_ssl = True
+		self.verify = None
 	
 	def __dir__( self ) -> List[ str ]:
 		"""Return visible member names.
@@ -4365,12 +4373,9 @@ class AwsBucketLoader( Loader ):
 			'chunk_size', 'overlap_amount', 'load', 'split', 'split_documents', ]
 	
 	def load( self, bucket: str, prefix: Optional[ str ] = None,
-		aws_access_key_id: Optional[ str ] = None,
-		aws_secret_access_key: Optional[ str ] = None,
-		aws_session_token: Optional[ str ] = None,
 		region_name: Optional[ str ] = None, endpoint_url: Optional[ str ] = None,
-		api_version: Optional[ str ] = None, use_ssl: bool = True,
-		verify: str | bool | None = None ) -> List[ Document ] | None:
+	api_version: Optional[ str ] = None, use_ssl: bool = True,
+	verify: str | bool | None = None ) -> List[ Document ] | None:
 		"""Load an Amazon S3 directory.
 
 		Purpose:
@@ -4380,9 +4385,6 @@ class AwsBucketLoader( Loader ):
 		Args:
 			bucket (str): S3 bucket containing the requested objects.
 			prefix (Optional[str]): Optional object-key prefix used to restrict loading.
-			aws_access_key_id (Optional[str]): Optional AWS access key identifier.
-			aws_secret_access_key (Optional[str]): Optional AWS secret access key.
-			aws_session_token (Optional[str]): Optional AWS session token.
 			region_name (Optional[str]): Optional AWS region name.
 			endpoint_url (Optional[str]): Optional custom S3 endpoint URL.
 			api_version (Optional[str]): Optional S3 API version.
@@ -4399,9 +4401,6 @@ class AwsBucketLoader( Loader ):
 			throw_if( 'bucket', bucket )
 			self.bucket = bucket
 			self.prefix = prefix
-			self.aws_access_key_id = aws_access_key_id
-			self.aws_secret_access_key = aws_secret_access_key
-			self.aws_session_token = aws_session_token
 			self.region_name = region_name
 			self.endpoint_url = endpoint_url
 			self.api_version = api_version

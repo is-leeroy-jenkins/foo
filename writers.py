@@ -251,10 +251,10 @@ class MarkdownWriter( Writer ):
 			self.file_path = Path( self.path ).resolve( )
 			self.output_path = self.file_path.parent
 			self.output_path.mkdir( parents=True, exist_ok=True )
-			self.front_matter = (
-					'---\n' + f'source_url: {json.dumps( self.result.url, ensure_ascii=False )}\n' + f'status_code: '
-					                                               f'{self.result.status_code}\n'
-					+ '---\n\n')
+			self.front_matter = ( '---\n'
+				f'source_url: {json.dumps( self.result.url, ensure_ascii=False )}\n'
+				f'status_code: {self.result.status_code}\n'
+				'---\n\n' )
 			self.body = (
 				self.result.text if self.result.text.endswith( '\n' ) else self.result.text + '\n')
 			self.text = self.front_matter + self.body

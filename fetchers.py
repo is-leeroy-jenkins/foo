@@ -1918,10 +1918,10 @@ class TheNews( Fetcher ):
 		        to the application logger, and re-raises it.
 		"""
 		try:
-			self.endpoint = (endpoint or 'all').strip( ).lower( )
+			self.endpoint = endpoint
 			self.timeout = time
-			self.limit = max( 1, min( limit, 50 ) )
-			self.page = max( 1, page )
+			self.limit = limit
+			self.page = page
 			
 			valid_endpoints = { 'all', 'top', 'headlines', 'sources' }
 			if self.endpoint not in valid_endpoints:
@@ -2263,21 +2263,21 @@ class GoogleSearch( Fetcher ):
 			if self.start > 91:
 				raise ValueError( 'start cannot exceed 91 when requesting up to 10 results.' )
 			
-			self.exact_terms = ( exact_terms or '' ).strip( )
-			self.exclude_terms = ( exclude_terms or '' ).strip( )
-			self.file_type = ( file_type or '' ).strip( )
-			self.date_restrict = ( date_restrict or '' ).strip( )
-			self.gl = ( gl or '' ).strip( )
-			self.lr = ( lr or '' ).strip( )
-			self.safe = ( safe or 'off' ).strip( )
-			self.search_type = ( search_type or '' ).strip( )
-			self.site_search = ( site_search or '' ).strip( )
-			self.site_search_filter = ( site_search_filter or '' ).strip( )
-			self.sort = ( sort or '' ).strip( )
-			self.img_size = ( img_size or '' ).strip( )
-			self.img_type = ( img_type or '' ).strip( )
-			self.img_color_type = ( img_color_type or '' ).strip( )
-			self.img_dominant_color = ( img_dominant_color or '' ).strip( )
+			self.exact_terms = exact_terms
+			self.exclude_terms = exclude_terms
+			self.file_type = file_type
+			self.date_restrict = date_restrict
+			self.gl = gl
+			self.lr = lr
+			self.safe = safe
+			self.search_type = search_type
+			self.site_search = site_search
+			self.site_search_filter = site_search_filter
+			self.sort = sort
+			self.img_size = img_size
+			self.img_type = img_type
+			self.img_color_type = img_color_type
+			self.img_dominant_color = img_dominant_color
 			self.params = { 'q': self.keywords, 'key': self.api_key, 'cx': self.cse_id,
 					'num': self.results, 'start': self.start, 'safe': self.safe }
 			
@@ -2498,8 +2498,8 @@ class GoogleMaps( Fetcher ):
 				                  'address.' )
 			
 			location = results[ 0 ].get( 'geometry', { } ).get( 'location', { } )
-			self.latitude = float( location.get( 'lat' ) )
-			self.longitude = float( location.get( 'lng' ) )
+			self.latitude = location[ 'lat' ]
+			self.longitude = location[ 'lng' ]
 			self.coordinates = (self.latitude, self.longitude)
 			self.result = self.coordinates
 			return self.coordinates

@@ -2722,8 +2722,7 @@ if mode == 'Loading':
 				gh_filetype = st.text_input( 'File type filter', value='.md',
 					key='gh_filetype', help='Filtering by file type. Example: .py, .md, .txt', )
 				
-				gh_access_token = st.text_input( 'GitHub Access Token (optional)', value="",
-					type='password', key='gh_access_token', help='Optional personal access token.')
+				st.caption( 'GitHub credentials: GITHUB_TOKEN (environment configuration).' )
 				
 				col_fetch, col_clear, col_save = st.columns( 3 )
 				gh_fetch = col_fetch.button( 'Load', key='gh_fetch', icon='📤', width='stretch' )
@@ -2750,8 +2749,7 @@ if mode == 'Loading':
 				
 				if gh_fetch and gh_repo and gh_branch:
 					loader = GithubLoader( )
-					documents = loader.load( gh_url, gh_repo, gh_branch, gh_filetype,
-						gh_access_token, ) or [ ]
+					documents = loader.load( gh_url, gh_repo, gh_branch, gh_filetype ) or [ ]
 					
 					for d in documents:
 						if not isinstance( getattr( d, 'metadata', None ), dict ):
@@ -5635,14 +5633,7 @@ elif mode == 'Retrieval':
 			
 			region_name = st.text_input( 'Region (Optional)', key='aws_file_region_name' )
 			
-			aws_access_key_id = st.text_input( 'AWS Access Key ID (Optional)',
-				type='password', key='aws_file_access_key' )
-			
-			aws_secret_access_key = st.text_input( 'AWS Secret Access Key (Optional)',
-				type='password', key='aws_file_secret_key' )
-			
-			aws_session_token = st.text_input( 'AWS Session Token (Optional)',
-				type='password', key='aws_file_session_token' )
+			st.caption( 'AWS credentials: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN (environment configuration).' )
 			
 			b1, b2, b3 = st.columns( 3 )
 			with b1:
@@ -5771,14 +5762,7 @@ elif mode == 'Retrieval':
 			endpoint_url = st.text_input( 'Endpoint URL (Optional)', key='aws_bucket_endpoint_url',
 				help='Optional S3-compatible endpoint URL.' )
 			
-			aws_access_key_id = st.text_input( 'AWS Access Key ID (Optional)',
-				type='password', key='aws_bucket_access_key' )
-			
-			aws_secret_access_key = st.text_input( 'AWS Secret Access Key (Optional)',
-				type='password', key='aws_bucket_secret_key' )
-			
-			aws_session_token = st.text_input( 'AWS Session Token (Optional)',
-				type='password', key='aws_bucket_session_token' )
+			st.caption( 'AWS credentials: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN (environment configuration).' )
 			
 			b1, b2, b3 = st.columns( 3 )
 			with b1:
@@ -6387,9 +6371,6 @@ elif mode == 'Retrieval':
 					try:
 						loader = AwsFileLoader( )
 						documents = loader.load( bucket=bucket.strip( ), key=key_name.strip( ),
-							aws_access_key_id=aws_access_key_id.strip( ) or None,
-							aws_secret_access_key=aws_secret_access_key.strip( ) or None,
-							aws_session_token=aws_session_token.strip( ) or None,
 							region_name=region_name.strip( ) or None ) or [ ]
 						
 						count = _promote_loader_documents( documents, 'AwsFileLoader' )
@@ -6622,9 +6603,6 @@ elif mode == 'Retrieval':
 						loader = AwsBucketLoader( )
 						documents = loader.load( bucket=bucket_name.strip( ),
 							prefix=prefix.strip( ) or None,
-							aws_access_key_id=aws_access_key_id.strip( ) or None,
-							aws_secret_access_key=aws_secret_access_key.strip( ) or None,
-							aws_session_token=aws_session_token.strip( ) or None,
 							region_name=region_name.strip( ) or None,
 							endpoint_url=endpoint_url.strip( ) or None ) or [ ]
 						
