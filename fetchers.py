@@ -12875,12 +12875,10 @@ method contract.
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'query_path', query_path )
-
-			
 			self.mode = 'athena'
 			self.query_path = self.normalize_query_path( query_path )
-			self.fmt = ( fmt or 'json' ).strip( )
+			throw_if( 'fmt', fmt )
+			self.fmt = fmt
 			throw_if( 'time', time )
 			self.timeout = time
 			self.url = f'{self.athena_base_url}/{self.query_path}'
@@ -12942,7 +12940,7 @@ method contract.
 		try:
 			throw_if( 'mode', mode )
 			
-			self.mode = ( mode or 'indicator_registry' ).strip( ).lower( )
+			self.mode = mode
 			
 			if self.mode == 'indicator_registry':
 				return self.fetch_indicator_registry( time=time )
@@ -13192,9 +13190,6 @@ class UnitedNations( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'query_path', query_path )
-
-			
 			self.mode = 'sdmx_query'
 			self.query_path = self.normalize_query_path( query_path )
 			throw_if( 'time', time )
@@ -13252,7 +13247,7 @@ class UnitedNations( Fetcher ):
 		try:
 			throw_if( 'mode', mode )
 			
-			self.mode = ( mode or 'datasets' ).strip( ).lower( )
+			self.mode = mode
 			
 			if self.mode == 'datasets':
 				return self.fetch_datasets( time=time )
@@ -13588,7 +13583,7 @@ class WorldPopulation( Fetcher ):
 
 			
 			self.mode = 'search'
-			self.query_text = ( query or '' ).strip( )
+			self.query_text = query
 			self.page = self.validate_page( page )
 			self.page_size = self.validate_page_size( page_size )
 			throw_if( 'time', time )
@@ -13642,9 +13637,6 @@ class WorldPopulation( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'asset_path', asset_path )
-
-			
 			self.mode = 'raster_metadata'
 			self.asset_path = self.normalize_asset_path( asset_path )
 			throw_if( 'time', time )
@@ -13703,7 +13695,7 @@ class WorldPopulation( Fetcher ):
 		"""
 		try:
 			throw_if( 'mode', mode )
-			self.mode = ( mode or 'catalog' ).strip( ).lower( )
+			self.mode = mode
 			if self.mode == 'catalog':
 				return self.fetch_catalog( time=time )
 			
@@ -13865,7 +13857,7 @@ class Wonder( Fetcher ):
 		try:
 			throw_if( 'dataset_id', dataset_id )
 			
-			value = dataset_id.strip( ).upper( )
+			value = dataset_id
 			
 			if not re.fullmatch( r'D\d{1,4}', value ):
 				raise ValueError( 'CDC WONDER Dataset ID must use the format D followed by '
@@ -13994,13 +13986,12 @@ class Wonder( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'dataset_id', dataset_id )
 			throw_if( 'request_xml', request_xml )
 
 			
 			self.mode = 'query_xml'
 			self.dataset_id = self.normalize_dataset_id( dataset_id )
-			self.request_xml = request_xml.strip( )
+			self.request_xml = request_xml
 			throw_if( 'time', time )
 			self.timeout = time
 			self.url = f'{self.base_url}/{self.dataset_id}'
@@ -14052,7 +14043,7 @@ class Wonder( Fetcher ):
 		try:
 			throw_if( 'mode', mode )
 			
-			self.mode = ( mode or 'metadata_template' ).strip( ).lower( )
+			self.mode = mode
 			
 			if self.mode == 'metadata_template':
 				return self.fetch_template( dataset_id=dataset_id )
@@ -14257,7 +14248,7 @@ class USGSEarthquakes( Fetcher ):
 		try:
 			throw_if( 'feed', feed )
 			
-			value = feed.strip( )
+			value = feed
 			allowed = { 'all_hour.geojson', 'all_day.geojson', 'all_week.geojson',
 					'all_month.geojson', 'significant_hour.geojson', 'significant_day.geojson',
 					'significant_week.geojson', 'significant_month.geojson', '4.5_hour.geojson',
@@ -14369,7 +14360,7 @@ class USGSEarthquakes( Fetcher ):
 		try:
 			throw_if( 'order_by', order_by )
 			
-			value = order_by.strip( ).lower( )
+			value = order_by
 			allowed = { 'time', 'time-asc', 'magnitude', 'magnitude-asc' }
 			
 			if value not in allowed:
@@ -14766,8 +14757,6 @@ class USGSEarthquakes( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'start_date', start_date )
-			throw_if( 'end_date', end_date )
 			throw_if( 'event_type', event_type )
 
 			
@@ -14791,7 +14780,7 @@ class USGSEarthquakes( Fetcher ):
 			self.max_magnitude = self.validate_magnitude( 'max_magnitude', max_magnitude )
 			self.limit = self.validate_limit( limit )
 			self.order_by = self.validate_order_by( order_by )
-			self.event_type = event_type.strip( )
+			self.event_type = event_type
 			throw_if( 'time', time )
 			self.timeout = time
 			self.url = self.search_url
@@ -14881,7 +14870,7 @@ class USGSEarthquakes( Fetcher ):
 		try:
 			throw_if( 'mode', mode )
 			
-			self.mode = ( mode or 'feed' ).strip( ).lower( )
+			self.mode = mode
 			
 			if self.mode == 'feed':
 				return self.fetch_feed( feed=feed, time=time )
@@ -15076,7 +15065,7 @@ value.
 		try:
 			throw_if( 'collection', collection )
 			
-			value = collection.strip( )
+			value = collection
 			allowed = { 'monitoring-locations', 'time-series-metadata', 'latest-continuous',
 					'latest-daily' }
 			
@@ -15147,7 +15136,7 @@ value.
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			value = ( parameter_code or '' ).strip( )
+			value = parameter_code
 			
 			if value and not re.fullmatch( r'\d{5}', value ):
 				raise ValueError( 'parameter_code must be a 5-digit USGS parameter code.' )
@@ -15570,10 +15559,10 @@ value.
 
 			
 			self.mode = 'monitoring-locations'
-			self.monitoring_location_id = ( monitoring_location_id or '' ).strip( )
-			self.state_code = ( state_code or '' ).strip( )
-			self.county_code = ( county_code or '' ).strip( )
-			self.site_type = ( site_type or '' ).strip( )
+			self.monitoring_location_id = monitoring_location_id
+			self.state_code = state_code
+			self.county_code = county_code
+			self.site_type = site_type
 			self.limit = self.validate_limit( limit )
 			throw_if( 'time', time )
 			self.timeout = time
@@ -15624,7 +15613,7 @@ value.
 
 			
 			self.mode = 'time-series-metadata'
-			self.monitoring_location_id = monitoring_location_id.strip( )
+			self.monitoring_location_id = monitoring_location_id
 			self.parameter_code = self.validate_parameter_code( parameter_code )
 			self.limit = self.validate_limit( limit )
 			throw_if( 'time', time )
@@ -15676,7 +15665,7 @@ value.
 
 			
 			self.mode = 'latest-continuous'
-			self.monitoring_location_id = monitoring_location_id.strip( )
+			self.monitoring_location_id = monitoring_location_id
 			self.parameter_code = self.validate_parameter_code( parameter_code )
 			self.limit = self.validate_limit( limit )
 			throw_if( 'time', time )
@@ -15728,7 +15717,7 @@ value.
 
 			
 			self.mode = 'latest-daily'
-			self.monitoring_location_id = monitoring_location_id.strip( )
+			self.monitoring_location_id = monitoring_location_id
 			self.parameter_code = self.validate_parameter_code( parameter_code )
 			self.limit = self.validate_limit( limit )
 			throw_if( 'time', time )
@@ -15782,7 +15771,7 @@ value.
 		try:
 			throw_if( 'mode', mode )
 			
-			self.mode = ( mode or 'monitoring-locations' ).strip( ).lower( )
+			self.mode = mode
 			
 			if self.mode == 'monitoring-locations':
 				return self.fetch_monitoring_locations(
@@ -15980,7 +15969,7 @@ class USGSTheNationalMap( Fetcher ):
 		try:
 			throw_if( 'endpoint', endpoint )
 			
-			value = endpoint.strip( ).lower( )
+			value = endpoint
 			allowed = { 'datasets', 'products' }
 			
 			if value not in allowed:
@@ -16467,15 +16456,11 @@ class USGSTheNationalMap( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'max_items', max_items )
-			throw_if( 'offset', offset )
-
-			
 			self.mode = 'products'
-			self.dataset = ( dataset or '' ).strip( )
-			self.query_text = ( q or '' ).strip( )
+			self.dataset = dataset
+			self.query_text = q
 			self.bbox = self.validate_bbox( bbox )
-			self.prod_formats = ( prod_formats or '' ).strip( )
+			self.prod_formats = prod_formats
 			self.max_items = self.validate_max_items( max_items )
 			self.offset = self.validate_offset( offset )
 			throw_if( 'time', time )
@@ -16530,7 +16515,7 @@ class USGSTheNationalMap( Fetcher ):
 		try:
 			throw_if( 'mode', mode )
 			
-			self.mode = ( mode or 'products' ).strip( ).lower( )
+			self.mode = mode
 			
 			if self.mode == 'datasets':
 				return self.fetch_datasets( time=time )
@@ -17092,14 +17077,11 @@ class USGSScienceBase( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			throw_if( 'max_items', max_items )
-			throw_if( 'offset', offset )
-
 			self.mode = 'items'
-			self.query_text = ( q or '' ).strip( )
+			self.query_text = q
 			self.max_items = self.validate_max_items( max_items )
 			self.offset = self.validate_offset( offset )
-			self.fields = ( fields or '' ).strip( )
+			self.fields = fields
 			throw_if( 'time', time )
 			self.timeout = time
 			
@@ -17139,7 +17121,7 @@ class USGSScienceBase( Fetcher ):
 			throw_if( 'item_id', item_id )
 
 			self.mode = 'item'
-			self.item_id = item_id.strip( )
+			self.item_id = item_id
 			throw_if( 'time', time )
 			self.timeout = time
 			self.request( endpoint=f'item/{self.item_id}', params={ }, time=self.timeout )
@@ -17181,7 +17163,7 @@ class USGSScienceBase( Fetcher ):
 		"""
 		try:
 			throw_if( 'mode', mode )
-			self.mode = ( mode or 'items' ).strip( ).lower( )
+			self.mode = mode
 			if self.mode == 'items':
 				return self.fetch_items( q=q, max_items=max_items, offset=offset, fields=fields,
 					time=time )
