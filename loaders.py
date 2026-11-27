@@ -1331,7 +1331,7 @@ class ExcelLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -1362,7 +1362,7 @@ class ExcelLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'ExcelLoader'
-			exception.method = 'split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ]'
+			exception.method = 'split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ]'
 			Logger( ).write( exception )
 			raise exception
 
@@ -1602,7 +1602,7 @@ class MarkdownLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'MarkdownLoader'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> '
+			exception.method = ('split( self, chunk: int=800, overlap: int=50 ) -> '
 			                    'List[ Document ] | None')
 			Logger( ).write( exception )
 			raise exception
@@ -1856,8 +1856,7 @@ class JsonLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'JsonLoader'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> '
-			                    'List[ Document ] | None')
+			exception.method = 'split( self, **args ) -> List[ Document ]'
 			Logger( ).write( exception )
 			raise exception
 
@@ -1952,7 +1951,7 @@ class ArXivLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -1980,8 +1979,7 @@ class ArXivLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'ArxivLoader'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> List[ '
-			                    'Document ]')
+			exception.method = ('split( self, **args ) -> List[ Document ]')
 			Logger( ).write( exception )
 			raise exception
 
@@ -2065,12 +2063,10 @@ class WikiLoader( Loader ):
 		"""
 		try:
 			throw_if( 'query', query )
-			
 			self.query = query
 			self.max_documents = max_docs
 			self.max_characters = max_chars
 			self.include_all = include_all
-			
 			self.loader = WikipediaLoader( query=self.query, load_max_docs=self.max_documents,
 				load_all_available_meta=self.include_all,
 				doc_content_chars_max=self.max_characters )
@@ -2082,12 +2078,11 @@ class WikiLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'WikiLoader'
-			exception.method = ('load( self, query: str, max_docs: int=25, max_chars: int=4000, '
-			                    'include_all: bool=False ) -> List[ Document ] | None')
+			exception.method = ('load( self, **args ) -> List[ Document ] | None')
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -2118,7 +2113,7 @@ class WikiLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'WikiLoader'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> '
+			exception.method = ('split( self, chunk: int=800, overlap: int=50 ) -> '
 			                    'List[ Document ] | None')
 			Logger( ).write( exception )
 			raise exception
@@ -2237,7 +2232,7 @@ class GithubLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -2267,7 +2262,7 @@ class GithubLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'GithubLoader'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> '
+			exception.method = ('split( self, chunk: int=800, overlap: int=50 ) -> '
 			                    'List[ Document ] | None')
 			Logger( ).write( exception )
 			raise exception
@@ -2387,7 +2382,7 @@ class PowerPointLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -2417,7 +2412,7 @@ class PowerPointLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'PowerPointLoader'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> '
+			exception.method = ('split( self, chunk: int=800, overlap: int=50 ) -> '
 			                    'List[ Document ] | None')
 			Logger( ).write( exception )
 			raise exception
@@ -2508,7 +2503,7 @@ class OutlookLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -2535,7 +2530,7 @@ class OutlookLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'OutlookLoader'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> List[ '
+			exception.method = ('split( self, chunk: int=800, overlap: int=50 ) -> List[ '
 			                    'Document ]')
 			Logger( ).write( exception )
 			raise exception
@@ -2749,7 +2744,7 @@ class WebCrawler( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -2778,7 +2773,7 @@ class WebCrawler( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'WebCrawler'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> '
+			exception.method = ('split( self, chunk: int=800, overlap: int=50 ) -> '
 			                    'List[ Document ] | None')
 			Logger( ).write( exception )
 			raise exception
@@ -2915,7 +2910,7 @@ class SpfxLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -2942,7 +2937,7 @@ class SpfxLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'SpfxLoader'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> List[ '
+			exception.method = ('split( self, chunk: int=800, overlap: int=50 ) -> List[ '
 			                    'Document ]')
 			Logger( ).write( exception )
 			raise exception
@@ -3090,7 +3085,7 @@ class OneDriveDocLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -3117,7 +3112,7 @@ class OneDriveDocLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'WikiLoader'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> List[ '
+			exception.method = ('split( self, chunk: int=800, overlap: int=50 ) -> List[ '
 			                    'Document ]')
 			Logger( ).write( exception )
 			raise exception
@@ -3259,7 +3254,7 @@ class GoogleLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -3286,7 +3281,7 @@ class GoogleLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'GoogleDriveLoader'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> List[ '
+			exception.method = ('split( self, chunk: int=800, overlap: int=50 ) -> List[ '
 			                    'Document ]')
 			Logger( ).write( exception )
 			raise exception
@@ -3380,7 +3375,7 @@ class EmailLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -3406,7 +3401,7 @@ class EmailLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'EmailLoader'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) -> List[ '
+			exception.method = ('split( self, chunk: int=800, overlap: int=50 ) -> List[ '
 			                    'Document ]')
 			Logger( ).write( exception )
 			raise exception
@@ -3488,7 +3483,7 @@ class PubMedSearchLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -3516,7 +3511,7 @@ class PubMedSearchLoader( Loader ):
 			exception.module = 'loaders'
 			exception.cause = 'PubMedSearchLoader'
 			exception.method = (
-				'split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None')
+				'split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None')
 			Logger( ).write( exception )
 			raise exception
 
@@ -3603,7 +3598,7 @@ class OpenCityLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -3631,7 +3626,7 @@ class OpenCityLoader( Loader ):
 			exception.module = 'loaders'
 			exception.cause = 'OpenCityLoader'
 			exception.method = (
-				'split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None')
+				'split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None')
 			Logger( ).write( exception )
 			raise exception
 
@@ -3731,7 +3726,7 @@ class JupyterNotebookLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -3759,7 +3754,7 @@ class JupyterNotebookLoader( Loader ):
 			exception.module = 'loaders'
 			exception.cause = 'JupyterNotebookLoader'
 			exception.method = (
-				'split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None')
+				'split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None')
 			Logger( ).write( exception )
 			raise exception
 
@@ -3847,7 +3842,7 @@ class GoogleCloudFileLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -3875,7 +3870,7 @@ class GoogleCloudFileLoader( Loader ):
 			exception.module = 'loaders'
 			exception.cause = 'GoogleCloudStorageFileLoader'
 			exception.method = (
-				'split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None')
+				'split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None')
 			Logger( ).write( exception )
 			raise exception
 
@@ -4005,7 +4000,7 @@ class AwsFileLoader( Loader ):
 			raise exception
 
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -4032,7 +4027,7 @@ class AwsFileLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'AwsFileLoader'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) '
+			exception.method = ('split( self, chunk: int=800, overlap: int=50 ) '
 			                    '-> List[ Document ] | None')
 			Logger( ).write( exception )
 			raise exception
@@ -4130,7 +4125,7 @@ class GoogleSpeechToTextLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -4157,7 +4152,7 @@ class GoogleSpeechToTextLoader( Loader ):
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'GoogleSpeechToTextAudioLoader'
-			exception.method = ('split( self, chunk: int=1000, overlap: int=200 ) '
+			exception.method = ('split( self, chunk: int=800, overlap: int=50 ) '
 			                    '-> List[ Document ] | None')
 			Logger( ).write( exception )
 			raise exception
@@ -4256,7 +4251,7 @@ class GoogleBucketLoader( Loader ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
@@ -4412,7 +4407,7 @@ class AwsBucketLoader( Loader ):
 			raise exception
 
 	
-	def split( self, chunk: int=1000, overlap: int=200 ) -> List[ Document ] | None:
+	def split( self, chunk: int=800, overlap: int=50 ) -> List[ Document ] | None:
 		"""Split.
 
 		Purpose:
