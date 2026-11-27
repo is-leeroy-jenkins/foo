@@ -9438,11 +9438,13 @@ class InternetArchive( Fetcher ):
 	    agents (Optional[str]): Configured user-agent string sent with web requests.
 	    headers (Any): HTTP headers sent with the current request.
 	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
+	    active_fields (List[str]): Fields requested by the current search.
 	"""
 	keywords: Optional[ str ]
 	url: Optional[ str ]
 	response: Optional[ Response ]
 	fields: Optional[ List[ str ] ]
+	active_fields: List[ str ]
 	rows: Optional[ int ]
 	page: Optional[ int ]
 	sort: Optional[ str ]
@@ -9470,6 +9472,7 @@ class InternetArchive( Fetcher ):
 		self.params = { }
 		self.fields = [ 'identifier', 'title', 'creator', 'mediatype', 'collection', 'publicdate',
 				'description' ]
+		self.active_fields = self.fields
 		self.rows = 10
 		self.page = 1
 		self.sort = 'downloads desc'
@@ -9514,11 +9517,11 @@ class InternetArchive( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			value = rows
-			if value < 1 or value > 100:
+			throw_if( 'rows', rows )
+			if rows < 1 or rows > 100:
 				raise ValueError( 'rows must be between 1 and 100.' )
 			
-			return value
+			return rows
 		
 		except Exception as e:
 			exception = Error( e )
@@ -9634,26 +9637,28 @@ class InternetArchive( Fetcher ):
 		    to the application logger, and re-raises it.
 		"""
 		try:
-			self.keywords = keywords.strip( )
-			throw_if( 'keywords', self.keywords )
+			throw_if( 'keywords', keywords )
+			self.keywords = keywords
 			
 
 			throw_if( 'time', time )
 			self.timeout = time
 			self.rows = self.validate_rows( rows )
 			self.page = self.validate_page( page )
-			self.sort = ( sort or 'downloads desc' ).strip( )
-			self.media_type = ( media_type or '' ).strip( )
-			self.collection = ( collection or '' ).strip( )
+			self.sort = sort
+			self.media_type = media_type
+			self.collection = collection
 			
-			active_fields = fields if fields else self.fields
-			if not isinstance( active_fields, list ) or not active_fields:
-				raise ValueError( 'fields must be a non-empty list of field names.' )
+			if fields is None:
+				self.active_fields = self.fields
+			else:
+				throw_if( 'fields', fields )
+				self.active_fields = fields
 			
 			query_text = self.build_query( keywords=self.keywords, media_type=self.media_type,
 				collection=self.collection )
 			
-			self.params = { 'q': query_text, 'fl[]': active_fields, 'rows': self.rows,
+			self.params = { 'q': query_text, 'fl[]': self.active_fields, 'rows': self.rows,
 					'page': self.page, 'sort[]': self.sort, 'output': 'json' }
 			
 			self.response = requests.get( url=self.url, params=self.params, headers=self.headers,
@@ -9759,6 +9764,8 @@ class OpenWeather( Fetcher ):
 	    between related operations.
 	    agents (Optional[str]): Configured user-agent string sent with web requests.
 	    headers (Any): HTTP headers sent with the current request.
+	    past_days (int): Number of historical days included in the forecast request.
+	    forecast_days (int): Number of forecast days requested.
 	"""
 	geocode_url: Optional[ str ]
 	forecast_url: Optional[ str ]
@@ -9776,6 +9783,8 @@ class OpenWeather( Fetcher ):
 	params: Optional[ Dict[ str, Any ] ]
 	geocode_params: Optional[ Dict[ str, Any ] ]
 	result_limit: Optional[ int ]
+	past_days: int
+	forecast_days: int
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
@@ -9798,6 +9807,8 @@ class OpenWeather( Fetcher ):
 		self.timezone = 'auto'
 		self.mode = 'current'
 		self.result_limit = 10
+		self.past_days = 0
+		self.forecast_days = 7
 		self.geocode_url = 'https://geocoding-api.open-meteo.com/v1/search'
 		self.forecast_url = 'https://api.open-meteo.com/v1/forecast'
 		self.temperature_unit = 'fahrenheit'
@@ -9864,7 +9875,8 @@ class OpenWeather( Fetcher ):
 		"""
 		try:
 			throw_if( 'location', location )
-			self.location = location.strip( )
+			self.location = location
+			throw_if( 'count', count )
 			self.result_limit = count
 			if self.result_limit < 1:
 				raise ValueError( 'count must be positive.' )
@@ -9936,13 +9948,16 @@ class OpenWeather( Fetcher ):
 			self.longitude = long
 			if not -90.0 <= self.latitude <= 90.0 or not -180.0 <= self.longitude <= 180.0 or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
 				raise ValueError( 'Invalid latitude or longitude.' )
-			self.timezone = ( zone or 'auto' ).strip( )
+			throw_if( 'zone', zone )
+			self.timezone = zone
+			throw_if( 'past_days', past_days )
+			self.past_days = past_days
 			
 			self.params = { 'latitude': self.latitude, 'longitude': self.longitude,
 					'current': self.current_metrics, 'timezone': self.timezone,
 					'temperature_unit': self.temperature_unit,
 					'wind_speed_unit': self.windspeed_unit,
-					'precipitation_unit': self.precipitation_unit, 'past_days': past_days }
+					'precipitation_unit': self.precipitation_unit, 'past_days': self.past_days }
 			
 			self.url = self.forecast_url
 			self.response = requests.get( self.url, params=self.params, headers=self.headers,
@@ -10002,10 +10017,15 @@ class OpenWeather( Fetcher ):
 			self.longitude = long
 			if not -90.0 <= self.latitude <= 90.0 or not -180.0 <= self.longitude <= 180.0 or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
 				raise ValueError( 'Invalid latitude or longitude.' )
-			self.timezone = ( zone or 'auto' ).strip( )
+			throw_if( 'zone', zone )
+			self.timezone = zone
+			throw_if( 'past_days', past_days )
+			self.past_days = past_days
+			throw_if( 'forecast_days', forecast_days )
+			self.forecast_days = forecast_days
 			self.params = { 'latitude': self.latitude, 'longitude': self.longitude,
 					'hourly': self.hourly_metrics, 'timezone': self.timezone,
-					'forecast_days': forecast_days, 'past_days': past_days,
+					'forecast_days': self.forecast_days, 'past_days': self.past_days,
 					'temperature_unit': self.temperature_unit,
 					'wind_speed_unit': self.windspeed_unit,
 					'precipitation_unit': self.precipitation_unit }
@@ -10067,10 +10087,15 @@ class OpenWeather( Fetcher ):
 			self.longitude = long
 			if not -90.0 <= self.latitude <= 90.0 or not -180.0 <= self.longitude <= 180.0 or not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ):
 				raise ValueError( 'Invalid latitude or longitude.' )
-			self.timezone = ( zone or 'auto' ).strip( )
+			throw_if( 'zone', zone )
+			self.timezone = zone
+			throw_if( 'past_days', past_days )
+			self.past_days = past_days
+			throw_if( 'forecast_days', forecast_days )
+			self.forecast_days = forecast_days
 			self.params = { 'latitude': self.latitude, 'longitude': self.longitude,
 					'daily': self.daily_metrics, 'timezone': self.timezone,
-					'forecast_days': forecast_days, 'past_days': past_days,
+					'forecast_days': self.forecast_days, 'past_days': self.past_days,
 					'temperature_unit': self.temperature_unit,
 					'wind_speed_unit': self.windspeed_unit,
 					'precipitation_unit': self.precipitation_unit }
@@ -10141,22 +10166,17 @@ class OpenWeather( Fetcher ):
 						'message': 'Geocoding returned no usable coordinates.',
 						'geocoding': selected, 'data': { } }
 			
-			active_mode = mode.strip( ).lower( )
+			active_mode = mode
 			if active_mode == 'current':
-				result = self.fetch_current( lat=float( lat ),
-					long=float( long ), zone=( zone or 'auto' ).strip( ),
+				result = self.fetch_current( lat=lat,
+					long=long, zone=zone,
 					past_days=past_days ) or { }
 			
 			elif active_mode == 'hourly':
-				result = self.fetch_hourly( lat=float( lat ), long=float( long ), zone=( zone
-				                                                                            or
-				                                                                            'auto'
-				).strip( ), forecast_days=forecast_days, past_days=past_days ) or { }
+				result = self.fetch_hourly( lat=lat, long=long, zone=zone, forecast_days=forecast_days, past_days=past_days ) or { }
 			
 			elif active_mode == 'daily':
-				result = self.fetch_daily( lat=float( lat ), long=float( long ), zone=( zone or
-				                                                                           'auto'
-				).strip( ), forecast_days=forecast_days, past_days=past_days ) or { }
+				result = self.fetch_daily( lat=lat, long=long, zone=zone, forecast_days=forecast_days, past_days=past_days ) or { }
 			
 			else:
 				raise ValueError( "Unsupported mode. Use 'current', 'hourly', or 'daily'." )
@@ -10349,7 +10369,7 @@ class HistoricalWeather( Fetcher ):
 		"""
 		try:
 			throw_if( 'location', location )
-			self.location = location.strip( )
+			self.location = location
 			self.result_limit = count
 			if self.result_limit < 1:
 				raise ValueError( 'count must be positive.' )
@@ -10421,7 +10441,8 @@ class HistoricalWeather( Fetcher ):
 			if not isinstance( date, dt.date ):
 				raise ValueError( 'date must be a datetime.date instance.' )
 			self.target_date = date
-			self.timezone = zone.strip( ) if zone else 'auto'
+			throw_if( 'zone', zone )
+			self.timezone = zone
 			self.params = { 'latitude': self.latitude, 'longitude': self.longitude,
 					'start_date': self.target_date.isoformat( ),
 					'end_date': self.target_date.isoformat( ), 'timezone': self.timezone,
@@ -10490,8 +10511,8 @@ class HistoricalWeather( Fetcher ):
 						'message': 'Geocoding returned no usable coordinates.',
 						'geocoding': selected, 'data': { } }
 			
-			result = self.fetch_historical( lat=float( lat ), long=float( long ), date=date,
-				zone=( zone or 'auto' ).strip( ) ) or { }
+			result = self.fetch_historical( lat=lat, long=long, date=date,
+				zone=zone ) or { }
 			
 			result[ 'geocoding' ] = selected
 			return result
@@ -10638,15 +10659,11 @@ class Grokipedia( Fetcher ):
 		    Error: Wraps the source exception with module, class, and method metadata.
 		"""
 		try:
-			throw_if( 'limit', limit )
-
-			throw_if( 'offset', offset )
-
 			throw_if( 'query', query )
+			self.query = query
 			throw_if( 'limit', limit )
-			throw_if( 'offset', offset )
-			self.query = query.strip( )
 			self.limit = limit
+			throw_if( 'offset', offset )
 			self.offset = offset
 			self.client = GrokipediaClient( )
 			self.url = 'grokipedia.search'
@@ -10687,7 +10704,7 @@ class Grokipedia( Fetcher ):
 			throw_if( 'include_content', include_content )
 
 			throw_if( 'page', page )
-			self.page = page.strip( )
+			self.page = page
 			self.include_content = include_content
 			self.client = GrokipediaClient( )
 			self.url = 'grokipedia.get_page'
@@ -10730,7 +10747,7 @@ class Grokipedia( Fetcher ):
 		"""
 		try:
 			throw_if( 'mode', mode )
-			mode_value = ( mode or 'search' ).strip( ).lower( )
+			mode_value = mode
 			if mode_value == 'search':
 				return self.fetch_search( query=query, limit=limit, offset=offset )
 			
@@ -10983,9 +11000,9 @@ class GoogleGeocoding( Fetcher ):
 
 			
 			self.mode = 'forward'
-			self.query = query.strip( )
-			self.language = ( language or 'en' ).strip( )
-			self.region = ( region or '' ).strip( )
+			self.query = query
+			self.language = language
+			self.region = region
 			throw_if( 'time', time )
 			self.timeout = time
 			self.params = { 'address': self.query, 'language': self.language }
@@ -11041,9 +11058,9 @@ class GoogleGeocoding( Fetcher ):
 			self.longitude = longitude
 			if not math.isfinite( self.latitude ) or not math.isfinite( self.longitude ) or not -90 <= self.latitude <= 90 or not -180 <= self.longitude <= 180:
 				raise ValueError( 'Latitude or longitude is outside valid geographic bounds.' )
-			self.language = ( language or 'en' ).strip( )
-			self.result_type = ( result_type or '' ).strip( )
-			self.location_type = ( location_type or '' ).strip( )
+			self.language = language
+			self.result_type = result_type
+			self.location_type = location_type
 			throw_if( 'time', time )
 			self.timeout = time
 			self.params = { 'latlng': f'{self.latitude},{self.longitude}',
@@ -11096,9 +11113,9 @@ class GoogleGeocoding( Fetcher ):
 			throw_if( 'place_id', place_id )
 
 			self.mode = 'place'
-			self.place_id = place_id.strip( )
-			self.language = ( language or 'en' ).strip( )
-			self.region = ( region or '' ).strip( )
+			self.place_id = place_id
+			self.language = language
+			self.region = region
 			throw_if( 'time', time )
 			self.timeout = time
 			self.params = { 'place_id': self.place_id, 'language': self.language }
@@ -11147,7 +11164,7 @@ class GoogleGeocoding( Fetcher ):
 		"""
 		try:
 			throw_if( 'mode', mode )
-			self.mode = mode.strip( ).lower( )
+			self.mode = mode
 			if self.mode == 'forward':
 				return self.fetch_forward( query=query, language=language, region=region,
 					time=time )
@@ -11474,8 +11491,8 @@ class CensusData( Fetcher ):
 			throw_if( 'dataset', dataset )
 
 			self.mode = 'variables'
-			self.year = year.strip( )
-			self.dataset = dataset.strip( ).strip( '/' )
+			self.year = year
+			self.dataset = dataset
 			throw_if( 'time', time )
 			self.timeout = time
 			if not re.fullmatch( r'\d{4}', self.year ):
@@ -11543,10 +11560,10 @@ class CensusData( Fetcher ):
 
 			
 			self.mode = 'data'
-			self.year = year.strip( )
-			self.dataset = dataset.strip( ).strip( '/' )
-			self.geography_for = ( geography_for or '' ).strip( )
-			self.geography_in = ( geography_in or '' ).strip( )
+			self.year = year
+			self.dataset = dataset
+			self.geography_for = geography_for
+			self.geography_in = geography_in
 			self.predicates = self.parse_predicates( predicates )
 			throw_if( 'time', time )
 			self.timeout = time
@@ -11619,7 +11636,7 @@ class CensusData( Fetcher ):
 		try:
 			throw_if( 'mode', mode )
 			
-			self.mode = mode.strip( ).lower( )
+			self.mode = mode
 			
 			if self.mode == 'variables':
 				return self.fetch_variables( year=year, dataset=dataset, time=time )
@@ -12024,10 +12041,10 @@ class Socrata( Fetcher ):
 			self.mode = 'rows'
 			self.domain = self.normalize_domain( domain )
 			self.dataset_id = self.normalize_dataset_id( dataset_id )
-			self.select_clause = ( select or '' ).strip( )
-			self.where_clause = ( where or '' ).strip( )
-			self.order_clause = ( order or '' ).strip( )
-			self.group_clause = ( group or '' ).strip( )
+			self.select_clause = select
+			self.where_clause = where
+			self.order_clause = order
+			self.group_clause = group
 			self.limit_value = self.validate_limit( limit )
 			self.offset_value = self.validate_offset( offset )
 			throw_if( 'time', time )
@@ -12106,7 +12123,7 @@ class Socrata( Fetcher ):
 		try:
 			throw_if( 'mode', mode )
 			
-			self.mode = ( mode or 'rows' ).strip( ).lower( )
+			self.mode = mode
 			
 			if self.mode == 'metadata':
 				return self.fetch_metadata( domain=domain, dataset_id=dataset_id, time=time )
@@ -12510,10 +12527,10 @@ class HealthData( Fetcher ):
 			self.mode = 'rows'
 			self.domain = self.normalize_domain( domain )
 			self.dataset_id = self.normalize_dataset_id( dataset_id )
-			self.select_clause = ( select or '' ).strip( )
-			self.where_clause = ( where or '' ).strip( )
-			self.order_clause = ( order or '' ).strip( )
-			self.group_clause = ( group or '' ).strip( )
+			self.select_clause = select
+			self.where_clause = where
+			self.order_clause = order
+			self.group_clause = group
 			self.limit_value = self.validate_limit( limit )
 			self.offset_value = self.validate_offset( offset )
 			throw_if( 'time', time )
@@ -12592,7 +12609,7 @@ class HealthData( Fetcher ):
 		try:
 			throw_if( 'mode', mode )
 			
-			self.mode = ( mode or 'rows' ).strip( ).lower( )
+			self.mode = mode
 			
 			if self.mode == 'metadata':
 				return self.fetch_metadata( domain=domain, dataset_id=dataset_id, time=time )
