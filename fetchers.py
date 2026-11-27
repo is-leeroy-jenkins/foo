@@ -3771,35 +3771,30 @@ class SatelliteCenter( Fetcher ):
 			raise exception
 
 class EarthObservatory( Fetcher ):
-	"""EarthObservatory component.
+	"""NASA EONET event and reference-data adapter.
 
 	Purpose:
-	    Queries NASA Earth Observatory event and reference endpoints for natural-event categories,
-	    sources, and imagery layers.
+	    Retrieve natural events, categories, sources, and imagery-layer metadata through the NASA
+	    EONET v3 API, packaging the selected collection with request metadata.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    mode (Optional[str]): Current mode retained by the EarthObservatory workflow between
-	    related operations.
-	    status (Optional[str]): Current status retained by the EarthObservatory workflow between
-	    related operations.
-	    category (Optional[str]): Current category retained by the EarthObservatory workflow
-	    between related operations.
-	    source (Optional[str]): Current source retained by the EarthObservatory workflow between
-	    related operations.
-	    days (Optional[int]): Current days retained by the EarthObservatory workflow between
-	    related operations.
-	    limit (Optional[int]): Current limit retained by the EarthObservatory workflow between
-	    related operations.
-	    start_date (Optional[str]): Current start date retained by the EarthObservatory workflow
-	    between related operations.
-	    end_date (Optional[str]): Current end date retained by the EarthObservatory workflow
-	    between related operations.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    headers (Any): HTTP headers sent with the current request.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    base_url (Optional[str]): Base provider API URL.
+	    url (Optional[str]): Latest endpoint or request URL.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    response (Optional[Response]): Latest HTTP response.
+	    payload (Any): Latest decoded EONET JSON object.
+	    result (Optional[Dict[str, Any]]): Latest packaged event or reference collection.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    mode (Optional[str]): Selected retrieval operation.
+	    status (Optional[str]): Requested event status.
+	    category (Optional[str]): Event or imagery-layer category filter.
+	    source (Optional[str]): Event source filter.
+	    days (Optional[int]): Event lookback period in days.
+	    limit (Optional[int]): Requested record count.
+	    start_date (Optional[str]): Start date of the requested interval.
+	    end_date (Optional[str]): End date of the requested interval.
+	    agents (Optional[str]): Configured HTTP user-agent.
 	"""
 	base_url: Optional[ str ]
 	url: Optional[ str ]
@@ -3815,15 +3810,14 @@ class EarthObservatory( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider configuration.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure the EONET v3 base URL, user-agent, twenty-second timeout, and open-event
+		    defaults without issuing a request.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.headers = { }
@@ -3848,34 +3842,33 @@ class EarthObservatory( Fetcher ):
 			self.headers[ 'User-Agent' ] = self.agents
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'url', 'params', 'mode', 'status', 'category', 'source', 'days',
 				'limit', 'start_date', 'end_date', 'request', 'fetch_events', 'fetch_categories',
 				'fetch_sources', 'fetch_layers', 'fetch', 'create_schema' ]
 	
 	def request( self, time: int=20 ) -> Dict[ str, Any ]:
-		"""Retrieve and validate the configured NASA EONET JSON response.
+		"""Execute the configured endpoint request.
 
 		Purpose:
-		    Uses the endpoint and parameters already stored by the calling method and
-		    rejects malformed or provider-reported error responses.
+		    Send an HTTP GET using the retained URL, parameters, and headers, check HTTP status,
+		    decode JSON, and reject provider error responses.
 
 		Args:
-		    time (int): Maximum request duration in seconds.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any]: Validated EONET response object.
+		    Dict[str, Any]: Decoded provider JSON object.
 
 		Raises:
-		    Error: Reports request and response validation failures.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 
@@ -3899,32 +3892,30 @@ class EarthObservatory( Fetcher ):
 			raise exception
 	
 	def fetch_events( self, status: str='open', category: str='', source: str='', limit: int=20, days: int=30, start_date: str='', end_date: str='', time: int=20 ) -> Dict[ str, Any ]:
-		"""Fetch events.
+		"""Retrieve natural events.
 
 		Purpose:
-		    Retrieves events from the configured provider and returns normalized response data.
+		    Validate status, positive limits and paired dates; request events using an explicit date
+		    range when present, otherwise use the lookback period.
 
 		Args:
-		    status (str): Status supplied by the caller and interpreted according to the method
-		    contract.
-		    category (str): Category supplied by the caller and interpreted according to the
-		    method contract.
-		    source (str): Source supplied by the caller and interpreted according to the method
-		    contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    days (int): Days supplied by the caller and interpreted according to the method
-		    contract.
-		    start_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
-		    time (int): Maximum request duration in seconds.
+		    status (str): Event status: open, closed, or all. Defaults to 'open'.
+		    category (str): Optional category filter. Defaults to an empty string.
+		    source (str): Optional source filter. Defaults to an empty string.
+		    limit (int): Positive requested event count. Defaults to 20.
+		    days (int): Positive lookback in days when no explicit dates are supplied. Defaults to
+		        30.
+		    start_date (str): Start date parsed as YYYY-MM-DD; supply with end_date. Defaults to an
+		        empty string.
+		    end_date (str): End date parsed as YYYY-MM-DD, on or after start_date. Defaults to an
+		        empty string.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, parameters, events collection, title, and description.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 
@@ -3980,21 +3971,20 @@ class EarthObservatory( Fetcher ):
 			raise exception
 	
 	def fetch_categories( self, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch categories.
+		"""Retrieve event categories.
 
 		Purpose:
-		    Retrieves categories from the configured provider and returns normalized response data.
+		    Request the categories endpoint and validate that the returned category collection is a
+		    list.
 
 		Args:
-		    time (int): Maximum request duration in seconds.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, parameters, categories collection, title, and description.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'categories'
@@ -4018,21 +4008,19 @@ class EarthObservatory( Fetcher ):
 			raise exception
 	
 	def fetch_sources( self, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch sources.
+		"""Retrieve event sources.
 
 		Purpose:
-		    Retrieves sources from the configured provider and returns normalized response data.
+		    Request the sources endpoint and validate that the returned source collection is a list.
 
 		Args:
-		    time (int): Maximum request duration in seconds.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, parameters, sources collection, title, and description.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'sources'
@@ -4056,23 +4044,23 @@ class EarthObservatory( Fetcher ):
 			raise exception
 	
 	def fetch_layers( self, category: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch layers.
+		"""Retrieve imagery-layer metadata.
 
 		Purpose:
-		    Retrieves layers from the configured provider and returns normalized response data.
+		    Optionally validate a category identifier, request the layers endpoint, and flatten
+		    nested category layer lists or use the top-level layers list.
 
 		Args:
-		    category (str): Category supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    category (str): Optional category identifier containing letters, digits, underscores, or
+		        hyphens. Defaults to an empty string.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, parameters, category, flattened layer list, title, and
+		        description.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.mode = 'layers'
@@ -4111,34 +4099,31 @@ class EarthObservatory( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='events', status: str='open', category: str='', source: str='', limit: int=20, days: int=30, start_date: str='', end_date: str='', time: int=20 ) ->  Dict[ str, Any ]:
-		"""Fetch.
+		"""Dispatch an EONET operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select the events, categories, sources, or layers retrieval method and pass the
+		    applicable arguments.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    status (str): Status supplied by the caller and interpreted according to the method
-		    contract.
-		    category (str): Category supplied by the caller and interpreted according to the
-		    method contract.
-		    source (str): Source supplied by the caller and interpreted according to the method
-		    contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    days (int): Days supplied by the caller and interpreted according to the method
-		    contract.
-		    start_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): events, categories, sources, or layers. Defaults to 'events'.
+		    status (str): Event status: open, closed, or all. Defaults to 'open'.
+		    category (str): Optional category filter. Defaults to an empty string.
+		    source (str): Optional source filter. Defaults to an empty string.
+		    limit (int): Positive requested event count. Defaults to 20.
+		    days (int): Positive lookback in days when no explicit dates are supplied. Defaults to
+		        30.
+		    start_date (str): Start date parsed as YYYY-MM-DD; supply with end_date. Defaults to an
+		        empty string.
+		    end_date (str): End date parsed as YYYY-MM-DD, on or after start_date. Defaults to an
+		        empty string.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Packaged collection and metadata for the selected operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -4175,26 +4160,25 @@ class EarthObservatory( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter properties and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
- metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -4220,50 +4204,50 @@ class EarthObservatory( Fetcher ):
 			raise exception
 
 class GlobalImagery( Fetcher ):
-	"""GlobalImagery component.
+	"""NASA GIBS Web Map Service imagery adapter.
 
 	Purpose:
-	    Builds Web Map Service requests and retrieves geospatial imagery in standard projections
-	    for mapping and analysis.
+	    Construct WMS GetCapabilities and GetMap URLs, account for WMS version and projection
+	    axis ordering, and retrieve image files with request and output metadata.
 
 	Attributes:
-	    file_path (Optional[str]): Resolved filesystem path of the current source or output file.
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    latitude (Optional[float]): Current latitude retained by the GlobalImagery workflow
-	    between related operations.
-	    longitude (Optional[float]): Current longitude retained by the GlobalImagery workflow
-	    between related operations.
-	    coordinates (Optional[Tuple[float, float]]): Current coordinates retained by the
-	    GlobalImagery workflow between related operations.
-	    calendar_date (Optional[dt.datetime]): Current calendar date retained by the GlobalImagery
-	    workflow between related operations.
-	    julian_date (Optional[float]): Current julian date retained by the GlobalImagery workflow
-	    between related operations.
-	    sidereal_time (Optional[str]): Current sidereal time retained by the GlobalImagery
-	    workflow between related operations.
-	    utc_time (Optional[dt.time]): Current utc time retained by the GlobalImagery workflow
-	    between related operations.
-	    local_time (Optional[dt.time]): Current local time retained by the GlobalImagery workflow
-	    between related operations.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    era (Optional[str]): Current era retained by the GlobalImagery workflow between related
-	    operations.
-	    year (Optional[str]): Current year retained by the GlobalImagery workflow between related
-	    operations.
-	    month (Optional[str]): Current month retained by the GlobalImagery workflow between
-	    related operations.
-	    day (Optional[str]): Current day retained by the GlobalImagery workflow between related
-	    operations.
-	    mode (Any): Current mode retained by the GlobalImagery workflow between related operations.
-	    fetcher (Any): Current fetcher retained by the GlobalImagery workflow between related
-	    operations.
-	    response (Any): Most recent raw response returned by the provider client.
-	    result (Any): Most recent normalized Foo result produced by the instance.
-	    timeout (Any): Maximum request duration, in seconds, applied to provider calls.
-	    agents (Any): Configured user-agent string sent with web requests.
-	    headers (Any): HTTP headers sent with the current request.
+	    api_key (Optional[str]): Provider API key loaded from configuration.
+	    mode (Optional[str]): Selected retrieval operation.
+	    layer (str): Selected WMS layer identifier.
+	    image_date (str): WMS TIME parameter.
+	    bbox (Optional[Tuple[float, float, float, float]]): West, south, east, north bounding
+	        coordinates.
+	    projection (str): Normalized GIBS projection identifier.
+	    quality (str): GIBS service quality identifier.
+	    version (str): Selected WMS protocol version.
+	    image_format (str): Requested image MIME type.
+	    transparent (bool): Requested background transparency.
+	    width (int): Image width in pixels.
+	    height (int): Image height in pixels.
+	    wms_url (str): Projection-specific WMS service URL.
+	    epsg (str): EPSG coordinate reference identifier.
+	    url (Optional[str]): Latest endpoint or request URL.
+	    file_path (Optional[str]): Path of the downloaded image file.
+	    longitude (Optional[float]): Reserved longitude state, initialized to None.
+	    latitude (Optional[float]): Reserved latitude state, initialized to None.
+	    coordinates (Optional[Tuple[float, float]]): Reserved coordinate pair, initialized to
+	        None.
+	    fetcher (Any): Reserved fetcher reference, initialized to None.
+	    calendar_date (Optional[dt.datetime]): Reserved calendar date, initialized to None.
+	    julian_date (Optional[float]): Reserved Julian date, initialized to None.
+	    sidereal_time (Optional[str]): Reserved sidereal time, initialized to None.
+	    local_time (Optional[dt.time]): Reserved local time, initialized to None.
+	    utc_time (Optional[dt.time]): Reserved UTC time, initialized to None.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    response (Optional[Response]): Latest HTTP response.
+	    result (Optional[Dict[str, Any]]): Latest downloaded image metadata.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    era (Optional[str]): Reserved era, initialized to None.
+	    year (Optional[str]): Reserved year, initialized to None.
+	    month (Optional[str]): Reserved month, initialized to None.
+	    day (Optional[str]): Reserved day, initialized to None.
 	"""
 	file_path: Optional[ str ]
 	api_key: Optional[ str ]
@@ -4283,15 +4267,14 @@ class GlobalImagery( Fetcher ):
 	day: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider configuration.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Initialize GIBS service defaults, including EPSG:4326, best quality, WMS 1.1.1, PNG
+		    output, transparency, and a 1200 by 600 image size.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.api_key = cfg.NASA_API_KEY
@@ -4332,14 +4315,13 @@ class GlobalImagery( Fetcher ):
 		self.day = None
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'file_path', 'api_key', 'url', 'latitude', 'longitude', 'coordinates',
 				'calendar_date', 'julian_date', 'sidereal_time', 'utc_time', 'local_time',
@@ -4350,26 +4332,24 @@ class GlobalImagery( Fetcher ):
 				'fetch_mercator_map', 'create_schema' ]
 	
 	def get_capabilities_url( self, projection: str='epsg4326', quality: str='best', version: str='1.1.1' ) -> str:
-		"""Get capabilities url.
+		"""Build a WMS capabilities URL.
 
 		Purpose:
-		    Get capabilities url using the class state and returns data required by the
-		    surrounding workflow.
+		    Validate projection, quality and version, then assemble the GetCapabilities query
+		    without issuing a request.
 
 		Args:
-		    projection (str): Projection supplied by the caller and interpreted according to the
-		    method contract.
-		    quality (str): Quality supplied by the caller and interpreted according to the method
-		    contract.
-		    version (str): Version supplied by the caller and interpreted according to the method
-		    contract.
+		    projection (str): epsg4326, epsg3857, epsg3413, or epsg3031; case and colon are
+		        normalized. Defaults to 'epsg4326'.
+		    quality (str): Nonblank service quality identifier containing lowercase letters, digits,
+		        underscores, or hyphens. Defaults to 'best'.
+		    version (str): WMS version 1.1.1 or 1.3.0. Defaults to '1.1.1'.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Complete URL for the GetCapabilities operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'projection', projection )
@@ -4399,37 +4379,34 @@ class GlobalImagery( Fetcher ):
 			raise exception
 	
 	def build_wms_url( self, layer: str, image_date: str, bbox: Tuple[ float, float, float, float ], width: int=1200, height: int=600, projection: str='epsg4326', quality: str='best', image_format: str='image/png', transparent: bool=True, version: str='1.1.1' ) -> str:
-		"""Build wms url.
+		"""Build a WMS map URL.
 
 		Purpose:
-		    Constructs the wms url payload required by the downstream provider or loader.
+		    Validate bounds, dimensions, projection, layer, format and transparency; use CRS and
+		    latitude-first EPSG:4326 bounds for WMS 1.3.0, otherwise the applicable SRS or CRS
+		    ordering.
 
 		Args:
-		    layer (str): Layer supplied by the caller and interpreted according to the method
-		    contract.
-		    image_date (str): Date boundary or date value used by the request.
-		    bbox (Tuple[float, float, float, float]): Bbox supplied by the caller and interpreted
-		    according to the method contract.
-		    width (int): Width supplied by the caller and interpreted according to the method
-		    contract.
-		    height (int): Height supplied by the caller and interpreted according to the method
-		    contract.
-		    projection (str): Projection supplied by the caller and interpreted according to the
-		    method contract.
-		    quality (str): Quality supplied by the caller and interpreted according to the method
-		    contract.
-		    image_format (str): Image format supplied by the caller and interpreted according to
-		    the method contract.
-		    transparent (bool): Whether transparent behavior is enabled for the operation.
-		    version (str): Version supplied by the caller and interpreted according to the method
-		    contract.
+		    layer (str): Nonblank WMS layer identifier using letters, digits, underscores, commas,
+		        or hyphens.
+		    image_date (str): Nonblank imagery time value passed to the WMS TIME parameter.
+		    bbox (Tuple[float, float, float, float]): Finite west, south, east, north bounds in the
+		        selected projection, with increasing axes.
+		    width (int): Positive image width in pixels. Defaults to 1200.
+		    height (int): Positive image height in pixels. Defaults to 600.
+		    projection (str): epsg4326, epsg3857, epsg3413, or epsg3031; case and colon are
+		        normalized. Defaults to 'epsg4326'.
+		    quality (str): Nonblank service quality identifier containing lowercase letters, digits,
+		        underscores, or hyphens. Defaults to 'best'.
+		    image_format (str): image/png or image/jpeg. Defaults to 'image/png'.
+		    transparent (bool): Request a transparent background. Defaults to True.
+		    version (str): WMS version 1.1.1 or 1.3.0. Defaults to '1.1.1'.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Complete URL for the GetMap operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'layer', layer )
@@ -4501,41 +4478,39 @@ class GlobalImagery( Fetcher ):
 			raise exception
 	
 	def fetch_wms_map( self, layer: str, image_date: str, bbox: Tuple[ float, float, float, float ], width: int=1200, height: int=600, projection: str='epsg4326', quality: str='best', image_format: str='image/png', transparent: bool=True, output_dir: str='python-examples', output_name: str='', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch wms map.
+		"""Download a GIBS map image.
 
 		Purpose:
-		    Retrieves wms map from the configured provider and returns normalized response data.
+		    Construct a GetMap URL using the builder's default WMS version, create the output
+		    directory, request the image, require an image content type, and write the response
+		    bytes to disk.
 
 		Args:
-		    layer (str): Layer supplied by the caller and interpreted according to the method
-		    contract.
-		    image_date (str): Date boundary or date value used by the request.
-		    bbox (Tuple[float, float, float, float]): Bbox supplied by the caller and interpreted
-		    according to the method contract.
-		    width (int): Width supplied by the caller and interpreted according to the method
-		    contract.
-		    height (int): Height supplied by the caller and interpreted according to the method
-		    contract.
-		    projection (str): Projection supplied by the caller and interpreted according to the
-		    method contract.
-		    quality (str): Quality supplied by the caller and interpreted according to the method
-		    contract.
-		    image_format (str): Image format supplied by the caller and interpreted according to
-		    the method contract.
-		    transparent (bool): Whether transparent behavior is enabled for the operation.
-		    output_dir (str): Output dir supplied by the caller and interpreted according to the
-		    method contract.
-		    output_name (str): Output name supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    layer (str): Nonblank WMS layer identifier using letters, digits, underscores, commas,
+		        or hyphens.
+		    image_date (str): Nonblank imagery time value passed to the WMS TIME parameter.
+		    bbox (Tuple[float, float, float, float]): Finite west, south, east, north bounds in the
+		        selected projection, with increasing axes.
+		    width (int): Positive image width in pixels. Defaults to 1200.
+		    height (int): Positive image height in pixels. Defaults to 600.
+		    projection (str): epsg4326, epsg3857, epsg3413, or epsg3031; case and colon are
+		        normalized. Defaults to 'epsg4326'.
+		    quality (str): Nonblank service quality identifier containing lowercase letters, digits,
+		        underscores, or hyphens. Defaults to 'best'.
+		    image_format (str): image/png or image/jpeg. Defaults to 'image/png'.
+		    transparent (bool): Request a transparent background. Defaults to True.
+		    output_dir (str): Destination directory. Defaults to 'python-examples'; a blank value
+		        uses the same directory.
+		    output_name (str): Destination filename. Defaults to an empty string, generating a
+		        layer-and-date filename.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Image path, URL, request parameters, content type, HTTP status, byte
+		        count, layer, date, bounds, and summary.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'layer', layer )
@@ -4598,19 +4573,18 @@ class GlobalImagery( Fetcher ):
 			raise exception
 	
 	def fetch_map_services( self ) -> Dict[ str, Any ] | None:
-		"""Fetch map services.
+		"""Download the predefined global MODIS image.
 
 		Purpose:
-		    Retrieves map services from the configured provider and returns normalized response
-		    data.
+		    Request the global MODIS Terra true-color image for 2021-09-21 in EPSG:4326 at 1200 by
+		    600 pixels and save the PNG in python-examples.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Image path, URL, request parameters, content type, HTTP status, byte
+		        count, layer, date, bounds, and summary.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			return self.fetch_wms_map( layer='MODIS_Terra_CorrectedReflectance_TrueColor',
@@ -4628,23 +4602,21 @@ class GlobalImagery( Fetcher ):
 			raise exception
 	
 	def fetch_mercator_map( self, ccrs=None ) -> Dict[ str, Any ] | None:
-		"""Fetch mercator map.
+		"""Download the predefined Mercator Landsat image.
 
 		Purpose:
-		    Retrieves mercator map from the configured provider and returns normalized response
-		    data.
+		    Request the Landsat WELD annual reflectance image for 2000-12-01 in EPSG:3857 at 600 by
+		    600 pixels and save the PNG in python-examples.
 
 		Args:
-		    ccrs (Any): Ccrs supplied by the caller and interpreted according to the method
-		    contract.
+		    ccrs (Any): Reserved compatibility argument; unused. Defaults to None.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Image path, URL, request parameters, content type, HTTP status, byte
+		        count, layer, date, bounds, and summary.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			return self.fetch_wms_map(
@@ -4665,26 +4637,25 @@ class GlobalImagery( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter properties and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -4714,33 +4685,43 @@ class GlobalImagery( Fetcher ):
 			raise exception
 
 class NearbyObjects( Fetcher ):
-	"""NearbyObjects component.
+	"""NASA JPL small-body and fireball data adapter.
 
 	Purpose:
-	    Queries NASA near-Earth-object and fireball endpoints for close approaches,
-	    object details, and human-accessible target summaries.
+	    Retrieve close approaches, small-body object details, human-accessible target summaries
+	    and individual objects, and fireball observations through JPL SSD endpoints.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    mode (Optional[str]): Current mode retained by the NearbyObjects workflow between related
-	    operations.
-	    start_date (Optional[str]): Current start date retained by the NearbyObjects workflow
-	    between related operations.
-	    end_date (Optional[str]): Current end date retained by the NearbyObjects workflow between
-	    related operations.
-	    query (Optional[str]): Most recent search text or model prompt submitted by the instance.
-	    dist_max (Optional[str]): Current dist max retained by the NearbyObjects workflow between
-	    related operations.
-	    body (Optional[str]): Text body retained for serialization by the writer.
-	    sort (Optional[str]): Current sort retained by the NearbyObjects workflow between related
-	    operations.
-	    limit (Optional[int]): Current limit retained by the NearbyObjects workflow between
-	    related operations.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    headers (Any): HTTP headers sent with the current request.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    base_url (Optional[str]): Base provider API URL.
+	    url (Optional[str]): Latest endpoint or request URL.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    mode (Optional[str]): Selected retrieval operation.
+	    start_date (Optional[str]): Start date of the requested interval.
+	    end_date (Optional[str]): End date of the requested interval.
+	    query (Optional[str]): Latest search value.
+	    dist_max (Optional[str]): Maximum close-approach distance with unit suffix.
+	    body (Optional[str]): Close-approach target body.
+	    sort (Optional[str]): Close-approach sort expression.
+	    limit (Optional[int]): Requested record count.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    response (Optional[Response]): Latest HTTP response.
+	    payload (Any): Latest decoded SSD JSON object.
+	    dv (float): NHATS delta-v threshold.
+	    dur (int): NHATS mission duration in days.
+	    stay (int): NHATS stay duration in days.
+	    launch (str): NHATS launch window.
+	    start (dt.date): Parsed close-approach start date.
+	    end (dt.date): Parsed close-approach end date.
+	    result (Optional[Dict[str, Any]]): Latest packaged SSD response.
+	    query_type (str): Small-body search selector.
+	    include_physical (bool): Whether physical parameters are requested.
+	    include_close_approaches (bool): Whether close-approach details are requested.
+	    include_discovery (bool): Whether discovery details are requested.
+	    ca_body (str): Body filter for object close-approach details.
+	    h (float): NHATS absolute magnitude threshold.
+	    occ (int): NHATS orbit condition code.
 	"""
 	base_url: Optional[ str ]
 	url: Optional[ str ]
@@ -4756,15 +4737,14 @@ class NearbyObjects( Fetcher ):
 	agents: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider configuration.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure the JPL SSD base URL, request headers, Earth close-approach defaults, and
+		    empty query state.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.headers = { }
@@ -4784,14 +4764,13 @@ class NearbyObjects( Fetcher ):
 			self.headers[ 'User-Agent' ] = self.agents
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'url', 'params', 'mode', 'start_date', 'end_date', 'query',
 				'dist_max',
@@ -4800,20 +4779,20 @@ class NearbyObjects( Fetcher ):
 				'create_schema' ]
 	
 	def request( self, time: int=20 ) -> Dict[ str, Any ]:
-		"""Issue a JPL SSD API request and retain validated response state.
+		"""Execute the configured endpoint request.
 
 		Purpose:
-		    Centralizes positive timeout validation, HTTP response processing,
-		    JSON-object validation and provider error detection for all NEO modes.
+		    Send an HTTP GET using the retained URL, parameters, and headers, check HTTP status,
+		    decode JSON, and reject provider error responses.
 
 		Args:
-		    time (int): Request timeout in seconds.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any]: Valid JSON response from the selected JPL service.
+		    Dict[str, Any]: Decoded provider JSON object.
 
 		Raises:
-		    Error: If an invalid timeout, request failure or provider error occurs.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 
@@ -4838,22 +4817,24 @@ class NearbyObjects( Fetcher ):
 
 
 	def validate_nhats_options( self, dv: float, dur: int, stay: int, launch: str ) -> None:
-		"""Validate the NASA NHATS mission constraint options.
+		"""Validate NHATS mission filters.
 
 		Purpose:
-		    Checks the documented enumerated NHATS filters before a provider request.
+		    Store the supplied mission filters and check allowed delta-v, duration, stay, and
+		    launch-window values.
 
 		Args:
-		    dv (float): Maximum total mission delta-V in km/s.
-		    dur (int): Maximum total mission duration in days.
-		    stay (int): Minimum stay duration in days.
-		    launch (str): Supported NHATS launch window.
+		    dv (float): Delta-v threshold in km/s; accepted whole-number values 4 through 12.
+		    dur (int): Mission duration in days, 60 through 450 in 30-day increments.
+		    stay (int): Stay duration in days: 8, 16, 24, or 32.
+		    launch (str): Launch window: 2020-2025, 2025-2030, 2030-2035, 2035-2040, 2040-2045, or
+		        2020-2045.
 
 		Returns:
-		    None: Checked values are stored on the instance.
+		    None: Stores validated mission filter state; no value is returned.
 
 		Raises:
-		    Error: If any NHATS mission constraint is unsupported.
+		    Error: Raised when required mission filters are missing or outside the accepted values.
 		"""
 		try:
 			throw_if( 'dv', dv )
@@ -4883,31 +4864,28 @@ class NearbyObjects( Fetcher ):
 
 
 	def fetch_close_approaches( self, start_date: str, end_date: str, dist_max: str='10LD', body: str='Earth', sort: str='date', limit: int=20, time: int=20 ) -> Dict[ str, Any ]:
-		"""Fetch close approaches.
+		"""Retrieve small-body close approaches.
 
 		Purpose:
-		    Retrieves close approaches from the configured provider and returns normalized
-		    response data.
+		    Validate dates, record limit, distance expression and sort field, then query cad.api and
+		    package its tabular response.
 
 		Args:
-		    start_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
-		    dist_max (str): Dist max supplied by the caller and interpreted according to the
-		    method contract.
-		    body (str): Body supplied by the caller and interpreted according to the method
-		    contract.
-		    sort (str): Sort supplied by the caller and interpreted according to the method
-		    contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    time (int): Maximum request duration in seconds.
+		    start_date (str): Start date parsed as YYYY-MM-DD.
+		    end_date (str): End date parsed as YYYY-MM-DD, on or after start_date.
+		    dist_max (str): Maximum distance with numeric magnitude and LD, au, AU, km, or KM
+		        suffix. Defaults to '10LD'.
+		    body (str): Close-approach body filter. Defaults to 'Earth'.
+		    sort (str): date, dist, dist-min, v-inf, v-rel, h, or object; a leading minus requests
+		        descending order. Defaults to 'date'.
+		    limit (int): Positive requested record count. Defaults to 20.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, parameters, count, fields, data rows, and provider signature.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 
@@ -4952,33 +4930,26 @@ class NearbyObjects( Fetcher ):
 			raise exception
 	
 	def fetch_object_lookup( self, query: str, query_type: str='sstr', include_physical: bool = True, include_close_approaches: bool=True, ca_body: str='Earth', include_discovery: bool = True, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch object lookup.
+		"""Retrieve small-body object details.
 
 		Purpose:
-		    Retrieves object lookup from the configured provider and returns normalized response
-		    data.
+		    Validate the search selector, assemble optional physical, close-approach and discovery
+		    flags, and query sbdb.api.
 
 		Args:
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    query_type (str): Query type supplied by the caller and interpreted according to the
-		    method contract.
-		    include_physical (bool): Whether include physical behavior is enabled for the
-		    operation.
-		    include_close_approaches (bool): Whether include close approaches behavior is enabled
-		    for the operation.
-		    ca_body (str): Ca body supplied by the caller and interpreted according to the method
-		    contract.
-		    include_discovery (bool): Whether include discovery behavior is enabled for the
-		    operation.
-		    time (int): Maximum request duration in seconds.
+		    query (str): Nonblank object search value.
+		    query_type (str): Search selector: sstr, spk, or des. Defaults to 'sstr'.
+		    include_physical (bool): Include physical parameters. Defaults to True.
+		    include_close_approaches (bool): Include close-approach data. Defaults to True.
+		    ca_body (str): Body filter for included close approaches. Defaults to 'Earth'.
+		    include_discovery (bool): Include discovery data. Defaults to True.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, and decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'include_physical', include_physical )
@@ -5018,30 +4989,30 @@ class NearbyObjects( Fetcher ):
 			raise exception
 	
 	def fetch_nhats_summary( self, dv: float=6.0, dur: int=360, stay: int=8, launch: str = '2020-2045', h: float=26.0, occ: int=7, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch nhats summary.
+		"""Retrieve human-accessible target summaries.
 
 		Purpose:
-		    Retrieves nhats summary from the configured provider and returns normalized response
-		    data.
+		    Validate mission and magnitude filters and orbit condition code, then request NHATS
+		    summary data.
 
 		Args:
-		    dv (float): Dv supplied by the caller and interpreted according to the method contract.
-		    dur (int): Dur supplied by the caller and interpreted according to the method contract.
-		    stay (int): Stay supplied by the caller and interpreted according to the method
-		    contract.
-		    launch (str): Launch supplied by the caller and interpreted according to the method
-		    contract.
-		    h (float): H supplied by the caller and interpreted according to the method contract.
-		    occ (int): Occ supplied by the caller and interpreted according to the method contract.
-		    time (int): Maximum request duration in seconds.
+		    dv (float): Delta-v threshold in km/s; accepted whole-number values 4 through 12.
+		        Defaults to 6.0.
+		    dur (int): Mission duration in days, 60 through 450 in 30-day increments. Defaults to
+		        360.
+		    stay (int): Stay duration in days: 8, 16, 24, or 32. Defaults to 8.
+		    launch (str): Launch window: 2020-2025, 2025-2030, 2030-2035, 2035-2040, 2040-2045, or
+		        2020-2045. Defaults to '2020-2045'.
+		    h (float): Absolute magnitude threshold; accepted whole-number values 16 through 30.
+		        Defaults to 26.0.
+		    occ (int): Orbit condition code from 0 through 8. Defaults to 7.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, and decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			self.validate_nhats_options( dv=dv, dur=dur, stay=stay, launch=launch )
@@ -5068,30 +5039,27 @@ class NearbyObjects( Fetcher ):
 			raise exception
 	
 	def fetch_nhats_object( self, designation: str, dv: float=6.0, dur: int=360, stay: int = 8, launch: str='2020-2045', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch nhats object.
+		"""Retrieve accessibility data for a designated object.
 
 		Purpose:
-		    Retrieves nhats object from the configured provider and returns normalized response
-		    data.
+		    Validate the object designation and mission filters and request individual NHATS data.
 
 		Args:
-		    designation (str): Designation supplied by the caller and interpreted according to the
-		    method contract.
-		    dv (float): Dv supplied by the caller and interpreted according to the method contract.
-		    dur (int): Dur supplied by the caller and interpreted according to the method contract.
-		    stay (int): Stay supplied by the caller and interpreted according to the method
-		    contract.
-		    launch (str): Launch supplied by the caller and interpreted according to the method
-		    contract.
-		    time (int): Maximum request duration in seconds.
+		    designation (str): Nonblank small-body designation.
+		    dv (float): Delta-v threshold in km/s; accepted whole-number values 4 through 12.
+		        Defaults to 6.0.
+		    dur (int): Mission duration in days, 60 through 450 in 30-day increments. Defaults to
+		        360.
+		    stay (int): Stay duration in days: 8, 16, 24, or 32. Defaults to 8.
+		    launch (str): Launch window: 2020-2025, 2025-2030, 2030-2035, 2035-2040, 2040-2045, or
+		        2020-2045. Defaults to '2020-2045'.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint URL, request parameters, and decoded provider data.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'designation', designation )
@@ -5114,24 +5082,23 @@ class NearbyObjects( Fetcher ):
 			raise exception
 	
 	def fetch_fireballs( self, date_min: str='', limit: int=20, time: int=20 ) -> (Dict[ str, Any ] | None):
-		"""Fetch fireballs.
+		"""Retrieve fireball observations.
 
 		Purpose:
-		    Retrieves fireballs from the configured provider and returns normalized response data.
+		    Validate the record limit and optional minimum date, then query fireball.api and package
+		    its tabular response.
 
 		Args:
-		    date_min (str): Date min supplied by the caller and interpreted according to the
-		    method contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    time (int): Maximum request duration in seconds.
+		    date_min (str): Optional earliest date parsed as YYYY-MM-DD. Defaults to an empty
+		        string.
+		    limit (int): Positive requested record count. Defaults to 20.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, parameters, count, fields, data rows, and provider signature.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 
@@ -5162,51 +5129,48 @@ class NearbyObjects( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='close_approaches', start_date: str='', end_date: str='', query: str='', query_type: str='sstr', dist_max: str='10LD', body: str = 'Earth', sort: str='date', limit: int=20, dv: float=6.0, dur: int=360, stay: int=8, launch: str='2020-2045', h: float=26.0, occ: int=7, include_physical: bool=True, include_close_approaches: bool=True, ca_body: str = 'Earth', include_discovery: bool=True, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a JPL SSD retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Select close approaches, object lookup, NHATS summary, NHATS object, or fireball
+		    retrieval and forward the corresponding filters.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    start_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    query_type (str): Query type supplied by the caller and interpreted according to the
-		    method contract.
-		    dist_max (str): Dist max supplied by the caller and interpreted according to the
-		    method contract.
-		    body (str): Body supplied by the caller and interpreted according to the method
-		    contract.
-		    sort (str): Sort supplied by the caller and interpreted according to the method
-		    contract.
-		    limit (int): Maximum number of records or characters permitted by the operation.
-		    dv (float): Dv supplied by the caller and interpreted according to the method contract.
-		    dur (int): Dur supplied by the caller and interpreted according to the method contract.
-		    stay (int): Stay supplied by the caller and interpreted according to the method
-		    contract.
-		    launch (str): Launch supplied by the caller and interpreted according to the method
-		    contract.
-		    h (float): H supplied by the caller and interpreted according to the method contract.
-		    occ (int): Occ supplied by the caller and interpreted according to the method contract.
-		    include_physical (bool): Whether include physical behavior is enabled for the
-		    operation.
-		    include_close_approaches (bool): Whether include close approaches behavior is enabled
-		    for the operation.
-		    ca_body (str): Ca body supplied by the caller and interpreted according to the method
-		    contract.
-		    include_discovery (bool): Whether include discovery behavior is enabled for the
-		    operation.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): close_approaches, object_lookup, nhats_summary, nhats_object, or fireballs.
+		        Defaults to 'close_approaches'.
+		    start_date (str): Start date parsed as YYYY-MM-DD. Defaults to an empty string; required
+		        for close approaches and optional for fireballs.
+		    end_date (str): End date parsed as YYYY-MM-DD, on or after start_date. Defaults to an
+		        empty string; required for close approaches.
+		    query (str): Object search value or NHATS designation. Defaults to an empty string.
+		    query_type (str): Search selector: sstr, spk, or des. Defaults to 'sstr'.
+		    dist_max (str): Maximum distance with numeric magnitude and LD, au, AU, km, or KM
+		        suffix. Defaults to '10LD'.
+		    body (str): Close-approach body filter. Defaults to 'Earth'.
+		    sort (str): date, dist, dist-min, v-inf, v-rel, h, or object; a leading minus requests
+		        descending order. Defaults to 'date'.
+		    limit (int): Positive requested record count. Defaults to 20.
+		    dv (float): Delta-v threshold in km/s; accepted whole-number values 4 through 12.
+		        Defaults to 6.0.
+		    dur (int): Mission duration in days, 60 through 450 in 30-day increments. Defaults to
+		        360.
+		    stay (int): Stay duration in days: 8, 16, 24, or 32. Defaults to 8.
+		    launch (str): Launch window: 2020-2025, 2025-2030, 2030-2035, 2035-2040, 2040-2045, or
+		        2020-2045. Defaults to '2020-2045'.
+		    h (float): Absolute magnitude threshold; accepted whole-number values 16 through 30.
+		        Defaults to 26.0.
+		    occ (int): Orbit condition code from 0 through 8. Defaults to 7.
+		    include_physical (bool): Include physical parameters. Defaults to True.
+		    include_close_approaches (bool): Include close-approach data. Defaults to True.
+		    ca_body (str): Body filter for included close approaches. Defaults to 'Earth'.
+		    include_discovery (bool): Include discovery data. Defaults to True.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Packaged response for the selected SSD operation.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -5243,26 +5207,25 @@ class NearbyObjects( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter properties and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -5289,28 +5252,28 @@ class NearbyObjects( Fetcher ):
 			raise exception
 
 class OpenScience( Fetcher ):
-	"""OpenScience component.
+	"""NASA Open Science Data Repository adapter.
 
 	Purpose:
-	    Retrieves datasets, metadata, assays, and tabular content from an open-science repository
-	    using validated response formats.
+	    Retrieve dataset accession records and metadata, assay, or data queries from the OSDR
+	    biodata API. Package JSON or textual responses with their endpoint and query parameters.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    query_text (Optional[str]): Current query text retained by the OpenScience workflow
-	    between related operations.
-	    format_value (Optional[str]): Current format value retained by the OpenScience workflow
-	    between related operations.
-	    size (Optional[int]): Current size retained by the OpenScience workflow between related
-	    operations.
-	    endpoint (Optional[str]): Current endpoint retained by the OpenScience workflow between
-	    related operations.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    headers (Any): HTTP headers sent with the current request.
-	    accession (str): Dataset accession identifier.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    base_url (Optional[str]): Base provider API URL.
+	    url (Optional[str]): Latest endpoint or request URL.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    query_text (Optional[str]): Latest query string or encoded query parameters.
+	    format_value (Optional[str]): Requested OSDR response format.
+	    size (Optional[int]): Reserved result size, initialized to 100; not submitted by
+	        retrieval methods.
+	    endpoint (Optional[str]): Selected relative OSDR API path.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    accession (str): Latest dataset accession identifier.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    response (Optional[Response]): Latest HTTP response.
+	    payload (Any): Latest decoded JSON or text response.
+	    result (Optional[Dict[str, Any]]): Latest packaged OSDR response.
 	"""
 	base_url: Optional[ str ]
 	url: Optional[ str ]
@@ -5324,15 +5287,14 @@ class OpenScience( Fetcher ):
 	accession: str
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider configuration.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure the OSDR biodata base URL, user-agent, JSON format default, and empty query
+		    and accession state.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.headers = { }
@@ -5350,35 +5312,32 @@ class OpenScience( Fetcher ):
 		self.accession = ''
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'url', 'params', 'query_text', 'format_value', 'size', 'endpoint',
 				'request', 'fetch_dataset', 'fetch_metadata', 'fetch_assays', 'fetch_data', 'fetch',
 				'create_schema' ]
 	
 	def validate_format( self, format_value: str ) -> str:
-		"""Validate format.
+		"""Validate the requested output format.
 
 		Purpose:
-		    Validates the format against provider constraints and returns the accepted value.
+		    Check that the supplied format is one of json, csv, tsv, or browser.
 
 		Args:
-		    format_value (str): Format value supplied by the caller and interpreted according to
-		    the method contract.
+		    format_value (str): Response format: json, csv, tsv, or browser.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Original accepted format string.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when the format is missing or unsupported.
 		"""
 		try:
 			throw_if( 'format_value', format_value )
@@ -5398,22 +5357,21 @@ class OpenScience( Fetcher ):
 			raise exception
 	
 	def coerce_response( self, response: requests.Response ) -> Dict[ str, Any ] | str:
-		"""Coerce response.
+		"""Decode an OSDR HTTP response.
 
 		Purpose:
-		    Coerce response using the class state and returns data required by the surrounding
-		    workflow.
+		    Decode JSON directly for application/json content; otherwise attempt JSON decoding and
+		    fall back to response text.
 
 		Args:
-		    response (requests.Response): Provider response object or event stream to inspect.
+		    response (requests.Response): HTTP response to decode.
 
 		Returns:
-		    Dict[str, Any] | str: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any] | str: Decoded JSON value or response text; JSON may also have other
+		        JSON-compatible types.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when response processing fails outside the text fallback.
 		"""
 		try:
 			content_type = str( response.headers.get( 'Content-Type', '' ) ).lower( )
@@ -5435,20 +5393,20 @@ class OpenScience( Fetcher ):
 			raise exception
 	
 	def request( self, time: int=20 ) -> Dict[ str, Any ] | str:
-		"""Request and decode NASA OSDR data using its advertised content type.
+		"""Execute an OSDR request.
 
 		Purpose:
-		    Validates the timeout, retrieves the configured OSDR resource, and
-		    stores its response and decoded payload for all retrieval methods.
+		    Send an HTTP GET using retained URL, parameters and headers, check status, decode the
+		    response, and reject JSON objects containing provider errors.
 
 		Args:
-		    time (int): Positive HTTP timeout in seconds.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | str: JSON or text response from OSDR.
+		    Dict[str, Any] | str: Decoded JSON value or response text.
 
 		Raises:
-		    Error: If the request, timeout or provider response fails.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 
@@ -5471,23 +5429,22 @@ class OpenScience( Fetcher ):
 
 
 	def fetch_dataset( self, accession: str, time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch dataset.
+		"""Retrieve a dataset by accession.
 
 		Purpose:
-		    Retrieves dataset from the configured provider and returns normalized response data.
+		    Validate the accession identifier, build the dataset endpoint, and package the retrieved
+		    data.
 
 		Args:
-		    accession (str): Accession supplied by the caller and interpreted according to the
-		    method contract.
-		    time (int): Maximum request duration in seconds.
+		    accession (str): Nonblank accession containing letters, digits, underscores, or hyphens.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, parameters, and response data, which may be decoded JSON or
+		        text.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'accession', accession )
@@ -5509,24 +5466,24 @@ class OpenScience( Fetcher ):
 			raise exception
 	
 	def fetch_metadata( self, query: str, format_value: str='json', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch metadata.
+		"""Retrieve dataset metadata.
 
 		Purpose:
-		    Retrieves metadata from the configured provider and returns normalized response data.
+		    Parse the query into parameters, validate and attach the format, and request the
+		    metadata endpoint.
 
 		Args:
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    format_value (str): Format value supplied by the caller and interpreted according to
-		    the method contract.
-		    time (int): Maximum request duration in seconds.
+		    query (str): Nonblank query text or URL-encoded key/value pairs; text containing '=' is
+		        parsed into query parameters.
+		    format_value (str): Response format: json, csv, tsv, or browser. Defaults to 'json'.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, parameters, and response data, which may be decoded JSON or
+		        text.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'query', query )
@@ -5550,24 +5507,24 @@ to the application logger, and re-raises it.
 			raise exception
 	
 	def fetch_assays( self, query: str, format_value: str='json', time: int=20 ) -> (Dict[ str, Any ] | None):
-		"""Fetch assays.
+		"""Retrieve assay information.
 
 		Purpose:
-		    Retrieves assays from the configured provider and returns normalized response data.
+		    Parse the query into parameters, validate and attach the format, and request the assays
+		    endpoint.
 
 		Args:
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    format_value (str): Format value supplied by the caller and interpreted according to
-		    the method contract.
-		    time (int): Maximum request duration in seconds.
+		    query (str): Nonblank query text or URL-encoded key/value pairs; text containing '=' is
+		        parsed into query parameters.
+		    format_value (str): Response format: json, csv, tsv, or browser. Defaults to 'json'.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, parameters, and response data, which may be decoded JSON or
+		        text.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'query', query )
@@ -5591,24 +5548,24 @@ to the application logger, and re-raises it.
 			raise exception
 	
 	def fetch_data( self, query: str, format_value: str='json', time: int=20 ) -> (Dict[ str, Any ] | None):
-		"""Fetch data.
+		"""Retrieve OSDR data.
 
 		Purpose:
-		    Retrieves data from the configured provider and returns normalized response data.
+		    Parse the query into parameters, validate and attach the format, and request the data
+		    endpoint.
 
 		Args:
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    format_value (str): Format value supplied by the caller and interpreted according to
-		    the method contract.
-		    time (int): Maximum request duration in seconds.
+		    query (str): Nonblank query text or URL-encoded key/value pairs; text containing '=' is
+		        parsed into query parameters.
+		    format_value (str): Response format: json, csv, tsv, or browser. Defaults to 'json'.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, parameters, and response data, which may be decoded JSON or
+		        text.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'query', query )
@@ -5632,28 +5589,27 @@ to the application logger, and re-raises it.
 			raise exception
 	
 	def fetch( self, mode: str='dataset', query: str='', accession: str='', format_value: str = 'json', time: int=20 ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch an OSDR retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Normalize the mode and delegate to dataset, metadata, assays, or data retrieval.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    accession (str): Accession supplied by the caller and interpreted according to the
-		    method contract.
-		    format_value (str): Format value supplied by the caller and interpreted according to
-		    the method contract.
-		    time (int): Maximum request duration in seconds.
+		    mode (str): dataset, metadata, assays, or data. Defaults to 'dataset'; blank also
+		        selects dataset.
+		    query (str): Nonblank query text or URL-encoded key/value pairs; text containing '=' is
+		        parsed into query parameters. Defaults to an empty string; required for query modes.
+		    accession (str): Dataset accession identifier. Defaults to an empty string; required in
+		        dataset mode.
+		    format_value (str): Response format: json, csv, tsv, or browser. Defaults to 'json'.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, URL, parameters, and response data, which may be decoded JSON or
+		        text.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			active_mode = ( mode or 'dataset' ).strip( ).lower( )
@@ -5681,26 +5637,25 @@ to the application logger, and re-raises it.
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter properties and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -5726,41 +5681,38 @@ to the application logger, and re-raises it.
 			raise exception
 
 class SpaceWeather( Fetcher ):
-	"""SpaceWeather component.
+	"""NASA DONKI space-weather retrieval adapter.
 
 	Purpose:
-	    Retrieves space-weather observations and forecasts from the selected endpoint and packages
-	    provider responses consistently.
+	    Map supported space-weather operations to DONKI endpoints, apply endpoint-specific
+	    filters, and package decoded event or notification data without exposing the API key in
+	    returned parameters.
 
 	Attributes:
-	    base_url (Optional[str]): URL associated with the current base resource or endpoint.
-	    api_key (Optional[str]): Provider credential loaded from application configuration.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    params (Optional[Dict[str, Any]]): Request parameters assembled for the most recent
-	    provider call.
-	    mode (Optional[str]): Current mode retained by the SpaceWeather workflow between related
-	    operations.
-	    start_date (Optional[str]): Current start date retained by the SpaceWeather workflow
-	    between related operations.
-	    end_date (Optional[str]): Current end date retained by the SpaceWeather workflow between
-	    related operations.
-	    location (Optional[str]): Current location retained by the SpaceWeather workflow between
-	    related operations.
-	    catalog (Optional[str]): Current catalog retained by the SpaceWeather workflow between
-	    related operations.
-	    notification_type (Optional[str]): Current notification type retained by the SpaceWeather
-	    workflow between related operations.
-	    limit_note (Optional[str]): Current limit note retained by the SpaceWeather workflow
-	    between related operations.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    headers (Any): HTTP headers sent with the current request.
-	    most_accurate_only (bool): Restrict CME analyses to the most accurate entries.
-	    complete_entry_only (bool): Restrict CME analyses to complete entries.
-	    speed (int): Minimum CME speed filter.
-	    half_angle (int): CME half-angle filter.
-	    keyword (str): CME keyword filter.
-	    endpoint (str): Selected DONKI API endpoint.
-	    active_key (str): Configured NASA key or documented demo key.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    base_url (Optional[str]): Base provider API URL.
+	    api_key (Optional[str]): Provider API key loaded from configuration.
+	    url (Optional[str]): Latest endpoint or request URL.
+	    params (Optional[Dict[str, Any]]): Latest request parameters.
+	    mode (Optional[str]): Selected retrieval operation.
+	    start_date (Optional[str]): Start date of the requested interval.
+	    end_date (Optional[str]): End date of the requested interval.
+	    location (Optional[str]): IPS location filter.
+	    catalog (Optional[str]): IPS or CMEAnalysis catalog filter.
+	    notification_type (Optional[str]): Notification type filter.
+	    limit_note (Optional[str]): Reserved rate-limit note, initialized to None.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    most_accurate_only (bool): CMEAnalysis accuracy filter flag.
+	    complete_entry_only (bool): CMEAnalysis completeness filter flag.
+	    speed (int): CMEAnalysis nonnegative speed filter.
+	    half_angle (int): CMEAnalysis half-angle filter in degrees.
+	    keyword (str): CMEAnalysis keyword filter.
+	    endpoint (str): Selected DONKI endpoint.
+	    active_key (str): Configured NASA key or DEMO_KEY fallback.
+	    timeout (Optional[int]): HTTP request timeout in seconds.
+	    response (Optional[Response]): Latest HTTP response.
+	    payload (Any): Latest decoded DONKI JSON array or object.
+	    result (Optional[Dict[str, Any]]): Latest packaged DONKI response.
 	"""
 	base_url: Optional[ str ]
 	api_key: Optional[ str ]
@@ -5784,15 +5736,14 @@ class SpaceWeather( Fetcher ):
 	active_key: str
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize provider configuration.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure the DONKI base URL, load the NASA API key or DEMO_KEY fallback, initialize
+		    request headers and default CME filters.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.headers = { }
@@ -5820,55 +5771,50 @@ class SpaceWeather( Fetcher ):
 		self.active_key = self.api_key or 'DEMO_KEY'
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list returned by dir().
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'base_url', 'api_key', 'url', 'params', 'mode', 'start_date', 'end_date',
 				'location', 'catalog', 'notification_type', 'fetch_endpoint', 'fetch',
 				'create_schema' ]
 	
 	def fetch_endpoint( self, endpoint: str, start_date: str, end_date: str, time: int=20, location: str='', catalog: str='', notification_type: str='', most_accurate_only: bool=True, complete_entry_only: bool=True, speed: int=0, half_angle: int=0, keyword: str='' ) -> Dict[ str, Any ] | None:
-		"""Fetch endpoint.
+		"""Retrieve a DONKI endpoint response.
 
 		Purpose:
-		    Retrieves endpoint from the configured provider and returns normalized response data.
+		    Validate the endpoint and paired date interval, add applicable IPS, CMEAnalysis, or
+		    notification filters, request JSON, check provider errors, and exclude the API key from
+		    returned parameters.
 
 		Args:
-		    endpoint (str): Endpoint supplied by the caller and interpreted according to the
-		    method contract.
-		    start_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
-		    time (int): Maximum request duration in seconds.
-		    location (str): Location supplied by the caller and interpreted according to the
-		    method contract.
-		    catalog (str): Catalog supplied by the caller and interpreted according to the method
-		    contract.
-		    notification_type (str): Notification type supplied by the caller and interpreted
-		    according to the method contract.
-		    most_accurate_only (bool): Whether most accurate only behavior is enabled for the
-		    operation.
-		    complete_entry_only (bool): Whether complete entry only behavior is enabled for the
-		    operation.
-		    speed (int): Speed supplied by the caller and interpreted according to the method
-		    contract.
-		    half_angle (int): Half angle supplied by the caller and interpreted according to the
-		    method contract.
-		    keyword (str): Keyword supplied by the caller and interpreted according to the method
-		    contract.
+		    endpoint (str): CME, CMEAnalysis, GST, IPS, FLR, SEP, MPC, RBE, HSS,
+		        WSAEnlilSimulations, or notifications.
+		    start_date (str): Start date parsed as YYYY-MM-DD; supply with end_date.
+		    end_date (str): End date parsed as YYYY-MM-DD, on or after start_date.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
+		    location (str): Optional IPS location filter. Defaults to an empty string.
+		    catalog (str): Optional IPS or CMEAnalysis catalog filter. Defaults to an empty string.
+		    notification_type (str): Optional notifications type filter. Defaults to an empty
+		        string.
+		    most_accurate_only (bool): Restrict CME analyses to most accurate entries. Defaults to
+		        True.
+		    complete_entry_only (bool): Restrict CME analyses to complete entries. Defaults to True.
+		    speed (int): Nonnegative CMEAnalysis speed filter. Defaults to 0.
+		    half_angle (int): CMEAnalysis half-angle filter from 0 through 180 degrees. Defaults to
+		        0.
+		    keyword (str): Optional CMEAnalysis keyword. Defaults to an empty string.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint, URL, parameters excluding the API key, and decoded JSON
+		        array or object.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'most_accurate_only', most_accurate_only )
@@ -5947,41 +5893,37 @@ class SpaceWeather( Fetcher ):
 			raise exception
 	
 	def fetch( self, mode: str='cme', start_date: str='', end_date: str='', time: int=20, location: str='ALL', catalog: str='ALL', notification_type: str='all', most_accurate_only: bool=True, complete_entry_only: bool=True, speed: int=0, half_angle: int=0, keyword: str='' ) -> Dict[ str, Any ] | None:
-		"""Fetch.
+		"""Dispatch a DONKI retrieval operation.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Map the selected operation to its provider endpoint and delegate with date and
+		    endpoint-specific filters.
 
 		Args:
-		    mode (str): Provider or loader operating mode selected for the request.
-		    start_date (str): Date boundary or date value used by the request.
-		    end_date (str): Date boundary or date value used by the request.
-		    time (int): Maximum request duration in seconds.
-		    location (str): Location supplied by the caller and interpreted according to the
-		    method contract.
-		    catalog (str): Catalog supplied by the caller and interpreted according to the method
-		    contract.
-		    notification_type (str): Notification type supplied by the caller and interpreted
-		    according to the method contract.
-		    most_accurate_only (bool): Whether most accurate only behavior is enabled for the
-		    operation.
-		    complete_entry_only (bool): Whether complete entry only behavior is enabled for the
-		    operation.
-		    speed (int): Speed supplied by the caller and interpreted according to the method
-		    contract.
-		    half_angle (int): Half angle supplied by the caller and interpreted according to the
-		    method contract.
-		    keyword (str): Keyword supplied by the caller and interpreted according to the method
-		    contract.
+		    mode (str): cme, cme_analysis, gst, ips, flr, sep, mpc, rbe, hss, wsa_enlil, or
+		        notifications. Defaults to 'cme'.
+		    start_date (str): Start date parsed as YYYY-MM-DD; supply with end_date. Defaults to an
+		        empty string; omit both for provider defaults.
+		    end_date (str): End date parsed as YYYY-MM-DD, on or after start_date. Defaults to an
+		        empty string; omit both for provider defaults.
+		    time (int): HTTP request timeout in seconds. Defaults to 20.
+		    location (str): Optional IPS location filter. Defaults to 'ALL'.
+		    catalog (str): Optional IPS or CMEAnalysis catalog filter. Defaults to 'ALL'.
+		    notification_type (str): Optional notifications type filter. Defaults to 'all'.
+		    most_accurate_only (bool): Restrict CME analyses to most accurate entries. Defaults to
+		        True.
+		    complete_entry_only (bool): Restrict CME analyses to complete entries. Defaults to True.
+		    speed (int): Nonnegative CMEAnalysis speed filter. Defaults to 0.
+		    half_angle (int): CMEAnalysis half-angle filter from 0 through 180 degrees. Defaults to
+		        0.
+		    keyword (str): Optional CMEAnalysis keyword. Defaults to an empty string.
 
 		Returns:
-		    Dict[str, Any] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Mode, endpoint, URL, parameters excluding the API key, and decoded JSON
+		        array or object.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when input validation, retrieval, or response processing fails.
 		"""
 		try:
 			throw_if( 'mode', mode )
@@ -6012,26 +5954,25 @@ class SpaceWeather( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible function description with object parameter properties and
+		    required argument names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str] | None): Required argument names; None selects all property names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		    metadata, or generated schema content.
+		    Dict[str, Any]: Function name, service-qualified description, and nested parameter
+		        schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		    to the application logger, and re-raises it.
+		    Error: Raised when validation or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
