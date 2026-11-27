@@ -137,19 +137,18 @@ def encode_image( path: str ) -> str:
 	return base64.b64encode( data ).decode( "utf-8" )
 
 class Fetcher:
-	"""Fetcher component.
+	"""Shared retrieval contract and request state.
 
 	Purpose:
-	    Defines the common request state and abstract retrieval contract shared by Foo data-source
-	    adapters.
+	    Defines the common instance state for Foo retrieval adapters. Subclasses implement the fetch operation and determine the concrete result format.
 
 	Attributes:
-	    timeout (Optional[int]): Maximum request duration, in seconds, applied to provider calls.
-	    headers (Optional[Dict[str, Any]]): HTTP headers sent with the current request.
-	    response (Optional[Response]): Most recent raw response returned by the provider client.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    result (Optional[Result]): Most recent normalized Foo result produced by the instance.
-	    query (Optional[str]): Most recent search text or model prompt submitted by the instance.
+	    timeout (Optional[int]): Request timeout in seconds.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    response (Optional[Response]): Latest HTTP response.
+	    url (Optional[str]): Latest resource URL.
+	    result (Optional[Result]): Base retrieval result; concrete adapters may use other formats.
+	    query (Optional[str]): Latest search or provider query.
 	"""
 	timeout: Optional[ int ]
 	headers: Optional[ Dict[ str, Any ] ]
@@ -159,15 +158,13 @@ class Fetcher:
 	query: Optional[ str ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize shared retrieval state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Set timeout, headers, response, URL, result, and query to None without issuing a request.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		self.timeout = None
 		self.headers = None
@@ -177,62 +174,76 @@ class Fetcher:
 		self.query = None
 	
 	def __dir__( self ) -> list[ str ]:
-		"""Return visible member names.
+		"""Return exposed base member names.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list used by dir() for the base retrieval adapter.
 
 		Returns:
-		    list[str]: Ordered public member names exposed by the instance.
+		    list[str]: Timeout, headers, response, URL, result, query, and fetch member names.
 		"""
 		return [ 'timeout', 'headers', 'response', 'url', 'result', 'query', 'fetch' ]
 	
 	def fetch( self, query: str, url: str, time: int=10 ) -> Result | None:
-		"""Fetch.
+		"""Define the subclass retrieval contract.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Provide the base method signature for retrieval adapters. This implementation always raises NotImplementedError and issues no request.
 
 		Args:
-		    query (str): Search text, prompt, or provider query submitted by the caller.
-		    url (str): Absolute endpoint or resource URL.
-		    time (int): Maximum request duration in seconds.
+		    query (str): Search text or provider query.
+		    url (str): Target resource URL.
+		    time (int): Requested timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Result | None: Normalized Foo result for the completed provider request, or ``None``
-		        when the selected path does not create one.
+		    Result | None: Declared subclass result contract; the base method never returns.
 
 		Raises:
-		    NotImplementedError: Raised when the method cannot satisfy its documented
-		        not implemented requirement.
+		    NotImplementedError: Always raised because subclasses must implement retrieval.
 		"""
 		raise NotImplementedError( 'Must be implemented by a subclass.' )
 
 class WebFetcher( Fetcher ):
-	"""WebFetcher component.
+	"""HTTP and HTML retrieval adapter.
 
 	Purpose:
-	    Retrieves HTML over HTTP and provides reusable helpers for text conversion,
-	    URL resolution, link discovery, and structured element extraction.
+	    Fetches web pages over HTTP and exposes text conversion, URL resolution, link discovery, structured extraction, and function-schema construction.
 
 	Attributes:
-	    soup (Optional[BeautifulSoup]): BeautifulSoup document tree for the current HTML content.
-	    agents (Optional[str]): Configured user-agent string sent with web requests.
-	    url (Optional[str]): Most recent endpoint or resource URL used by the instance.
-	    html (Optional[str]): Raw HTML returned by the most recent web request.
-	    text (Optional[str]): Plain text extracted or normalized by the current operation.
-	    source_url (Optional[str]): Source URL associated with the HTML currently being processed.
-	    source_html (Optional[str]): HTML source supplied to an extraction helper.
-	    selected_methods (Optional[List[str]]): Requested structured-extraction methods for the
-	        current page.
-	    re_tag (Optional[Pattern]): Compiled pattern used to remove residual HTML tags.
-	    re_ws (Optional[Pattern]): Compiled pattern used to collapse repeated whitespace.
-	    response (Optional[Response]): Most recent raw response returned by the provider client.
-	    result (Optional[Result]): Most recent normalized Foo result produced by the instance.
-	    headers (Optional[Dict[str, Any]]): HTTP headers sent with the current request.
-	    timeout (Optional[int]): Maximum request duration, in seconds, applied to provider calls.
+	    soup (Optional[BeautifulSoup]): Parsed HTML document tree.
+	    agents (Optional[str]): Configured HTTP user-agent.
+	    url (Optional[str]): Latest requested page URL.
+	    html (Optional[str]): HTML returned by the latest request.
+	    text (Optional[str]): Latest extracted or supplied text.
+	    source_url (Optional[str]): Base URL used during extraction or link resolution.
+	    source_html (Optional[str]): HTML supplied to an extraction method.
+	    selected_methods (Optional[List[str]]): Selected structured extraction method names.
+	    re_tag (Optional[Pattern]): Compiled markup-removal expression.
+	    re_ws (Optional[Pattern]): Compiled whitespace expression.
+	    response (Optional[Response]): Latest HTTP response.
+	    result (Optional[Result]): Latest HTTP response wrapper.
+	    headers (Optional[Dict[str, Any]]): HTTP request headers.
+	    timeout (Optional[int]): Request timeout in seconds.
+	    limit (int): Most recent text truncation character count.
+	    href (str): Current hyperlink reference.
+	    absolute_url (str): Resolved hyperlink before normalization.
+	    parsed_url (urllib.parse.ParseResult): Parsed resolved hyperlink.
+	    normalized_path (str): Resolved URL path or root path.
+	    normalized_url (urllib.parse.ParseResult): Parsed URL with normalized path and no fragment.
+	    left_url (str): First URL in the latest host comparison.
+	    right_url (str): Second URL in the latest host comparison.
+	    left_host (str): First parsed network location.
+	    right_host (str): Second parsed network location.
+	    results (List[str]):  Dict[str, List[str]]|Latest link list or structured extraction groups.
+	    seen (set[str]): Values encountered during deduplication.
+	    candidate (str): Current normalized hyperlink candidate.
+	    registry (Dict[str, Tuple[str, Any]]): Extraction method names mapped to display labels and callable extractors.
+	    method_name (str): Current structured extraction method name.
+	    label (str): Display label for the active extractor.
+	    extractor (Any): Callable for the active extraction group.
+	    values (List[str]): Current group values before deduplication.
+	    deduped (List[str]): Current group values after deduplication.
+	    value (str): Current value considered during deduplication.
 	"""
 	soup: Optional[ BeautifulSoup ]
 	agents: Optional[ str ]
@@ -250,15 +261,13 @@ class WebFetcher( Fetcher ):
 	timeout: Optional[ int ]
 	
 	def __init__( self ) -> None:
-		"""Initialize the instance.
+		"""Initialize HTTP and HTML extraction state.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Configure the ten-second timeout, compiled tag and whitespace patterns, user-agent and Accept headers, and empty response and extraction state. No network request is issued.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		    value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.timeout = 10
@@ -281,14 +290,13 @@ class WebFetcher( Fetcher ):
 		                            '*/*;q=0.8')
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed retrieval and extraction members.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list used by dir(), including HTTP retrieval and HTML extraction methods.
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'agents', 'url', 'html', 'text', 'source_url', 'source_html', 'selected_methods',
 				'timeout', 'headers', 'response', 'result', 'soup', 're_tag', 're_ws', 'fetch',
@@ -299,23 +307,20 @@ class WebFetcher( Fetcher ):
 				'scrape_images', 'create_schema' ]
 	
 	def fetch( self, url: str, time: int=10 ) -> Result | None:
-		"""Fetch.
+		"""Retrieve a web page over HTTP.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Send a GET request with configured headers and timeout, check its status, store HTML and a BeautifulSoup tree, and wrap the response in Result.
 
 		Args:
-		    url (str): Absolute endpoint or resource URL.
-		    time (int): Maximum request duration in seconds.
+		    url (str): Nonblank target URL.
+		    time (int): Request timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Result | None: Normalized Foo result for the completed provider request, or ``None``
-		        when the selected path does not create one.
+		    Result: Wrapper around the successful HTTP response.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when input validation, HTTP retrieval, parsing, or result construction fails.
 		"""
 		try:
 
@@ -343,21 +348,19 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def html_to_text( self, html: str ) -> str:
-		"""Html to text.
+		"""Convert HTML into plain text.
 
 		Purpose:
-		    Removes non-content HTML, strips remaining markup, and normalizes whitespace into text
-		    suitable for indexing or display.
+		    Remove script and style blocks, strip markup, and collapse whitespace, storing the resulting text.
 
 		Args:
-		    html (str): Raw HTML document content to parse or convert.
+		    html (str): Nonblank HTML content.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Extracted text with whitespace collapsed.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation or text conversion fails.
 		"""
 		try:
 			throw_if( 'html', html )
@@ -381,17 +384,16 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def coerce_items( self, value: Any ) -> List[ str ]:
-		"""Coerce items.
+		"""Convert extraction values into strings.
 
 		Purpose:
-		    Converts a scalar, list, or missing extraction result into a predictable list of
-		    strings.
+		    Convert a scalar into a single string, convert non-None list entries to strings, or return an empty list for None.
 
 		Args:
-		    value (Any): Candidate value to validate or normalize.
+		    value (Any): Scalar, list, or None to convert.
 
 		Returns:
-		    List[str]: Ordered values or records produced by the operation.
+		    List[str]: Converted strings in input order.
 		"""
 		if value is None:
 			return [ ]
@@ -402,21 +404,19 @@ class WebFetcher( Fetcher ):
 		return [ str( value ) ]
 	
 	def extract_title( self, html: str ) -> str:
-		"""Extract title.
+		"""Extract the HTML page title.
 
 		Purpose:
-		    Parses the HTML title element and returns a normalized page title when one is
-		    available.
+		    Read the title through BeautifulSoup, falling back to a regular-expression search, and collapse whitespace.
 
 		Args:
-		    html (str): Raw HTML document content to parse or convert.
+		    html (str): Nonblank HTML content.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Normalized title, or an empty string when absent.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation or title extraction fails.
 		"""
 		try:
 			throw_if( 'html', html )
@@ -442,21 +442,20 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def truncate_text( self, text: str, limit: int=12000 ) -> str:
-		"""Truncate text.
+		"""Limit text to a character count.
 
 		Purpose:
-		    Limits text to the requested character count and marks content that was shortened.
+		    Return the original text when it fits; otherwise slice to the requested count and append a truncation marker.
 
 		Args:
-		    text (str): Text content supplied to the operation.
-		    limit (int): Maximum number of records or characters permitted by the operation.
+		    text (str): Nonblank text to shorten.
+		    limit (int): Requested character count before the marker. Defaults to 12000.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Original or truncated text with a marker when shortened.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation or truncation fails.
 		"""
 		try:
 
@@ -478,18 +477,17 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def normalize_url( self, base_url: str, href: str ) -> str:
-		"""Normalize url.
+		"""Resolve a hyperlink to an HTTP URL.
 
 		Purpose:
-		    Resolves a relative reference against a base URL, removes fragments, and rejects
-		    unsupported schemes.
+		    Resolve relative references against the base URL, remove fragments, and supply a root path when absent. Reject unsupported schemes and hostless URLs.
 
 		Args:
-		    base_url (str): Base URL used to resolve relative references.
-		    href (str): Raw hyperlink reference to resolve and validate.
+		    base_url (str): Base URL for resolving the reference.
+		    href (str): Hyperlink reference to resolve.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Absolute HTTP or HTTPS URL, or an empty string for rejected references or errors.
 		"""
 		try:
 			throw_if( 'base_url', base_url )
@@ -517,18 +515,17 @@ class WebFetcher( Fetcher ):
 			return ''
 	
 	def same_domain( self, left_url: str, right_url: str ) -> bool:
-		"""Same domain.
+		"""Compare the network locations of two URLs.
 
 		Purpose:
-		    Compares parsed network locations to determine whether two URLs belong to the same
-		    host.
+		    Compare parsed network locations case-insensitively; ports remain part of the comparison.
 
 		Args:
-		    left_url (str): First URL in the domain comparison.
-		    right_url (str): Second URL in the domain comparison.
+		    left_url (str): First URL.
+		    right_url (str): Second URL.
 
 		Returns:
-		    bool: ``True`` when the condition is satisfied; otherwise ``False``.
+		    bool: True when both have the same nonempty network location; otherwise False, including errors.
 		"""
 		try:
 			throw_if( 'left_url', left_url )
@@ -544,21 +541,20 @@ class WebFetcher( Fetcher ):
 			return False
 	
 	def extract_links( self, base_url: str, html: str ) -> List[ str ]:
-		"""Extract links.
+		"""Extract unique page hyperlinks.
 
 		Purpose:
-		    Collects unique, normalized hyperlinks from an HTML document in source order.
+		    Parse anchor elements, resolve their references, and retain valid distinct URLs in discovery order.
 
 		Args:
-		    base_url (str): Base URL used to resolve relative references.
-		    html (str): Raw HTML document content to parse or convert.
+		    base_url (str): Base URL for resolving links.
+		    html (str): Nonblank HTML content.
 
 		Returns:
-		    List[str]: Ordered values or records produced by the operation.
+		    List[str]: Unique absolute HTTP or HTTPS hyperlinks.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation or extraction fails.
 		"""
 		try:
 			throw_if( 'base_url', base_url )
@@ -585,25 +581,21 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def extract_structured_data( self, url: str, html: str, selected_methods: Optional[ List[ str ] ]=None ) -> Dict[ str, List[ str ] ]:
-		"""Extract structured data.
+		"""Extract selected HTML element groups.
 
 		Purpose:
-		    Runs selected HTML extractors and returns deduplicated content grouped by semantic
-		    element type.
+		    Run registered extractors for requested method names, ignore unknown names, and deduplicate each group while retaining discovery order.
 
 		Args:
-		    url (str): Absolute endpoint or resource URL.
-		    html (str): Raw HTML document content to parse or convert.
-		    selected_methods (Optional[List[str]]): Extraction method names that determine which
-		        HTML element groups are returned.
+		    url (str): Page URL used to resolve links and images.
+		    html (str): Nonblank HTML content.
+		    selected_methods (Optional[List[str]]): Extractor method names. Defaults to None, which selects no groups.
 
 		Returns:
-		    Dict[str, List[str]]: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, List[str]]: Display labels mapped to distinct text or URL values.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, parsing, or extraction fails.
 		"""
 		try:
 			throw_if( 'url', url )
@@ -676,21 +668,19 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def scrape_paragraphs( self, uri: str ) -> List[ str ] | None:
-		"""Scrape paragraphs.
+		"""Extract paragraphs from a web page.
 
 		Purpose:
-		    Fetches the target page and extracts non-empty paragraphs content for downstream
-		    indexing or analysis.
+		    Fetch the page and return distinct paragraph text in discovery order.
 
 		Args:
-		    uri (str): Fully qualified resource identifier for the target page.
+		    uri (str): Nonblank target page URL.
 
 		Returns:
-		    List[str] | None: Ordered values or records produced by the operation.
+		    List[str]: Extracted paragraph text, or an empty list when none are found.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or extraction fails.
 		"""
 		try:
 			throw_if( 'uri', uri )
@@ -708,21 +698,19 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def scrape_lists( self, uri: str ) -> List[ str ] | None:
-		"""Scrape lists.
+		"""Extract lists from a web page.
 
 		Purpose:
-		    Fetches the target page and extracts non-empty lists content for downstream indexing
-		    or analysis.
+		    Fetch the page and return distinct individual list-item text in discovery order.
 
 		Args:
-		    uri (str): Fully qualified resource identifier for the target page.
+		    uri (str): Nonblank target page URL.
 
 		Returns:
-		    List[str] | None: Ordered values or records produced by the operation.
+		    List[str]: Extracted individual list-item text, or an empty list when none are found.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or extraction fails.
 		"""
 		try:
 			throw_if( 'uri', uri )
@@ -740,21 +728,19 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def scrape_tables( self, uri: str ) -> List[ str ] | None:
-		"""Scrape tables.
+		"""Extract tables from a web page.
 
 		Purpose:
-		    Fetches the target page and extracts non-empty tables content for downstream indexing
-		    or analysis.
+		    Fetch the page and return distinct individual table header and data cell text in discovery order.
 
 		Args:
-		    uri (str): Fully qualified resource identifier for the target page.
+		    uri (str): Nonblank target page URL.
 
 		Returns:
-		    List[str] | None: Ordered values or records produced by the operation.
+		    List[str]: Extracted individual table header and data cell text, or an empty list when none are found.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or extraction fails.
 		"""
 		try:
 			throw_if( 'uri', uri )
@@ -772,21 +758,19 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def scrape_articles( self, uri: str ) -> List[ str ] | None:
-		"""Scrape articles.
+		"""Extract articles from a web page.
 
 		Purpose:
-		    Fetches the target page and extracts non-empty articles content for downstream
-		    indexing or analysis.
+		    Fetch the page and return distinct article element text in discovery order.
 
 		Args:
-		    uri (str): Fully qualified resource identifier for the target page.
+		    uri (str): Nonblank target page URL.
 
 		Returns:
-		    List[str] | None: Ordered values or records produced by the operation.
+		    List[str]: Extracted article element text, or an empty list when none are found.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or extraction fails.
 		"""
 		try:
 			throw_if( 'uri', uri )
@@ -804,21 +788,19 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def scrape_headings( self, uri: str ) -> List[ str ] | None:
-		"""Scrape headings.
+		"""Extract headings from a web page.
 
 		Purpose:
-		    Fetches the target page and extracts non-empty headings content for downstream
-		    indexing or analysis.
+		    Fetch the page and return distinct heading text from h1 through h6 elements in discovery order.
 
 		Args:
-		    uri (str): Fully qualified resource identifier for the target page.
+		    uri (str): Nonblank target page URL.
 
 		Returns:
-		    List[str] | None: Ordered values or records produced by the operation.
+		    List[str]: Extracted heading text from h1 through h6 elements, or an empty list when none are found.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or extraction fails.
 		"""
 		try:
 			throw_if( 'uri', uri )
@@ -836,21 +818,19 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def scrape_divisions( self, uri: str ) -> List[ str ] | None:
-		"""Scrape divisions.
+		"""Extract divisions from a web page.
 
 		Purpose:
-		    Fetches the target page and extracts non-empty divisions content for downstream
-		    indexing or analysis.
+		    Fetch the page and return distinct div element text in discovery order.
 
 		Args:
-		    uri (str): Fully qualified resource identifier for the target page.
+		    uri (str): Nonblank target page URL.
 
 		Returns:
-		    List[str] | None: Ordered values or records produced by the operation.
+		    List[str]: Extracted div element text, or an empty list when none are found.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or extraction fails.
 		"""
 		try:
 			throw_if( 'uri', uri )
@@ -868,21 +848,19 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def scrape_sections( self, uri: str ) -> List[ str ] | None:
-		"""Scrape sections.
+		"""Extract sections from a web page.
 
 		Purpose:
-		    Fetches the target page and extracts non-empty sections content for downstream
-		    indexing or analysis.
+		    Fetch the page and return distinct section element text in discovery order.
 
 		Args:
-		    uri (str): Fully qualified resource identifier for the target page.
+		    uri (str): Nonblank target page URL.
 
 		Returns:
-		    List[str] | None: Ordered values or records produced by the operation.
+		    List[str]: Extracted section element text, or an empty list when none are found.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or extraction fails.
 		"""
 		try:
 			throw_if( 'uri', uri )
@@ -900,21 +878,19 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def scrape_blockquotes( self, uri: str ) -> List[ str ] | None:
-		"""Scrape blockquotes.
+		"""Extract blockquotes from a web page.
 
 		Purpose:
-		    Fetches the target page and extracts non-empty blockquotes content for downstream
-		    indexing or analysis.
+		    Fetch the page and return distinct blockquote text in discovery order.
 
 		Args:
-		    uri (str): Fully qualified resource identifier for the target page.
+		    uri (str): Nonblank target page URL.
 
 		Returns:
-		    List[str] | None: Ordered values or records produced by the operation.
+		    List[str]: Extracted blockquote text, or an empty list when none are found.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or extraction fails.
 		"""
 		try:
 			throw_if( 'uri', uri )
@@ -932,21 +908,19 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def scrape_hyperlinks( self, uri: str ) -> List[ str ] | None:
-		"""Scrape hyperlinks.
+		"""Extract hyperlinks from a web page.
 
 		Purpose:
-		    Fetches the target page and extracts non-empty hyperlinks content for downstream
-		    indexing or analysis.
+		    Fetch the page and return distinct absolute HTTP or HTTPS anchor URLs in discovery order.
 
 		Args:
-		    uri (str): Fully qualified resource identifier for the target page.
+		    uri (str): Nonblank target page URL.
 
 		Returns:
-		    List[str] | None: Ordered values or records produced by the operation.
+		    List[str]: Extracted absolute HTTP or HTTPS anchor URLs, or an empty list when none are found.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or extraction fails.
 		"""
 		try:
 			throw_if( 'uri', uri )
@@ -964,21 +938,19 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def scrape_images( self, uri: str ) -> List[ str ] | None:
-		"""Scrape images.
+		"""Extract images from a web page.
 
 		Purpose:
-		    Fetches the target page and extracts non-empty images content for downstream indexing
-		    or analysis.
+		    Fetch the page and return distinct absolute HTTP or HTTPS image source URLs in discovery order.
 
 		Args:
-		    uri (str): Fully qualified resource identifier for the target page.
+		    uri (str): Nonblank target page URL.
 
 		Returns:
-		    List[str] | None: Ordered values or records produced by the operation.
+		    List[str]: Extracted absolute HTTP or HTTPS image source URLs, or an empty list when none are found.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or extraction fails.
 		"""
 		try:
 			throw_if( 'uri', uri )
@@ -996,26 +968,23 @@ class WebFetcher( Fetcher ):
 			raise exception
 	
 	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
-		"""Create schema.
+		"""Build a function schema.
 
 		Purpose:
-		    Builds a JSON-compatible function schema for model tool-calling and orchestration
-		    workflows.
+		    Construct a JSON-compatible tool schema with a service-qualified description, object properties, and required parameter names.
 
 		Args:
-		    function (str): Function name exposed in the generated tool schema.
-		    tool (str): Service or tool name referenced by the generated schema.
-		    description (str): Human-readable explanation embedded in the generated schema.
-		    parameters (dict): JSON Schema property definitions for the tool arguments.
-		    required (list[str]): Argument names that callers must supply to the generated tool.
+		    function (str): Nonblank function name.
+		    tool (str): Nonblank service name.
+		    description (str): Nonblank function description.
+		    parameters (dict): Nonempty parameter-property definitions.
+		    required (list[str]): Nonempty list of required argument names.
 
 		Returns:
-		    Dict[str, str] | None: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Function name, description, and nested parameter schema.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when required inputs are missing or schema construction fails.
 		"""
 		try:
 			throw_if( 'function', function )
@@ -1038,25 +1007,20 @@ class WebFetcher( Fetcher ):
 			raise exception
 
 class WebCrawler( WebFetcher ):
-	"""WebCrawler component.
+	"""HTTP and browser-based web crawler.
 
 	Purpose:
-	    Extends HTTP retrieval with optional Playwright rendering and bounded same-domain
-	    traversal for collecting JavaScript-driven pages and linked content.
+	    Extends WebFetcher with optional Playwright rendering, per-page extraction, and breadth-first link traversal governed by page and depth limits.
 
 	Attributes:
-	    use_playwright (Optional[bool]): Flag controlling whether use playwright behavior is
-	        enabled.
-	    browser_context (Optional[Any]): Current browser context retained by the WebCrawler
-	        workflow between related operations.
-	    raw_url (Optional[str]): URL associated with the current raw resource or endpoint.
-	    raw_html (Optional[str]): Raw HTML retained by the extractor before transformation.
-	    pages (Optional[List[Dict[str, Any]]]): Current pages retained by the WebCrawler workflow
-	        between related operations.
-	    summary (Optional[Dict[str, Any]]): Current summary retained by the WebCrawler workflow
-	        between related operations.
-	    response (Any): Most recent raw response returned by the provider client.
-	    headers (Any): HTTP headers sent with the current request.
+	    use_playwright (Optional[bool]): Whether browser rendering is enabled.
+	    browser_context (Optional[Any]): Reserved browser context state, initialized to None.
+	    raw_url (Optional[str]): URL supplied to browser retrieval.
+	    raw_html (Optional[str]): HTML returned by browser rendering.
+	    pages (Optional[List[Dict[str, Any]]]): Page dictionaries from the latest crawl.
+	    summary (Optional[Dict[str, Any]]): Latest traversal statistics and configuration.
+	    response (Optional[Response]): Inherited HTTP response state.
+	    headers (Optional[Dict[str, Any]]): Inherited or replacement HTTP headers.
 	"""
 	use_playwright: Optional[ bool ]
 	browser_context: Optional[ Any ]
@@ -1066,20 +1030,17 @@ class WebCrawler( WebFetcher ):
 	summary: Optional[ Dict[ str, Any ] ]
 	
 	def __init__( self, headers: Optional[ Dict[ str, str ] ]=None, use_playwright: bool=False ) -> None:
-		"""Initialize the instance.
+		"""Initialize crawler configuration.
 
 		Purpose:
-		    Initializes instance state and provider or loader defaults required by subsequent
-		    operations.
+		    Initialize inherited HTTP and extraction state, configure optional browser rendering, and initialize page and summary collections.
 
 		Args:
-		    headers (Optional[Dict[str, str]]): Optional HTTP headers that override or extend the
-		        default request headers.
-		    use_playwright (bool): Whether use playwright behavior is enabled for the operation.
+		    headers (Optional[Dict[str, str]]): Replacement HTTP headers. Defaults to None to retain inherited headers; a missing User-Agent is supplied from configuration.
+		    use_playwright (bool): Enable Chromium rendering instead of HTTP retrieval. Defaults to False.
 
 		Returns:
-		    None: This method updates instance state or validates input and does not return a
-		        value.
+		    None: Initializes instance state.
 		"""
 		super( ).__init__( )
 		self.browser_context = None
@@ -1096,14 +1057,13 @@ class WebCrawler( WebFetcher ):
 			self.headers[ 'User-Agent' ] = cfg.AGENTS
 	
 	def __dir__( self ) -> List[ str ]:
-		"""Return visible member names.
+		"""Return exposed crawler members.
 
 		Purpose:
-		    Returns the stable public-member ordering used by introspection, interactive tools,
-		    and generated documentation.
+		    Provide the explicit member list used by dir(), including inherited extraction helpers and crawler operations.
 
 		Returns:
-		    List[str]: Ordered public member names exposed by the instance.
+		    List[str]: Ordered member names.
 		"""
 		return [ 'use_playwright', 'browser_context', 'raw_url', 'raw_html', 'pages', 'summary',
 				'fetch', 'html_to_text', 'coerce_items', 'extract_title', 'truncate_text',
@@ -1111,23 +1071,20 @@ class WebCrawler( WebFetcher ):
 				'render_with_playwright', 'scrape_page', 'crawl' ]
 	
 	def fetch( self, url: str, time: int=10 ) -> Result | None:
-		"""Fetch.
+		"""Retrieve a page using HTTP or Chromium.
 
 		Purpose:
-		    Dispatches the requested retrieval or generation operation using the class
-		    configuration and returns the normalized result.
+		    Use Playwright when enabled, storing rendered HTML and a parsed document; otherwise delegate to WebFetcher.fetch.
 
 		Args:
-		    url (str): Absolute endpoint or resource URL.
-		    time (int): Maximum request duration in seconds.
+		    url (str): Nonblank page URL.
+		    time (int): Timeout in seconds. Defaults to 10.
 
 		Returns:
-		    Result | None: Normalized Foo result for the completed provider request, or ``None``
-		        when the selected path does not create one.
+		    Result | None: HTTP response wrapper in HTTP mode; None in browser mode.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation, retrieval, or rendering fails.
 		"""
 		try:
 			throw_if( 'url', url )
@@ -1153,22 +1110,20 @@ class WebCrawler( WebFetcher ):
 			raise exception
 	
 	def render_with_playwright( self, url: str, timeout: int=15 ) -> str:
-		"""Render with playwright.
+		"""Render a web page using Chromium.
 
 		Purpose:
-		    Render with playwright using the class state and returns data required by the
-		    surrounding workflow.
+		    Launch Chromium, navigate to the requested URL, wait for network idle, obtain the rendered HTML, and close the browser on success.
 
 		Args:
-		    url (str): Absolute endpoint or resource URL.
-		    timeout (int): Maximum request duration in seconds.
+		    url (str): Nonblank page URL.
+		    timeout (int): Navigation and network-idle timeout in seconds for each operation. Defaults to 15.
 
 		Returns:
-		    str: Normalized text produced by the operation.
+		    str: Rendered page HTML.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when validation or browser rendering fails.
 		"""
 		try:
 
@@ -1197,29 +1152,22 @@ class WebCrawler( WebFetcher ):
 			raise exception
 	
 	def scrape_page( self, url: str, include_title: bool=True, include_basic_text: bool=True, include_raw_html: bool=False, selected_methods: Optional[ List[ str ] ]=None, request_timeout: int=10, max_bytes: int=1000000 ) -> Dict[ str, Any ]:
-		"""Scrape page.
+		"""Retrieve and extract a single page.
 
 		Purpose:
-		    Fetches the target page and extracts non-empty page content for downstream indexing or
-		    analysis.
+		    Collect response metadata, links, selected text and HTML groups, and content size. Truncate HTML by UTF-8 byte count before extraction when the positive limit is exceeded; record failures in the result.
 
 		Args:
-		    url (str): Absolute endpoint or resource URL.
-		    include_title (bool): Whether include title behavior is enabled for the operation.
-		    include_basic_text (bool): Whether include basic text behavior is enabled for the
-		        operation.
-		    include_raw_html (bool): Whether include raw html behavior is enabled for the
-		        operation.
-		    selected_methods (Optional[List[str]]): Extraction method names that determine which
-		        HTML element groups are returned.
-		    request_timeout (int): Request timeout supplied by the caller and interpreted
-		        according to the method contract.
-		    max_bytes (int): Max bytes supplied by the caller and interpreted according to the
-		        method contract.
+		    url (str): Page URL.
+		    include_title (bool): Include page title. Defaults to True.
+		    include_basic_text (bool): Include extracted plain text. Defaults to True.
+		    include_raw_html (bool): Include raw or truncated HTML. Defaults to False.
+		    selected_methods (Optional[List[str]]): Registered extraction method names. Defaults to None, selecting no groups.
+		    request_timeout (int): Retrieval timeout in seconds. Defaults to 10.
+		    max_bytes (int): Maximum retained HTML bytes before extraction; nonpositive values disable truncation. Defaults to 1000000.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Page URL, status, encoding, title, plain text, HTML, links, structured data, errors, original byte count, and truncation flag.
 		"""
 		page_result: Dict[ str, Any ] = { 'url': url, 'status_code': None, 'encoding': None,
 				'title': '', 'plain_text': '', 'raw_html': '', 'links_discovered': [ ], 'data': { },
@@ -1270,41 +1218,30 @@ class WebCrawler( WebFetcher ):
 			return page_result
 	
 	def crawl( self, seed_url: str, include_title: bool=True, include_basic_text: bool=True, include_raw_html: bool=False, selected_methods: Optional[ List[ str ] ]=None, recursive: bool=False, max_depth: int=1, max_pages: int=10, same_domain_only: bool=True, request_timeout: int=10, delay_seconds: float=0.25, max_bytes: int=1000000 ) -> Dict[ str, Any ]:
-		"""Crawl.
+		"""Traverse and extract linked pages.
 
 		Purpose:
-		    Crawl using the class state and returns data required by the surrounding workflow.
+		    Process the normalized seed and optionally discovered links in breadth-first order, respecting depth, page, and host limits. Store collected pages and a traversal summary.
 
 		Args:
-		    seed_url (str): Seed url supplied by the caller and interpreted according to the
-		        method contract.
-		    include_title (bool): Whether include title behavior is enabled for the operation.
-		    include_basic_text (bool): Whether include basic text behavior is enabled for the
-		        operation.
-		    include_raw_html (bool): Whether include raw html behavior is enabled for the
-		        operation.
-		    selected_methods (Optional[List[str]]): Extraction method names that determine which
-		        HTML element groups are returned.
-		    recursive (bool): Whether loading follows links or descends into child resources.
-		    max_depth (int): Maximum number of link levels traversed from the starting page.
-		    max_pages (int): Max pages supplied by the caller and interpreted according to the
-		        method contract.
-		    same_domain_only (bool): Whether same domain only behavior is enabled for the
-		        operation.
-		    request_timeout (int): Request timeout supplied by the caller and interpreted
-		        according to the method contract.
-		    delay_seconds (float): Delay seconds supplied by the caller and interpreted according
-		        to the method contract.
-		    max_bytes (int): Max bytes supplied by the caller and interpreted according to the
-		        method contract.
+		    seed_url (str): Nonblank absolute HTTP or HTTPS starting URL.
+		    include_title (bool): Include page titles. Defaults to True.
+		    include_basic_text (bool): Include plain text. Defaults to True.
+		    include_raw_html (bool): Include HTML. Defaults to False.
+		    selected_methods (Optional[List[str]]): Registered extraction method names. Defaults to None, selecting no groups.
+		    recursive (bool): Follow discovered links. Defaults to False.
+		    max_depth (int): Maximum link depth from the seed at depth zero. Defaults to 1.
+		    max_pages (int): Maximum number of processed pages. Defaults to 10.
+		    same_domain_only (bool): Restrict discovered links to the seed network location. Defaults to True.
+		    request_timeout (int): Per-page retrieval timeout in seconds. Defaults to 10.
+		    delay_seconds (float): Delay in seconds when queued pages remain; nonpositive values disable waiting. Defaults to 0.25.
+		    max_bytes (int): Per-page retained HTML byte limit; nonpositive values disable truncation. Defaults to 1000000.
 
 		Returns:
-		    Dict[str, Any]: Dictionary containing normalized provider data, configuration,
-		        metadata, or generated schema content.
+		    Dict[str, Any]: Pages with traversal depths and summary metrics, configuration, timing, and visited and skipped URLs.
 
 		Raises:
-		    Error: Wraps the source exception with module, class, and method metadata, writes it
-		        to the application logger, and re-raises it.
+		    Error: Raised when crawl setup or traversal fails; individual page failures are recorded in page results.
 		"""
 		try:
 			throw_if( 'include_title', include_title )
