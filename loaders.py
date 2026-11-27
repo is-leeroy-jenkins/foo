@@ -177,14 +177,12 @@ class Loader( ):
 			self.file_path = path
 			if not os.path.isfile( self.file_path ):
 				raise FileNotFoundError( f'File not found: {self.file_path}' )
-			else:
-				self.file_path = path
 			return self.file_path
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'loaders'
 			exception.cause = 'Loader'
-			exception.method = '_ensure_existing_file( self, path: str ) -> str'
+			exception.method = 'verify_exists( self, path: str ) -> str | None'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -249,15 +247,15 @@ class Loader( ):
 			self.encoding = encoding
 			self.csv_args = csv_args
 			self.source_column = source_column
-			self.loader = BaseLoader( file_path=self.file_path, encoding=self.encoding,
+			self.loader = CSVLoader( file_path=self.file_path, encoding=self.encoding,
 				csv_args=self.csv_args, source_column=self.source_column )
 			self.documents = self.loader.load( )
 			return self.documents
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'loaders'
-			exception.cause = 'CSV'
-			exception.method = 'loader( )'
+			exception.cause = 'Loader'
+			exception.method = 'load_documents( self, path, encoding, csv_args, source_column ) -> List[ Document ]'
 			Logger( ).write( exception )
 			raise exception
 	
@@ -639,6 +637,7 @@ class XmlLoader( Loader ):
 	    xml_tree (Optional[etree._ElementTree]): Current xml tree retained by the XmlLoader workflow between related operations.
 	    xml_root (Optional[etree._Element]): Current xml root retained by the XmlLoader workflow between related operations.
 	    xml_namespaces (Optional[Dict[str, str]]): Current xml namespaces retained by the XmlLoader workflow between related operations.
+	    xpath (Optional[str]): XPath expression supplied for element selection.
 	"""
 	
 	file_path: Optional[ str ]
@@ -650,6 +649,7 @@ class XmlLoader( Loader ):
 	xml_tree: Optional[ etree._ElementTree ]
 	xml_root: Optional[ etree._Element ]
 	xml_namespaces: Optional[ Dict[ str, str ] ]
+	xpath: Optional[ str ]
 	
 	def __init__( self ) -> None:
 		"""Initialize the instance.
@@ -670,6 +670,7 @@ class XmlLoader( Loader ):
 		self.xml_tree = None
 		self.xml_root = None
 		self.xml_namespaces = None
+		self.xpath = None
 	
 	def __dir__( self ) -> List[ str ]:
 		"""Return visible member names.
@@ -797,9 +798,11 @@ class XmlLoader( Loader ):
 		    Error: Wraps the source exception with module, class, and method metadata, writes it to the application logger, and re-raises it.
 		"""
 		try:
+			throw_if( 'xpath', xpath )
+			self.xpath = xpath
 			if self.xml_root is None:
 				raise ValueError( 'XML tree not loaded. Call load_tree() first.' )
-			elements = self.xml_root.xpath( xpath, namespaces=self.xml_namespaces )
+			elements = self.xml_root.xpath( self.xpath, namespaces=self.xml_namespaces )
 			return list( elements )
 		except Exception as e:
 			exception = Error( e )
