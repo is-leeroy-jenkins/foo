@@ -346,6 +346,61 @@ def test_xml_actions_and_chunking_handle_wrapped_errors( ) -> None:
 			for item in ast.walk( node ) ) for node in ast.walk( chunk ) )
 
 
+def test_processing_widget_overlap_bounds( ) -> None:
+	"""The overlap slider must retain a valid range at the minimum chunk size."""
+	source = read( 'app.py' )
+	tree = ast.parse( source, filename='app.py' )
+	function = next( node for node in tree.body if isinstance( node, ast.FunctionDef )
+		and node.name == 'render_document_processing_inputs' )
+	slider = next( node for node in ast.walk( function ) if isinstance( node, ast.Call )
+		and isinstance( node.func, ast.Attribute ) and node.func.attr == 'slider'
+		and node.args and isinstance( node.args[ 0 ], ast.Constant )
+		and node.args[ 0 ].value == 'Chunk Overlap' )
+	keywords = { item.arg: item.value for item in slider.keywords }
+	for size in ( 1, 2, 1000, 5000 ):
+		namespace = { 'chunk_size': size, 'max_overlap': size - 1 }
+		lower = eval( compile( ast.Expression( body=keywords[ 'min_value' ] ),
+			'app.py', 'eval' ), namespace )
+		upper = eval( compile( ast.Expression( body=keywords[ 'max_value' ] ),
+			'app.py', 'eval' ), namespace )
+		disabled = eval( compile( ast.Expression( body=keywords[ 'disabled' ] ),
+			'app.py', 'eval' ), namespace )
+		assert lower < upper
+		assert disabled == ( size == 1 )
+		assert upper == max( 1, size - 1 )
+	assert 'st.session_state[ overlap_key ] = max_overlap' in ast.unparse( function ).replace(
+		'st.session_state[overlap_key]', 'st.session_state[ overlap_key ]' )
+
+
+def test_incompatible_numeric_widget_keys_are_isolated( ) -> None:
+	"""Loading and Demographic numeric limits must not share incompatible keys."""
+	source = read( 'app.py' )
+	loading = source.split( "if mode == 'Loading':", 1 )[ 1 ].split(
+		"elif mode == 'Scraping':", 1 )[ 0 ]
+	demographic = source.split( "elif mode == 'Demographic':", 1 )[ 1 ].split(
+		"elif mode == 'Generation':", 1 )[ 0 ]
+	for key in ( 'pubmed_max_docs', 'open_city_limit' ):
+		assert f"key='loading_{key}'" in loading
+		assert f"key='{key}'" not in loading
+		assert f"key='{key}'" in demographic
+
+
+def test_claude_budget_is_adjusted_before_widget_creation( ) -> None:
+	"""A reduced maximum token count cannot leave an out-of-range widget value."""
+	source = read( 'app.py' )
+	tree = ast.parse( source, filename='app.py' )
+	widget = next( node for node in ast.walk( tree ) if isinstance( node, ast.Call )
+		and isinstance( node.func, ast.Attribute ) and node.func.attr == 'number_input'
+		and node.args and isinstance( node.args[ 0 ], ast.Constant )
+		and node.args[ 0 ].value == 'Thinking Budget' )
+	keywords = { item.arg: item.value for item in widget.keywords }
+	assert 'value' not in keywords
+	assert ast.unparse( keywords[ 'max_value' ] ) == 'max_budget'
+	assert ast.unparse( keywords[ 'disabled' ] ) == 'claude_max_tokens <= 1024'
+	assert source.index( "st.session_state[ 'claude_thinking_budget_chat' ] = max_budget" ) < source.index(
+		"claude_thinking_budget = st.number_input( 'Thinking Budget'" )
+
+
 if __name__ == '__main__':
 	tests = [ value for name, value in globals( ).items( )
 		if name.startswith( 'test_' ) and callable( value ) ]
