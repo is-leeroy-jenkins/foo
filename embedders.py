@@ -70,7 +70,7 @@ def throw_if( name: str, value: object ) -> None:
         raise ValueError( f'Argument "{name}" cannot be empty!' )
 
 
-class LocalGGUFEmbeddings( Embeddings ):
+class LocalEmbeddings( Embeddings ):
     """LangChain-compatible local GGUF embedding implementation.
 
     Purpose:
@@ -129,12 +129,7 @@ class LocalGGUFEmbeddings( Embeddings ):
                 raise FileNotFoundError( f'Local GGUF model not found: {self.model_path}' )
 
             from llama_cpp import Llama
-
-            self.client = Llama(
-                model_path=self.model_path,
-                embedding=True,
-                verbose=False,
-            )
+            self.client = Llama( model_path=self.model_path, embedding=True, verbose=False, )
         except Error:
             raise
         except Exception as e:
@@ -165,11 +160,10 @@ class LocalGGUFEmbeddings( Embeddings ):
             throw_if( 'texts', texts )
             for text in texts:
                 throw_if( 'text', text )
+            
             self.texts = texts
-
             self.load( )
             self.response = self.client.create_embedding( self.texts )
-
             if isinstance( self.response, dict ) and 'data' in self.response:
                 vectors = [ item[ 'embedding' ] for item in self.response[ 'data' ] ]
             else:
@@ -184,7 +178,7 @@ class LocalGGUFEmbeddings( Embeddings ):
         except Exception as e:
             exception = Error( e )
             exception.module = 'embedders'
-            exception.cause = 'LocalGGUFEmbeddings'
+            exception.cause = 'LocalEmbeddings'
             exception.method = 'embed_documents( self, texts: List[ str ] ) -> List[ List[ float ] ]'
             Logger( ).write( exception )
             raise exception
@@ -271,7 +265,7 @@ class EmbeddingFactory( ):
                 throw_if( 'model_path', model_path )
                 self.model_path = model_path
                 self.model = model
-                return LocalGGUFEmbeddings( model_path=self.model_path )
+                return LocalEmbeddings( model_path=self.model_path )
 
             self.model = model
             self.model_path = model_path
