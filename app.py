@@ -1103,44 +1103,36 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 		if key not in st.session_state:
 			st.session_state[ key ] = value
 	
-	if int( st.session_state[ overlap_key ] ) >= int( st.session_state[ size_key ] ):
-		st.session_state[ overlap_key ] = max( 0, int( st.session_state[ size_key ] ) // 5, )
-	
-	chunk_max = max( 5000, int( st.session_state[ size_key ] ) )
+	chunk_max = max( 5000, st.session_state[ size_key ] )
 	chunk_c1, chunk_c2 = st.columns( 2, border=True )
 	with chunk_c1:
-		st.slider( 'Chunk Size', min_value=1, max_value=chunk_max, step=1, key=size_key, )
-	
+		chunk_size = st.slider( 'Chunk Size', min_value=1, max_value=chunk_max, step=1,
+			key=size_key, )
+
 	with chunk_c2:
-		st.slider( 'Chunk Overlap', min_value=0, max_value=max( 0, int(
-			st.session_state[ size_key ] ) - 1 ), step=1, key=overlap_key, )
-	
+		max_overlap = chunk_size - 1
+		if st.session_state[ overlap_key ] > max_overlap:
+			st.session_state[ overlap_key ] = max_overlap
+		st.slider( 'Chunk Overlap', min_value=0, max_value=max( 1, max_overlap ), step=1,
+			key=overlap_key, disabled=chunk_size == 1, )
+
 	provider_options = list( EMBEDDING_MODELS.keys( ) ) + [ 'Local GGUF' ]
-	provider = st.session_state[ provider_key ]
-	if provider != 'Local GGUF':
-		model_c1, model_c2 = st.columns( 2, border=True )
-		with model_c1:
-			provider = st.selectbox( 'Embedding Provider', options=provider_options,
-				key=provider_key, )
-		
-		with model_c2:
-			if provider != 'Local GGUF':
-				model_options = EMBEDDING_MODELS[ provider ]
-				if st.session_state.get( model_key, '' ) not in model_options:
-					st.session_state[ model_key ] = model_options[ 0 ]
-				
-				st.selectbox( 'Embedding Model', options=model_options, key=model_key, )
-	else:
-		model_c1, model_c2 = st.columns( 2, border=True )
-		with model_c1:
-			provider = st.selectbox( 'Embedding Provider', options=provider_options,
-				key=provider_key, )
-	
-		with model_c2:
-			if provider == 'Local GGUF':
-				st.text_input( 'Local GGUF Model', key=path_key,
-					placeholder='Path to a local embedding GGUF model', )
-	
+	model_c1, model_c2 = st.columns( 2, border=True )
+	with model_c1:
+		provider = st.selectbox( 'Embedding Provider', options=provider_options,
+			key=provider_key, )
+
+	with model_c2:
+		if provider == 'Local GGUF':
+			st.text_input( 'Local GGUF Model', key=path_key,
+				placeholder='Path to a local embedding GGUF model', )
+		else:
+			model_options = EMBEDDING_MODELS[ provider ]
+			if st.session_state.get( model_key, '' ) not in model_options:
+				st.session_state[ model_key ] = model_options[ 0 ]
+
+			st.selectbox( 'Embedding Model', options=model_options, key=model_key, )
+
 	st.divider( )
 	
 	store_provider = st.selectbox( 'Vector Store', options=VECTOR_STORES, key=store_key, )
@@ -3198,7 +3190,7 @@ if mode == 'Loading':
 					key='pubmed_query', placeholder='e.g. transformer models biomedical NLP', )
 				
 				pubmed_max_docs = st.number_input( 'Maximum Documents', min_value=1,
-					value=5, step=1, key='pubmed_max_docs', )
+					value=5, step=1, key='loading_pubmed_max_docs', )
 				
 				# Save
 				col_load, col_clear, col_save = st.columns( 3 )
@@ -3265,7 +3257,7 @@ if mode == 'Loading':
 					help='Dataset identifier from the city portal.', icon='💾', width='stretch' )
 				
 				open_city_limit = st.number_input( 'Maximum Records', min_value=1, value=100,
-					step=1, key='open_city_limit', )
+					step=1, key='loading_open_city_limit', )
 				
 				# Save
 				col_load, col_clear, col_save = st.columns( 3 )
@@ -15808,11 +15800,12 @@ elif mode == 'Generation':
 			# Reasoning Budget
 			# -----------------------------
 			if claude_thinking:
+				max_budget = max( 1024, claude_max_tokens - 1 )
+				if st.session_state[ 'claude_thinking_budget_chat' ] > max_budget:
+					st.session_state[ 'claude_thinking_budget_chat' ] = max_budget
 				claude_thinking_budget = st.number_input( 'Thinking Budget', min_value=1024,
-					max_value=max( 1024, int( claude_max_tokens ) - 1 ), value=min( int(
-						st.session_state.get( 'claude_thinking_budget_chat', 1024 ) ), max( 1024,
-						int( claude_max_tokens ) - 1 ) ), step=1024,
-					key='claude_thinking_budget_chat', help='Must be less than Max Tokens.' )
+					max_value=max_budget, step=1024, key='claude_thinking_budget_chat',
+					disabled=claude_max_tokens <= 1024, help='Must be less than Max Tokens.' )
 			else:
 				claude_thinking_budget = None
 			
