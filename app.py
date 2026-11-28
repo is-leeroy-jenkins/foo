@@ -707,71 +707,124 @@ def normalize( obj ):
 			return str( obj )
 	return str( obj )
 
-def build_source_documents( mode_name: str, source_name: str,
-		result: Any ) -> List[ Document ]:
-	"""Convert a provider result into record-oriented documents.
+def build_source_documents( mode_name: str, source_name: str, result: Any ) -> List[ Document ]:
+	"""Convert provider results into record-oriented documents.
 
 	Purpose:
-		Preserves individual rows, features, observations, events, and records so chunking does
-		not destroy the provider's natural retrieval boundaries.
+		Preserve record boundaries and original loader text and metadata. Empty record
+		collections produce no documents; standalone structured responses remain supported.
+
+	Args:
+		mode_name (str): Non-empty application mode identifier.
+		source_name (str): Non-empty processing source identifier.
+		result (Any): Provider response, document collection, or structured result.
+
+	Returns:
+		List[Document]: Non-empty source documents suitable for downstream processing.
+
+	Raises:
+		Error: Wraps and logs argument or result-conversion failures.
 	"""
-	throw_if( 'mode_name', mode_name )
-	throw_if( 'source_name', source_name )
-	if result is None:
-		return [ ]
+	try:
+		throw_if( 'mode_name', mode_name )
+		throw_if( 'source_name', source_name )
+		if result is None:
+			return [ ]
 
-	values: List[ Any ] = [ ]
-	container_metadata: Dict[ str, Any ] = { }
-	if isinstance( result, dict ):
-		for key in ( 'rows', 'features', 'items', 'results', 'events', 'observations',
-				'records', 'data' ):
-			candidate = result.get( key )
-			if isinstance( candidate, list ):
-				values = candidate
-				container_metadata[ 'result_key' ] = key
-				break
-		if not values:
+		values: List[ Any ] = [ ]
+		container_metadata: Dict[ str, Any ] = { }
+		if isinstance( result, dict ):
+			if not result:
+				return [ ]
+			record_collection = False
+			for key in ( 'rows', 'features', 'items', 'results', 'events', 'observations',
+					'records', 'data' ):
+				candidate = result.get( key )
+				if isinstance( candidate, list ):
+					record_collection = True
+					if candidate:
+						values = candidate
+						container_metadata[ 'result_key' ] = key
+						break
+			if not values:
+				if record_collection:
+					return [ ]
+				values = [ result ]
+		elif isinstance( result, ( list, tuple, set ) ):
+			values = list( result )
+		else:
 			values = [ result ]
-	elif isinstance( result, ( list, tuple, set ) ):
-		values = list( result )
-	else:
-		values = [ result ]
 
-	documents: List[ Document ] = [ ]
-	for index, value in enumerate( values, start=1 ):
-		if isinstance( value, Document ):
-			metadata = dict( value.metadata or { } )
+		# These result caches retain the original loader text and metadata in each record.
+		content_key = ''
+		if mode_name == 'Retrieval' and source_name in ( 'Jupyter Notebook',
+				'Google Cloud File', 'AWS S3 File', 'OneDrive', 'Google Speech-to-Text',
+				'AWS S3 Bucket', 'Google Cloud Bucket' ):
+			content_key = 'Content'
+		elif mode_name == 'Demographic':
+			if source_name == 'pub_med_search':
+				content_key = 'Summary'
+			elif source_name == 'open_city_data':
+				content_key = 'Row'
+
+		documents: List[ Document ] = [ ]
+		for index, value in enumerate( values, start=1 ):
+			if isinstance( value, Document ):
+				content = value.page_content or ''
+				metadata = dict( value.metadata or { } )
+			elif content_key and isinstance( value, dict ) and content_key in value:
+				content = value[ content_key ]
+				metadata = dict( value.get( 'Metadata' ) or { } )
+			else:
+				if value is None or ( isinstance( value, ( dict, list, tuple, set ) ) and not value ):
+					continue
+				metadata = dict( container_metadata )
+				if isinstance( value, dict ):
+					for key in ( 'id', 'feature_id', 'latitude', 'longitude', 'lat', 'lon',
+							'lng', 'time', 'date', 'timestamp', 'provider', 'endpoint', 'units' ):
+						if key in value and isinstance( value[ key ], ( str, int, float, bool ) ):
+							metadata[ key ] = value[ key ]
+					content = json.dumps( normalize( value ), indent=2, ensure_ascii=False,
+						default=str )
+				else:
+					content = str( value )
+
 			metadata.setdefault( 'mode', mode_name )
 			metadata.setdefault( 'source', source_name )
 			metadata.setdefault( 'record_id', index )
-			documents.append( Document( page_content=value.page_content or '', metadata=metadata ) )
-			continue
-
-		metadata = dict( container_metadata )
-		metadata.update( { 'mode': mode_name, 'source': source_name, 'record_id': index } )
-		if isinstance( value, dict ):
-			for key in ( 'id', 'feature_id', 'latitude', 'longitude', 'lat', 'lon', 'lng',
-					'time', 'date', 'timestamp', 'provider', 'endpoint', 'units' ):
-				if key in value and isinstance( value[ key ], ( str, int, float, bool ) ):
-					metadata[ key ] = value[ key ]
-			content = json.dumps( normalize( value ), indent=2, ensure_ascii=False, default=str )
-		else:
-			content = str( value )
-		if content.strip( ):
-			documents.append( Document( page_content=content, metadata=metadata ) )
-	return documents
+			if isinstance( content, str ) and content.strip( ):
+				documents.append( Document( page_content=content, metadata=metadata ) )
+		return documents
+	except Error:
+		raise
+	except Exception as e:
+		exception = Error( e )
+		exception.module = 'app'
+		exception.cause = 'DocumentProcessing'
+		exception.method = 'build_source_documents( mode_name, source_name, result ) -> List[ Document ]'
+		Logger( ).write( exception )
+		raise exception
 
 def promote_source_result( mode_name: str, source_name: str, result: Any ) -> List[ Document ]:
-	"""Write a provider result to Foo's canonical document-processing state."""
-	activate_processing_source( source_name )
+	"""Promote a provider result into canonical document-processing state.
+
+	Purpose:
+		Use one source identity and retain valid processing outputs on unchanged reruns.
+
+	Args:
+		mode_name (str): Non-empty application mode identifier.
+		source_name (str): Non-empty processing source identifier.
+		result (Any): Provider response or cached result.
+
+	Returns:
+		List[Document]: Source documents represented by the result.
+
+	Raises:
+		Error: Propagates a logged document-conversion or promotion failure.
+	"""
 	documents = build_source_documents( mode_name=mode_name, source_name=source_name,
 		result=result )
-	st.session_state[ 'documents' ] = documents
-	st.session_state[ 'raw_documents' ] = list( documents )
-	st.session_state[ 'raw_text' ] = '\n\n'.join( document.page_content for document in documents
-		if isinstance( document.page_content, str ) and document.page_content.strip( ) )
-	st.session_state[ 'processed_text' ] = ''
-	st.session_state[ 'active_loader' ] = source_name
+	_promote_loader_documents( documents, source_name )
 	return documents
 
 def metric_with_tooltip( label: str, value: str, tooltip: str ):
@@ -1298,9 +1351,19 @@ def render_document_processing_tabs( key_prefix: str='loading' ) -> None:
 	throw_if( 'key_prefix', key_prefix )
 	ensure_document_processing_state( )
 	documents = st.session_state.get( 'documents' ) or [ ]
+	active_loader = st.session_state.get( 'active_loader' )
+	mode_source_keys = { 'retrieval': 'retrieval_active_source',
+			'geospatial': 'geospatial_active_source', 'environmental': 'environmental_active_source',
+			'astronomical': 'astronomical_active_source', 'demographic': 'demographic_active_source', }
+	if key_prefix in mode_source_keys:
+		if active_loader != st.session_state.get( mode_source_keys[ key_prefix ], '' ):
+			documents = [ ]
+	elif key_prefix == 'web_scraper' and active_loader != 'Web Scraper':
+		documents = [ ]
 	current_signature = document_signature( documents ) if documents else ''
-	derived_current = bool( documents ) and current_signature == st.session_state.get(
-		'chunk_source_signature', '' )
+	derived_current = ( bool( documents ) and active_loader ==
+		st.session_state.get( 'processing_active_source', '' ) and current_signature ==
+		st.session_state.get( 'chunk_source_signature', '' ) )
 	document_tab, chunk_tab, embedding_tab = st.tabs( [ 'Document', 'Chunks', 'Embeddings' ] )
 	with document_tab:
 		if not documents:
@@ -1375,18 +1438,56 @@ def set_sidebar_mode( source_key: str ) -> None:
 		st.session_state[ 'mode' ] = selected_mode
 
 def _promote_loader_documents( documents: List[ Document ] | None, active_loader: str ) -> int:
-	docs: List[ Document ] = list( documents or [ ] )
-	activate_processing_source( active_loader )
-	st.session_state.documents = docs
-	st.session_state.raw_documents = list( docs )
-	st.session_state.raw_text = '\n\n'.join( doc.page_content for doc in docs if
-			hasattr( doc, 'page_content' ) and isinstance( doc.page_content, str ) and doc.page_content.strip( ) )
-	st.session_state.processed_text = ''
-	st.session_state.tokens = None
-	st.session_state.vocabulary = None
-	st.session_state.token_counts = None
-	st.session_state.active_loader = active_loader
-	return len( docs )
+	"""Synchronize loaded documents with their processing source.
+
+	Purpose:
+		Retain valid derived outputs for identical document signatures, invalidate changed
+		collections, and avoid clearing another source when a result is empty.
+
+	Args:
+		documents (List[Document] | None): Loaded document collection.
+		active_loader (str): Non-empty processing source identifier.
+
+	Returns:
+		int: Number of source documents.
+
+	Raises:
+		Error: Wraps and logs invalid arguments or state failures.
+	"""
+	try:
+		throw_if( 'active_loader', active_loader )
+		docs: List[ Document ] = list( documents or [ ] )
+		if not docs:
+			clear_if_active( active_loader )
+			return 0
+
+		signature = document_signature( docs )
+		current_documents = st.session_state.get( 'documents' ) or [ ]
+		current_owner = st.session_state.get( 'active_loader' )
+		unchanged = ( current_owner == active_loader and bool( current_documents )
+			and document_signature( current_documents ) == signature )
+		activate_processing_source( active_loader )
+		stored_signature = st.session_state.get( 'chunk_source_signature', '' )
+		if stored_signature != signature and ( not unchanged or stored_signature ):
+			clear_document_processing_outputs( )
+		if unchanged:
+			return len( docs )
+
+		st.session_state.documents = docs
+		st.session_state.raw_documents = list( docs )
+		st.session_state.raw_text = rebuild_raw_text_from_documents( ) or ''
+		st.session_state.processed_text = ''
+		st.session_state.active_loader = active_loader
+		return len( docs )
+	except Error:
+		raise
+	except Exception as e:
+		exception = Error( e )
+		exception.module = 'app'
+		exception.cause = 'DocumentProcessing'
+		exception.method = '_promote_loader_documents( documents, active_loader ) -> int'
+		Logger( ).write( exception )
+		raise exception
 
 def _clear_loader_documents( loader_name: str ) -> int:
 	"""Clear source-owned documents and return the remaining document count.
@@ -4046,6 +4147,7 @@ elif mode == 'Scraping':
 						for err in errors:
 							st.error( err )
 
+		promote_source_result( mode_name='Scraping', source_name='Web Scraper', result=results )
 		render_document_processing_tabs( key_prefix='web_scraper' )
 
 # ==============================================================================
@@ -4072,6 +4174,7 @@ elif mode == 'Retrieval':
 			if st.session_state.get( 'arxiv_clear_request', False ):
 				st.session_state[ 'arxiv_input' ] = ''
 				st.session_state[ 'arxiv_results' ] = [ ]
+				clear_if_active( 'ArXiv' )
 				st.session_state[ 'arxiv_max_docs' ] = 5
 				st.session_state[ 'arxiv_full_documents' ] = False
 				st.session_state[ 'arxiv_include_metadata' ] = False
@@ -4161,6 +4264,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'googledrive_mode' ] = 'documents'
 				st.session_state[ 'googledrive_mime_type' ] = ''
 				st.session_state[ 'googledrive_results' ] = [ ]
+				clear_if_active( 'Google Drive' )
 				st.session_state[ 'googledrive_clear_request' ] = False
 			
 			def _clear_googledrive_state( ) -> None:
@@ -4261,6 +4365,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'wikipedia_max_docs' ] = 5
 				st.session_state[ 'wikipedia_include_metadata' ] = False
 				st.session_state[ 'wikipedia_results' ] = [ ]
+				clear_if_active( 'Wikipedia' )
 				st.session_state[ 'wikipedia_clear_request' ] = False
 			
 			def _clear_wikipedia_state( ) -> None:
@@ -4364,6 +4469,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'googlesearch_cse_id' ] = ''
 				st.session_state[ 'googlesearch_timeout' ] = 10
 				st.session_state[ 'googlesearch_results' ] = { }
+				clear_if_active( 'Google Search' )
 				st.session_state[ 'googlesearch_clear_request' ] = False
 			
 			def _clear_googlesearch_state( ) -> None:
@@ -4518,6 +4624,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'openscience_format' ] = 'json'
 				st.session_state[ 'openscience_timeout' ] = 20
 				st.session_state[ 'openscience_results' ] = { }
+				clear_if_active( 'Open Science' )
 				st.session_state[ 'openscience_clear_request' ] = False
 			
 			def _clear_openscience_state( ) -> None:
@@ -4576,6 +4683,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'govinfo_start_date' ] = '2025-01-01T00:00:00Z'
 				st.session_state[ 'govinfo_timeout' ] = 20
 				st.session_state[ 'govinfo_results' ] = { }
+				clear_if_active( 'Gov Info' )
 				st.session_state[ 'govinfo_clear_request' ] = False
 			
 			def _clear_govinfo_state( ) -> None:
@@ -4795,6 +4903,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'congress_conference' ] = False
 				st.session_state[ 'congress_timeout' ] = 20
 				st.session_state[ 'congress_results' ] = { }
+				clear_if_active( 'US Congress' )
 				st.session_state[ 'congress_clear_request' ] = False
 			
 			def _clear_congress_state( ) -> None:
@@ -5022,6 +5131,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'internetarchive_collection' ] = ''
 				st.session_state[ 'internetarchive_timeout' ] = 20
 				st.session_state[ 'internetarchive_results' ] = { }
+				clear_if_active( 'Internet Archive' )
 				st.session_state[ 'internetarchive_clear_request' ] = False
 			
 			def _clear_internetarchive_state( ) -> None:
@@ -5208,6 +5318,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'grokipedia_offset' ] = 0
 				st.session_state[ 'grokipedia_include_content' ] = True
 				st.session_state[ 'grokipedia_results' ] = { }
+				clear_if_active( 'Grokipedia' )
 				st.session_state[ 'grokipedia_auto_fetch_page' ] = False
 				st.session_state[ 'grokipedia_clear_request' ] = False
 			
@@ -5452,7 +5563,7 @@ elif mode == 'Retrieval':
 			
 			with b3:
 				can_save = (
-							st.session_state.get( 'active_loader' ) == 'JupyterNotebookLoader' \
+							st.session_state.get( 'active_loader' ) == 'Jupyter Notebook' \
 							and isinstance( st.session_state.get( 'raw_text' ), str ) \
 							and st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -5488,7 +5599,7 @@ elif mode == 'Retrieval':
 			
 			with b3:
 				can_save = ( st.session_state.get( 'active_loader' ) == \
-				             'GoogleCloudStorageFileLoader' and \
+				             'Google Cloud File' and \
 				             isinstance( st.session_state.get( 'raw_text' ), str ) \
 				             and st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -5527,7 +5638,7 @@ elif mode == 'Retrieval':
 			
 			with b3:
 				can_save = (st.session_state.get( 'active_loader' ) == \
-							'AwsFileLoader' and isinstance(
+							'AWS S3 File' and isinstance(
 							st.session_state.get( 'raw_text' ), str ) and \
 							st.session_state.get( 'raw_text' ).strip( ) )
 				
@@ -5568,7 +5679,7 @@ elif mode == 'Retrieval':
 					use_container_width=True, width='stretch' )
 			
 			with b3:
-				can_save = (st.session_state.get( 'active_loader' ) == 'OneDriveDocLoader' \
+				can_save = (st.session_state.get( 'active_loader' ) == 'OneDrive' \
 							and isinstance( st.session_state.get( 'raw_text' ), str ) \
 				            and st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -5610,7 +5721,7 @@ elif mode == 'Retrieval':
 					key='google_speech_to_text_clear', use_container_width=True, width='stretch' )
 			
 			with b3:
-				can_save = (st.session_state.get( 'active_loader' ) == 'GoogleSpeechToTextLoader' \
+				can_save = (st.session_state.get( 'active_loader' ) == 'Google Speech-to-Text' \
 							and isinstance( st.session_state.get( 'raw_text' ), str ) \
 				            and st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -5650,7 +5761,7 @@ elif mode == 'Retrieval':
 					use_container_width=True, width='stretch' )
 			
 			with b3:
-				can_save = (st.session_state.get( 'active_loader' ) == 'AmazonBucketLoader' \
+				can_save = (st.session_state.get( 'active_loader' ) == 'AWS S3 Bucket' \
 				            and isinstance( st.session_state.get( 'raw_text' ), str ) \
 				            and st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -5690,7 +5801,7 @@ elif mode == 'Retrieval':
 			
 			with b3:
 				can_save = (
-							st.session_state.get( 'active_loader' ) == 'GoogleBucketLoader' \
+							st.session_state.get( 'active_loader' ) == 'Google Cloud Bucket' \
 							and isinstance( st.session_state.get( 'raw_text' ), str ) \
 							and st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -5742,6 +5853,44 @@ elif mode == 'Retrieval':
 	
 	with right:
 		st.markdown( '##### Results' )
+		if jupyter_clear:
+			st.session_state[ 'jupyter_notebook_results' ] = { }
+			remaining = _clear_loader_documents( 'Jupyter Notebook' )
+			st.info(
+				f'Jupyter Notebook Loader state cleared. Remaining documents: {remaining}.')
+
+		if google_cloud_file_clear:
+			st.session_state[ 'google_cloud_file_results' ] = { }
+			remaining = _clear_loader_documents( 'Google Cloud File' )
+			st.info( f'Google Cloud File Loader state cleared. Remaining documents: '
+			         f'{remaining}.' )
+
+		if aws_file_clear:
+			st.session_state[ 'aws_file_results' ] = { }
+			remaining = _clear_loader_documents( 'AWS S3 File' )
+			st.info( f'AWS S3 File Loader state cleared. Remaining documents: {remaining}.' )
+
+		if onedrive_clear:
+			st.session_state[ 'onedrive_results' ] = { }
+			remaining = _clear_loader_documents( 'OneDrive' )
+			st.info( f'OneDrive Loader state cleared. Remaining documents: {remaining}.' )
+
+		if google_speech_clear:
+			st.session_state[ 'google_speech_to_text_results' ] = { }
+			remaining = _clear_loader_documents( 'Google Speech-to-Text' )
+			st.info( f'Google Speech-to-Text Loader state cleared. Remaining documents: '
+			         f'{remaining}.' )
+
+		if aws_bucket_clear:
+			st.session_state[ 'aws_bucket_results' ] = { }
+			remaining = _clear_loader_documents( 'AWS S3 Bucket' )
+			st.info( f'AWS S3 Bucket Loader state cleared. Remaining documents: {remaining}.' )
+
+		if google_bucket_clear:
+			st.session_state[ 'google_bucket_results' ] = { }
+			remaining = _clear_loader_documents( 'Google Cloud Bucket' )
+			st.info( f'Google Bucket Loader state cleared. Remaining documents: {remaining}.' )
+
 		active_source = st.session_state.get( 'retrieval_active_source', '' )
 		if not active_source:
 			st.info( 'Select a source, configure the request, and submit it to display results.' )
@@ -6081,11 +6230,6 @@ elif mode == 'Retrieval':
 		
 		# -------- Jupyter Notebook
 		if active_source == 'Jupyter Notebook':
-			if jupyter_clear:
-				st.session_state[ 'jupyter_notebook_results' ] = { }
-				remaining = _clear_loader_documents( 'JupyterNotebookLoader' )
-				st.info(
-					f'Jupyter Notebook Loader state cleared. Remaining documents: {remaining}.')
 			
 			if jupyter_submit:
 				if not notebook_file:
@@ -6102,7 +6246,7 @@ elif mode == 'Retrieval':
 								max_output_length=int( max_output_length ),
 								remove_newline=remove_newline, traceback=include_traceback ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'JupyterNotebookLoader' )
+						count = len( documents )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
@@ -6157,11 +6301,6 @@ elif mode == 'Retrieval':
 		
 		# -------- Google Cloud FIle
 		if active_source == 'Google Cloud File':
-			if google_cloud_file_clear:
-				st.session_state[ 'google_cloud_file_results' ] = { }
-				remaining = _clear_loader_documents( 'GoogleCloudStorageFileLoader' )
-				st.info( f'Google Cloud File Loader state cleared. Remaining documents: '
-				         f'{remaining}.' )
 			
 			if google_cloud_file_submit:
 				if not project_name or not project_name.strip( ):
@@ -6176,8 +6315,7 @@ elif mode == 'Retrieval':
 						documents = loader.load( project_name=project_name.strip( ),
 							bucket=bucket.strip( ), blob=blob.strip( ) ) or [ ]
 						
-						count = _promote_loader_documents(
-							documents, 'GoogleCloudStorageFileLoader' )
+						count = len( documents )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
@@ -6229,10 +6367,6 @@ elif mode == 'Retrieval':
 		
 		# -------- AWS S3 File
 		if active_source == 'AWS S3 File':
-			if aws_file_clear:
-				st.session_state[ 'aws_file_results' ] = { }
-				remaining = _clear_loader_documents( 'AwsFileLoader' )
-				st.info( f'AWS S3 File Loader state cleared. Remaining documents: {remaining}.' )
 			
 			if aws_file_submit:
 				if not bucket or not bucket.strip( ):
@@ -6245,7 +6379,7 @@ elif mode == 'Retrieval':
 						documents = loader.load( bucket=bucket.strip( ), key=key_name.strip( ),
 							region_name=region_name.strip( ) or None ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'AwsFileLoader' )
+						count = len( documents )
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
 							metadata = (
@@ -6296,10 +6430,6 @@ elif mode == 'Retrieval':
 		
 		# -------- OneDrive
 		if active_source == 'OneDrive':
-			if onedrive_clear:
-				st.session_state[ 'onedrive_results' ] = { }
-				remaining = _clear_loader_documents( 'OneDriveDocLoader' )
-				st.info( f'OneDrive Loader state cleared. Remaining documents: {remaining}.' )
 			
 			if onedrive_submit:
 				if not drive_id or not drive_id.strip( ):
@@ -6316,7 +6446,7 @@ elif mode == 'Retrieval':
 							folder_path=folder_path.strip( ) or None, object_ids=object_ids,
 							auth_with_token=auth_with_token ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'OneDriveDocLoader' )
+						count = len( documents )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
@@ -6373,11 +6503,6 @@ elif mode == 'Retrieval':
 		
 		# -------- Google STT
 		if active_source == 'Google Speech-to-Text':
-			if google_speech_clear:
-				st.session_state[ 'google_speech_to_text_results' ] = { }
-				remaining = _clear_loader_documents( 'GoogleSpeechToTextLoader' )
-				st.info( f'Google Speech-to-Text Loader state cleared. Remaining documents: '
-				         f'{remaining}.' )
 			
 			if google_speech_submit:
 				if not project_id or not project_id.strip( ):
@@ -6405,7 +6530,7 @@ elif mode == 'Retrieval':
 								documents = loader.load( project_id=project_id.strip( ),
 									file_path=path, config=config ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'GoogleSpeechToTextLoader' )
+						count = len( documents )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
@@ -6462,10 +6587,6 @@ elif mode == 'Retrieval':
 		
 		# -------- AWS S3 Bucket
 		if active_source == 'AWS S3 Bucket':
-			if aws_bucket_clear:
-				st.session_state[ 'aws_bucket_results' ] = { }
-				remaining = _clear_loader_documents( 'AmazonBucketLoader' )
-				st.info( f'AWS S3 Bucket Loader state cleared. Remaining documents: {remaining}.' )
 			
 			if aws_bucket_submit:
 				if not bucket_name or not bucket_name.strip( ):
@@ -6478,7 +6599,7 @@ elif mode == 'Retrieval':
 							region_name=region_name.strip( ) or None,
 							endpoint_url=endpoint_url.strip( ) or None ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'AmazonBucketLoader' )
+						count = len( documents )
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
 							metadata = ( doc.metadata if isinstance(
@@ -6534,10 +6655,6 @@ elif mode == 'Retrieval':
 		
 		# -------- Google Cloud Bucket
 		if active_source == 'Google Cloud Bucket':
-			if google_bucket_clear:
-				st.session_state[ 'google_bucket_results' ] = { }
-				remaining = _clear_loader_documents( 'GoogleBucketLoader' )
-				st.info( f'Google Bucket Loader state cleared. Remaining documents: {remaining}.' )
 			
 			if google_bucket_submit:
 				if not project_name or not project_name.strip( ):
@@ -6551,7 +6668,7 @@ elif mode == 'Retrieval':
 							bucket=bucket_name.strip( ), prefix=prefix.strip( ) or None,
 							continue_on_failure=continue_on_failure ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'GoogleBucketLoader' )
+						count = len( documents )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
@@ -6653,13 +6770,6 @@ elif mode == 'Geospatial':
 		documents = promote_source_result( mode_name='Geospatial', source_name=source, result=result )
 		st.session_state[ 'geospatial_raw_result' ] = result
 		st.session_state[ 'geospatial_documents' ] = documents
-		st.session_state[ 'documents' ] = documents
-		st.session_state[ 'raw_documents' ] = list( documents )
-		st.session_state[ 'raw_text' ] = '\n\n'.join(
-			document.page_content for document in documents if
-			isinstance( document.page_content, str ) and document.page_content.strip( ) )
-		st.session_state[ 'processed_text' ] = ''
-		st.session_state[ 'active_loader' ] = source
 		return documents
 	
 	st.subheader( '📡 Geospatial & Weather' )
@@ -6688,6 +6798,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'googlegeocoding_location_type' ] = ''
 				st.session_state[ 'googlegeocoding_timeout' ] = 10
 				st.session_state[ 'googlegeocoding_results' ] = { }
+				clear_if_active( 'Geocoding' )
 				st.session_state[ 'googlegeocoding_clear_request' ] = False
 			
 			def _clear_googlegeocoding_state( ) -> None:
@@ -6841,6 +6952,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'googlemaps_destination' ] = ''
 				st.session_state[ 'googlemaps_travel_mode' ] = 'driving'
 				st.session_state[ 'googlemaps_results' ] = { }
+				clear_if_active( 'Google Maps' )
 				st.session_state[ 'googlemaps_clear_request' ] = False
 			
 			googlemaps_mode = st.selectbox( 'Mode', options=GOOGLEMAPS_MODES,
@@ -6967,6 +7079,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'googleweather_days' ] = 5
 				st.session_state[ 'googleweather_timeout' ] = 10
 				st.session_state[ 'googleweather_results' ] = { }
+				clear_if_active( 'Google Weather' )
 				st.session_state[ 'googleweather_clear_request' ] = False
 			
 			gw_location = st.text_area( 'Location', height=70, key='googleweather_location',
@@ -7046,6 +7159,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'openweather_past_days' ] = 0
 				st.session_state[ 'openweather_count' ] = 10
 				st.session_state[ 'openweather_results' ] = { }
+				clear_if_active( 'Open Weather' )
 				st.session_state[ 'openweather_clear_request' ] = False
 			
 			def _clear_openweather_state( ) -> None:
@@ -7113,6 +7227,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'historicalweather_timezone' ] = 'auto'
 				st.session_state[ 'historicalweather_count' ] = 10
 				st.session_state[ 'historicalweather_results' ] = { }
+				clear_if_active( 'Historical Weather' )
 				st.session_state[ 'historicalweather_clear_request' ] = False
 			
 			def _clear_historicalweather_state( ) -> None:
@@ -7252,6 +7367,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'usgsearthquakes_max_radius_km' ] = ''
 				st.session_state[ 'usgsearthquakes_timeout' ] = 20
 				st.session_state[ 'usgsearthquakes_results' ] = { }
+				clear_if_active( 'USGS Earthquakes' )
 				st.session_state[ 'usgsearthquakes_clear_request' ] = False
 			
 			usgseq_mode = st.selectbox( 'Mode', options=USGSEARTHQUAKES_MODES,
@@ -7359,6 +7475,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'earthobservatory_end_date' ] = ''
 				st.session_state[ 'earthobservatory_timeout' ] = 20
 				st.session_state[ 'earthobservatory_results' ] = { }
+				clear_if_active( 'NASA Earth Observatory' )
 				st.session_state[ 'earthobservatory_clear_request' ] = False
 			
 			def _clear_earthobservatory_state( ) -> None:
@@ -7517,6 +7634,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'usgstnm_offset' ] = 0
 				st.session_state[ 'usgstnm_timeout' ] = 20
 				st.session_state[ 'usgstnm_results' ] = { }
+				clear_if_active( 'The National Map' )
 				st.session_state[ 'usgstnm_clear_request' ] = False
 			usgstnm_mode = st.selectbox( 'Mode', options=USGSTNM_MODES, index=USGSTNM_MODES.index(
 				st.session_state.get( 'usgstnm_mode', 'products' ) ), key='usgstnm_mode' )
@@ -7620,6 +7738,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'usgssb_fields' ] = [ ]
 				st.session_state[ 'usgssb_timeout' ] = 20
 				st.session_state[ 'usgssb_results' ] = { }
+				clear_if_active( 'USGS Science Base' )
 				st.session_state[ 'usgssb_clear_request' ] = False
 			
 			usgssb_mode = st.selectbox( 'Mode', options=USGSSB_MODES,
@@ -7675,6 +7794,7 @@ elif mode == 'Geospatial':
 		with st.expander( label='Open Sky', icon='✈️', expanded=False ):
 			def _clear_opensky_state( ) -> None:
 				st.session_state[ 'opensky_results' ] = { }
+				clear_if_active( 'Open Sky' )
 				st.session_state[ 'opensky_mode' ] = 'states_bbox'
 				st.session_state[ 'opensky_icao24' ] = ''
 				st.session_state[ 'opensky_airport' ] = ''
@@ -8757,13 +8877,6 @@ elif mode == 'Environmental':
 		documents = promote_source_result( mode_name='Environmental', source_name=source, result=result )
 		st.session_state[ 'environmental_raw_result' ] = result
 		st.session_state[ 'environmental_documents' ] = documents
-		st.session_state[ 'documents' ] = documents
-		st.session_state[ 'raw_documents' ] = list( documents )
-		st.session_state[ 'raw_text' ] = '\n\n'.join(
-			document.page_content for document in documents if
-			isinstance( document.page_content, str ) and document.page_content.strip( ) )
-		st.session_state[ 'processed_text' ] = ''
-		st.session_state[ 'active_loader' ] = source
 		return documents
 	
 	st.subheader( '🌍 Environmental Data' )
@@ -8790,6 +8903,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'airnow_distance' ] = 25
 				st.session_state[ 'airnow_timeout' ] = 20
 				st.session_state[ 'airnow_results' ] = { }
+				clear_if_active( 'Air Now' )
 				st.session_state[ 'airnow_clear_request' ] = False
 			
 			def _clear_airnow_state( ) -> None:
@@ -8915,6 +9029,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'climatedata_offset' ] = 0
 				st.session_state[ 'climatedata_timeout' ] = 20
 				st.session_state[ 'climatedata_results' ] = { }
+				clear_if_active( 'NOAA Climate Data' )
 				st.session_state[ 'climatedata_clear_request' ] = False
 			
 			climatedata_mode = st.selectbox( 'Mode', options=CLIMATEDATA_MODES,
@@ -9075,6 +9190,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'eonet_bbox' ] = ''
 				st.session_state[ 'eonet_timeout' ] = 20
 				st.session_state[ 'eonet_results' ] = { }
+				clear_if_active( 'NASA EONET' )
 				st.session_state[ 'eonet_clear_request' ] = False
 			
 			eonet_mode = st.selectbox( 'Mode', options=EONET_MODES, index=EONET_MODES.index( st.session_state.get( 'eonet_mode', 'events' ) ), key='eonet_mode' )
@@ -9171,6 +9287,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'envirofacts_limit' ] = 25
 				st.session_state[ 'envirofacts_timeout' ] = 20
 				st.session_state[ 'envirofacts_results' ] = { }
+				clear_if_active( 'EPA Envirofacts' )
 				st.session_state[ 'envirofacts_clear_request' ] = False
 			
 			envirofacts_table_name = st.selectbox( 'Table', options=ENVIROFACTS_TABLES, index=ENVIROFACTS_TABLES.index( st.session_state.get( 'envirofacts_table_name', 'TRI_FACILITY' ) ), key='envirofacts_table_name' )
@@ -9258,6 +9375,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'tidesandcurrents_interval' ] = 'hilo'
 				st.session_state[ 'tidesandcurrents_timeout' ] = 20
 				st.session_state[ 'tidesandcurrents_results' ] = { }
+				clear_if_active( 'NOAA Tides & Currents' )
 				st.session_state[ 'tidesandcurrents_clear_request' ] = False
 			
 			tac_mode = st.selectbox( 'Mode', options=TIDESANDCURRENTS_MODES, index=TIDESANDCURRENTS_MODES.index( st.session_state.get( 'tidesandcurrents_mode', 'water-level' ) ), key='tidesandcurrents_mode' )
@@ -9352,6 +9470,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'uvindex_state' ] = 'VA'
 				st.session_state[ 'uvindex_timeout' ] = 20
 				st.session_state[ 'uvindex_results' ] = { }
+				clear_if_active( 'EPA UV Index' )
 				st.session_state[ 'uvindex_clear_request' ] = False
 			
 			uvindex_mode = st.selectbox( 'Mode', options=UVINDEX_MODES, index=UVINDEX_MODES.index( st.session_state.get( 'uvindex_mode', 'daily-zip' ) ), key='uvindex_mode' )
@@ -9499,6 +9618,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'purpleair_fields' ] = PURPLEAIR_SENSOR_LIST_DEFAULT_FIELDS
 				st.session_state[ 'purpleair_timeout' ] = 20
 				st.session_state[ 'purpleair_results' ] = { }
+				clear_if_active( 'Purple Air' )
 				st.session_state[ 'purpleair_clear_request' ] = False
 			
 			purpleair_mode = st.selectbox( 'Mode', options=PURPLEAIR_MODES, index=PURPLEAIR_MODES.index( st.session_state.get( 'purpleair_mode', 'sensors' ) ), key='purpleair_mode' )
@@ -9639,6 +9759,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'openaq_page' ] = 1
 				st.session_state[ 'openaq_timeout' ] = 20
 				st.session_state[ 'openaq_results' ] = { }
+				clear_if_active( 'Open Air Quality' )
 				st.session_state[ 'openaq_clear_request' ] = False
 			
 			openaq_mode = st.selectbox( 'Mode', options=OPENAQ_MODES, index=OPENAQ_MODES.index( st.session_state.get( 'openaq_mode', 'locations' ) ), key='openaq_mode', help=(
@@ -9784,6 +9905,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'firms_sensor' ] = 'ALL'
 				st.session_state[ 'firms_timeout' ] = 20
 				st.session_state[ 'firms_results' ] = { }
+				clear_if_active( 'NASA FIRMS' )
 				st.session_state[ 'firms_clear_request' ] = False
 			
 			firms_mode = st.selectbox( 'Mode', options=FIRMS_MODES, index=FIRMS_MODES.index( st.session_state.get( 'firms_mode', 'area' ) ), key='firms_mode' )
@@ -9885,6 +10007,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'usgswaterdata_limit' ] = 25
 				st.session_state[ 'usgswaterdata_timeout' ] = 20
 				st.session_state[ 'usgswaterdata_results' ] = { }
+				clear_if_active( 'USGS Water Data' )
 				st.session_state[ 'usgswaterdata_clear_request' ] = False
 			
 			usgswd_mode = st.selectbox( 'Mode', options=USGSWATERDATA_MODES,
@@ -11100,13 +11223,6 @@ elif mode == 'Astronomical':
 		documents = promote_source_result( mode_name='Astronomical', source_name=source, result=result )
 		st.session_state[ 'astronomical_raw_result' ] = result
 		st.session_state[ 'astronomical_documents' ] = documents
-		st.session_state[ 'documents' ] = documents
-		st.session_state[ 'raw_documents' ] = list( documents )
-		st.session_state[ 'raw_text' ] = '\n\n'.join(
-			document.page_content for document in documents if
-			isinstance( document.page_content, str ) and document.page_content.strip( ) )
-		st.session_state[ 'processed_text' ] = ''
-		st.session_state[ 'active_loader' ] = source
 		return documents
 	
 	st.subheader( '🌌 Astronomical Data' )
@@ -11133,6 +11249,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'navalobservatory_location_label' ] = ''
 				st.session_state[ 'navalobservatory_timeout' ] = 20
 				st.session_state[ 'navalobservatory_results' ] = { }
+				clear_if_active( 'US Naval Observatory' )
 				st.session_state[ 'navalobservatory_clear_request' ] = False
 			
 			def _clear_navalobservatory_state( ) -> None:
@@ -11200,6 +11317,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'satellitecenter_resolution_factor' ] = 1
 				st.session_state[ 'satellitecenter_timeout' ] = 20
 				st.session_state[ 'satellitecenter_results' ] = { }
+				clear_if_active( 'Satellite Center' )
 				st.session_state[ 'satellitecenter_clear_request' ] = False
 			
 			def _clear_satellitecenter_state( ) -> None:
@@ -11320,6 +11438,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'astrocatalog_format' ] = 'json'
 				st.session_state[ 'astrocatalog_timeout' ] = 20
 				st.session_state[ 'astrocatalog_results' ] = { }
+				clear_if_active( 'Astro Catalog' )
 				st.session_state[ 'astrocatalog_clear_request' ] = False
 			
 			def _clear_astrocatalog_state( ) -> None:
@@ -11418,6 +11537,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'astroquery_radius_unit' ] = 'deg'
 				st.session_state[ 'astroquery_row_limit' ] = 100
 				st.session_state[ 'astroquery_results' ] = { }
+				clear_if_active( 'Astro Query' )
 				st.session_state[ 'astroquery_clear_request' ] = False
 			
 			def _clear_astroquery_state( ) -> None:
@@ -11512,6 +11632,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'starmap_show_const_names' ] = False
 				st.session_state[ 'starmap_timeout' ] = 20
 				st.session_state[ 'starmap_results' ] = { }
+				clear_if_active( 'Star Map' )
 				st.session_state[ 'starmap_clear_request' ] = False
 			
 			def _clear_starmap_state( ) -> None:
@@ -11628,6 +11749,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'simbad_radius_unit' ] = 'deg'
 				st.session_state[ 'simbad_row_limit' ] = 100
 				st.session_state[ 'simbad_results' ] = { }
+				clear_if_active( 'SIMBAD' )
 				st.session_state[ 'simbad_clear_request' ] = False
 			
 			def _clear_simbad_state( ) -> None:
@@ -11725,6 +11847,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'spaceweather_keyword' ] = ''
 				st.session_state[ 'spaceweather_timeout' ] = 20
 				st.session_state[ 'spaceweather_results' ] = { }
+				clear_if_active( 'Space Weather' )
 				st.session_state[ 'spaceweather_clear_request' ] = False
 			
 			def _clear_spaceweather_state( ) -> None:
@@ -11853,6 +11976,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'starchart_magnitude' ] = 7.5
 				st.session_state[ 'starchart_timeout' ] = 20
 				st.session_state[ 'starchart_results' ] = { }
+				clear_if_active( 'Star Chart' )
 				st.session_state[ 'starchart_clear_request' ] = False
 			
 			def _clear_starchart_state( ) -> None:
@@ -12017,6 +12141,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'nearbyobjects_include_discovery' ] = True
 				st.session_state[ 'nearbyobjects_timeout' ] = 20
 				st.session_state[ 'nearbyobjects_results' ] = { }
+				clear_if_active( 'Near Earth Objects' )
 				st.session_state[ 'nearbyobjects_clear_request' ] = False
 			
 			def _clear_nearbyobjects_state( ) -> None:
@@ -13139,6 +13264,7 @@ elif mode == 'Demographic':
 				st.session_state[ 'census_predicates' ] = ''
 				st.session_state[ 'census_timeout' ] = 20
 				st.session_state[ 'census_results' ] = { }
+				clear_if_active( 'u_s_census_bureau' )
 				st.session_state[ 'census_clear_request' ] = False
 			
 			census_mode = st.selectbox( 'Mode', options=CENSUS_MODES, index=CENSUS_MODES.index(
@@ -13264,6 +13390,7 @@ elif mode == 'Demographic':
 				st.session_state[ 'socrata_offset' ] = 0
 				st.session_state[ 'socrata_timeout' ] = 20
 				st.session_state[ 'socrata_results' ] = { }
+				clear_if_active( 'cdc_socrata' )
 				st.session_state[ 'socrata_clear_request' ] = False
 			
 			socrata_mode = st.selectbox( 'Mode', options=SOCRATA_MODES, index=SOCRATA_MODES.index(
@@ -13408,6 +13535,7 @@ elif mode == 'Demographic':
 				st.session_state[ 'healthdata_offset' ] = 0
 				st.session_state[ 'healthdata_timeout' ] = 20
 				st.session_state[ 'healthdata_results' ] = { }
+				clear_if_active( 'u_s_health' )
 				st.session_state[ 'healthdata_clear_request' ] = False
 			
 			healthdata_mode = st.selectbox( 'Mode', options=HEALTHDATA_MODES,
@@ -13559,6 +13687,7 @@ elif mode == 'Demographic':
 				st.session_state[ 'who_format' ] = 'json'
 				st.session_state[ 'who_timeout' ] = 20
 				st.session_state[ 'who_results' ] = { }
+				clear_if_active( 'who_global' )
 				st.session_state[ 'who_clear_request' ] = False
 			
 			who_mode = st.selectbox( 'Mode', options=WHO_MODES, index=WHO_MODES.index(
@@ -13673,6 +13802,7 @@ elif mode == 'Demographic':
 				st.session_state[ 'un_custom_query_path' ] = ''
 				st.session_state[ 'un_timeout' ] = 20
 				st.session_state[ 'un_results' ] = { }
+				clear_if_active( 'united_nations' )
 				st.session_state[ 'un_clear_request' ] = False
 			
 			un_mode = st.selectbox( 'Mode', options=UN_MODES, index=UN_MODES.index(
@@ -13805,6 +13935,7 @@ elif mode == 'Demographic':
 				st.session_state[ 'worldpop_page_size' ] = 25
 				st.session_state[ 'worldpop_timeout' ] = 20
 				st.session_state[ 'worldpop_results' ] = { }
+				clear_if_active( 'world_population' )
 				st.session_state[ 'worldpop_clear_request' ] = False
 			
 			worldpop_mode = st.selectbox( 'Mode', options=WORLDPOP_MODES,
@@ -13947,6 +14078,7 @@ elif mode == 'Demographic':
 				st.session_state[ 'wonder_request_xml' ] = ''
 				st.session_state[ 'wonder_timeout' ] = 20
 				st.session_state[ 'wonder_results' ] = { }
+				clear_if_active( 'cdc_wonder' )
 				st.session_state[ 'wonder_clear_request' ] = False
 			
 			wonder_mode = st.selectbox( 'Mode', options=WONDER_MODES, index=WONDER_MODES.index(
@@ -14039,7 +14171,7 @@ elif mode == 'Demographic':
 			
 			with b3:
 				can_save = (
-						st.session_state.get( 'active_loader' ) == 'PubMedSearchLoader' and
+						st.session_state.get( 'active_loader' ) == 'pub_med_search' and
 						isinstance( st.session_state.get( 'raw_text' ), str ) and
 						st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -14167,7 +14299,7 @@ elif mode == 'Demographic':
 			
 			with b3:
 				can_save = (
-						st.session_state.get( 'active_loader' ) == 'OpenCityLoader' and
+						st.session_state.get( 'active_loader' ) == 'open_city_data' and
 						isinstance( st.session_state.get( 'raw_text' ), str ) and
 						st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -14187,6 +14319,15 @@ elif mode == 'Demographic':
 	
 	with right:
 		st.markdown( '##### Results' )
+		if pubmed_clear:
+			remaining = _clear_loader_documents( 'pub_med_search' )
+			st.info( f'PubMed Loader state cleared. Remaining documents: {remaining}.' )
+
+		if open_city_clear:
+			remaining = _clear_loader_documents( 'open_city_data' )
+			st.info( f'Open City Data Loader state cleared. Remaining documents: '
+			         f'{remaining}.' )
+
 		active_source = st.session_state.get( 'demographic_active_source', '' )
 		display_names: Dict[ str, str ] = { 'u_s_census_bureau': 'U.S. Census Bureau',
 				'cdc_socrata': 'CDC Socrata', 'u_s_health': 'U.S. Health',
@@ -14680,9 +14821,6 @@ elif mode == 'Demographic':
 		# -------- Pub Med
 		elif active_source == 'pub_med_search':
 			st.markdown( '##### Pub Med Search' )
-			if pubmed_clear:
-				remaining = _clear_loader_documents( 'PubMedSearchLoader' )
-				st.info( f'PubMed Loader state cleared. Remaining documents: {remaining}.' )
 			
 			if pubmed_submit:
 				if not pubmed_query or not pubmed_query.strip( ):
@@ -14693,7 +14831,7 @@ elif mode == 'Demographic':
 						documents = loader.load( query=pubmed_query.strip( ), max_docs=int(
 							pubmed_max_docs ) ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'PubMedSearchLoader' )
+						count = len( documents )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						
@@ -14772,10 +14910,6 @@ elif mode == 'Demographic':
 		# -------- Open City
 		elif active_source == 'open_city_data':
 			st.markdown( '##### Open City Data' )
-			if open_city_clear:
-				remaining = _clear_loader_documents( 'OpenCityLoader' )
-				st.info( f'Open City Data Loader state cleared. Remaining documents: '
-				         f'{remaining}.' )
 			
 			if open_city_submit:
 				try:
@@ -14789,7 +14923,7 @@ elif mode == 'Demographic':
 					documents = loader.load( city_id=clean_city_id, dataset_id=clean_dataset_id,
 						limit=int( limit ) ) or [ ]
 					
-					count = _promote_loader_documents( documents, 'OpenCityLoader' )
+					count = len( documents )
 					
 					items: list[ dict[ str, Any ] ] = [ ]
 					for i, doc in enumerate( documents, start=1 ):
