@@ -1,7 +1,12 @@
 """Regression contracts for Foo source processing and provider alignment."""
 from __future__ import annotations
 import ast
+import inspect
+import json
+from hashlib import sha256
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, Dict, List
 
 
 ROOT = Path( __file__ ).resolve( ).parents[ 1 ]
@@ -85,6 +90,376 @@ def test_optional_vector_and_embedding_providers_are_lazy_loaded( ) -> None:
 		locations = [ line for line in ( embedders + vector ).splitlines( ) if import_line in line ]
 		assert locations
 		assert all( line.startswith( ( '            ', '\t\t\t' ) ) for line in locations )
+
+
+class SessionState( dict ):
+	"""Minimal attribute-access session state for isolated source lifecycle tests."""
+	__getattr__ = dict.__getitem__
+	__setattr__ = dict.__setitem__
+
+
+def source_namespace( ) -> dict:
+	"""Load the actual source-processing functions without starting Streamlit or providers."""
+	tree = ast.parse( read( 'app.py' ), filename='app.py' )
+	names = { 'normalize', 'build_source_documents', 'promote_source_result',
+		'_promote_loader_documents', 'activate_processing_source', 'ensure_document_processing_state',
+		'clear_document_processing_outputs', 'clear_if_active', 'document_signature',
+		'rebuild_raw_text_from_documents', 'reset_document_processing_controls', }
+	nodes = [ node for node in tree.body if
+		( isinstance( node, ast.FunctionDef ) and node.name in names ) or
+		( isinstance( node, ast.AnnAssign ) and isinstance( node.target, ast.Name ) and
+			node.target.id == 'DOCUMENT_PROCESSING_STATE' ) ]
+	assert { node.name for node in nodes if isinstance( node, ast.FunctionDef ) } == names
+
+	def validate( name: str, value: Any ) -> None:
+		"""Reject missing values in the isolated lifecycle test fixture."""
+		if value is None or value == '':
+			raise ValueError( name )
+
+	namespace = { 'Any': Any, 'Dict': Dict, 'List': List, 'Document': SimpleNamespace,
+		'json': json, 'sha256': sha256, 'throw_if': validate, 'Error': RuntimeError,
+		'Logger': lambda: SimpleNamespace( write=lambda error: None ),
+		'st': SimpleNamespace( session_state=SessionState( ) ), }
+	exec( compile( ast.Module( body=nodes, type_ignores=[ ] ), 'app.py', 'exec' ), namespace )
+	return namespace
+
+
+def test_empty_source_records_and_metadata_only_results( ) -> None:
+	"""Do not promote empty record collections; preserve standalone provider metadata."""
+	ns = source_namespace( )
+	build = ns[ 'build_source_documents' ]
+	for result in ( None, { }, [ ], { 'items': [ ], 'count': 0 }, { 'rows': [ ] } ):
+		assert build( 'Retrieval', 'ArXiv', result ) == [ ]
+	assert len( build( 'Astronomical', 'Star Map', { 'interactive_url': 'https://example.org' } ) ) == 1
+	assert len( build( 'Retrieval', 'ArXiv', { 'items': [ ], 'rows': [ { 'value': 1 } ] } ) ) == 1
+
+
+def test_loader_result_text_and_metadata_are_preserved( ) -> None:
+	"""Cached loader records retain original content and source metadata."""
+	ns = source_namespace( )
+	for mode, source, field in (
+		( 'Retrieval', 'Jupyter Notebook', 'Content' ),
+		( 'Retrieval', 'Google Cloud File', 'Content' ),
+		( 'Retrieval', 'AWS S3 File', 'Content' ),
+		( 'Retrieval', 'OneDrive', 'Content' ),
+		( 'Retrieval', 'Google Speech-to-Text', 'Content' ),
+		( 'Retrieval', 'AWS S3 Bucket', 'Content' ),
+		( 'Retrieval', 'Google Cloud Bucket', 'Content' ),
+		( 'Demographic', 'pub_med_search', 'Summary' ),
+		( 'Demographic', 'open_city_data', 'Row' ),
+	):
+		result = { 'items': [ { field: 'Original document text',
+			'Metadata': { 'source': 'original-source', 'page': 3 } } ] }
+		docs = ns[ 'build_source_documents' ]( mode, source, result )
+		assert len( docs ) == 1
+		assert docs[ 0 ].page_content == 'Original document text'
+		assert docs[ 0 ].metadata[ 'source' ] == 'original-source'
+		assert docs[ 0 ].metadata[ 'page' ] == 3
+		assert docs[ 0 ].metadata[ 'mode' ] == mode
+
+
+def test_promotion_retains_unchanged_and_invalidates_changed_documents( ) -> None:
+	"""Only changed source documents invalidate their derived processing results."""
+	ns = source_namespace( )
+	state = ns[ 'st' ].session_state
+	promote = ns[ 'promote_source_result' ]
+	result = { 'items': [ { 'Content': 'first', 'Metadata': { } } ] }
+	promote( 'Retrieval', 'Jupyter Notebook', result )
+	state.chunk_source_signature = ns[ 'document_signature' ]( state.documents )
+	chunks = [ 'first' ]
+	state.chunks = chunks
+	state.tokens = [ 'first' ]
+	state.embeddings = [ [ 1.0 ] ]
+	state.processed_text = 'processed'
+	promote( 'Retrieval', 'Jupyter Notebook', result )
+	assert state.chunks is chunks
+	assert state.processed_text == 'processed'
+	assert state.embeddings == [ [ 1.0 ] ]
+	promote( 'Retrieval', 'Jupyter Notebook', { 'items': [ { 'Content': 'changed',
+		'Metadata': { } } ] } )
+	assert state.raw_text == 'changed'
+	assert state.chunks is None
+	assert state.tokens is None
+	assert state.embeddings is None
+
+
+def test_source_switch_and_inactive_clear_preserve_owned_state( ) -> None:
+	"""Restore matching saved processing state and isolate an inactive clear request."""
+	ns = source_namespace( )
+	state = ns[ 'st' ].session_state
+	promote = ns[ 'promote_source_result' ]
+	a = { 'items': [ { 'Content': 'alpha', 'Metadata': { } } ] }
+	b = { 'items': [ { 'Content': 'beta', 'Metadata': { } } ] }
+	promote( 'Retrieval', 'Jupyter Notebook', a )
+	state.chunk_source_signature = ns[ 'document_signature' ]( state.documents )
+	state.chunks = [ 'alpha' ]
+	state.tokens = [ 'alpha' ]
+	state.embeddings = [ [ 1.0 ] ]
+	promote( 'Retrieval', 'OneDrive', b )
+	assert state.chunks is None
+	promote( 'Retrieval', 'Jupyter Notebook', a )
+	assert state.chunks == [ 'alpha' ]
+	assert state.tokens == [ 'alpha' ]
+	assert state.embeddings == [ [ 1.0 ] ]
+	ns[ 'reset_document_processing_controls' ]( 'excel' )
+	ns[ 'clear_if_active' ]( 'ExcelLoader' )
+	promote( 'Retrieval', 'OneDrive', { } )
+	assert state.active_loader == 'Jupyter Notebook'
+	assert state.raw_text == 'alpha'
+	assert state.chunks == [ 'alpha' ]
+	assert state.embeddings == [ [ 1.0 ] ]
+	assert state.excel_processing_reset_request is True
+	promote( 'Retrieval', 'Jupyter Notebook', { } )
+	assert state.active_loader is None
+	assert not state.documents
+	assert state.raw_documents == [ ]
+	assert state.raw_text == ''
+	assert state.embeddings is None
+
+
+def test_generation_provider_submit_contracts( ) -> None:
+	"""All five provider submit handlers must invoke and promote their results."""
+	tree = ast.parse( read( 'app.py' ), filename='app.py' )
+	generation = next( node for node in ast.walk( tree ) if isinstance( node, ast.If )
+		and isinstance( node.test, ast.Compare ) and isinstance( node.test.left, ast.Name )
+		and node.test.left.id == 'mode' and any( isinstance( item, ast.Constant )
+			and item.value == 'Generation' for item in node.test.comparators ) )
+	for flag, provider, method in ( ( 'chat_submit', 'ChatGPT', '_invoke_provider' ),
+		( 'groq_submit', 'Grok', '_invoke_provider' ), ( 'claude_submit', 'Claude', 'generate_text' ),
+		( 'gemini_submit', 'Gemini', '_invoke_provider' ), ( 'mistral_submit', 'Mistral', 'fetch' ) ):
+		handler = next( node for node in ast.walk( generation ) if isinstance( node, ast.If )
+			and isinstance( node.test, ast.Name ) and node.test.id == flag )
+		calls = [ node for node in ast.walk( handler ) if isinstance( node, ast.Call ) ]
+		assert any( ( isinstance( call.func, ast.Name ) and call.func.id == method ) or
+			( isinstance( call.func, ast.Attribute ) and call.func.attr == method ) for call in calls )
+		assert any( isinstance( call.func, ast.Name ) and call.func.id == '_promote_generation_result'
+			and any( item.arg == 'provider' and isinstance( item.value, ast.Constant )
+				and item.value.value == provider for item in call.keywords ) for call in calls )
+
+
+def test_generation_restores_owned_results_and_preserves_other_sources( ) -> None:
+	"""Generation promotion and clearing must respect the shared source lifecycle."""
+	ns = source_namespace( )
+	state = ns[ 'st' ].session_state
+	state.generation_documents = [ ]
+	state.generation_raw_result = None
+	state.generation_active_source = ''
+	warnings = [ ]
+	ns[ 'st' ].warning = warnings.append
+	tree = ast.parse( read( 'app.py' ), filename='app.py' )
+	names = { '_promote_generation_result', '_clear_generation_result' }
+	nodes = [ node for node in ast.walk( tree ) if isinstance( node, ast.FunctionDef )
+		and node.name in names ]
+	assert len( nodes ) == 2
+	exec( compile( ast.Module( body=nodes, type_ignores=[ ] ), 'app.py', 'exec' ), ns )
+	promote = ns[ '_promote_generation_result' ]
+	clear = ns[ '_clear_generation_result' ]
+	promote( 'Claude', 'Generated text' )
+	assert state.active_loader == 'Claude'
+	assert state.processing_active_source == 'Claude'
+	assert state.raw_text == 'Generated text'
+	assert state.generation_raw_result == 'Generated text'
+	state.chunk_source_signature = ns[ 'document_signature' ]( state.documents )
+	state.chunks = [ 'Generated text' ]
+	promote( 'Claude', 'Generated text' )
+	assert state.chunks == [ 'Generated text' ]
+	promote( 'Claude', '   ' )
+	assert warnings and state.raw_text == 'Generated text'
+	ns[ 'promote_source_result' ]( 'Retrieval', 'ArXiv', [ 'Research text' ] )
+	clear( 'Claude' )
+	assert state.active_loader == 'ArXiv'
+	assert state.raw_text == 'Research text'
+	assert state.generation_active_source == ''
+	assert state.generation_documents == [ ]
+
+
+def test_generation_right_column_uses_shared_processing( ) -> None:
+	"""Generation must render its result and shared document-processing tabs."""
+	source = read( 'app.py' ).split( "elif mode == 'Generation':", 1 )[ 1 ]
+	assert '\n\twith right:' in source
+	assert "_render_output( st, st.session_state[ 'generation_raw_result' ] )" in source
+	assert "render_source_processing_controls( generation_source, 'generation_processing' )" in source
+	assert "render_document_processing_tabs( key_prefix='generation' )" in source
+
+
+def test_xml_load_actions_guard_missing_upload_and_promote_owned_documents( ) -> None:
+	"""Missing XML uploads cannot promote documents from a previous loader."""
+	tree = ast.parse( read( 'app.py' ), filename='app.py' )
+	for label in ( 'Load XML (Semantic)', 'Load XML Tree' ):
+		action = next( node for node in ast.walk( tree ) if isinstance( node, ast.If )
+			and isinstance( node.test, ast.Call )
+			and isinstance( node.test.func, ast.Attribute ) and node.test.func.attr == 'button'
+			and node.test.args and isinstance( node.test.args[ 0 ], ast.Constant )
+			and node.test.args[ 0 ].value == label )
+		assert len( action.body ) == 1
+		guard = action.body[ 0 ]
+		assert isinstance( guard, ast.If )
+		assert ast.unparse( guard.test ) == 'xml_file is None'
+		warnings = [ ]
+		ns = source_namespace( )
+		ns[ 'st' ].warning = warnings.append
+		ns[ 'xml_file' ] = None
+		state = ns[ 'st' ].session_state
+		ns[ 'promote_source_result' ]( 'Loading', 'PdfLoader', [ 'Existing PDF' ] )
+		exec( compile( ast.Module( body=action.body, type_ignores=[ ] ), 'app.py', 'exec' ), ns )
+		assert warnings
+		assert state.active_loader == 'PdfLoader'
+		assert state.raw_text == 'Existing PDF'
+		assert any( isinstance( call, ast.Call ) and isinstance( call.func, ast.Name )
+			and call.func.id == '_promote_loader_documents'
+			and isinstance( call.args[ 1 ], ast.Constant ) and call.args[ 1 ].value == 'XmlLoader'
+			for statement in guard.orelse for call in ast.walk( statement ) )
+
+
+def test_structured_xml_document_promotion_synchronizes_state( ) -> None:
+	"""Structured XML replaces the canonical document collection and raw text."""
+	ns = source_namespace( )
+	state = ns[ 'st' ].session_state
+	ns[ 'promote_source_result' ]( 'Loading', 'PdfLoader', [ 'Existing PDF' ] )
+	xml = ns[ 'Document' ]( page_content='<root><item>value</item></root>',
+		metadata={ 'loader': 'XmlLoader', 'source': 'example.xml', 'load_mode': 'structured_xml' } )
+	ns[ '_promote_loader_documents' ]( [ xml ], 'XmlLoader' )
+	assert state.active_loader == 'XmlLoader'
+	assert state.processing_active_source == 'XmlLoader'
+	assert state.documents == [ xml ]
+	assert state.raw_documents == [ xml ]
+	assert state.raw_text == xml.page_content
+
+
+def test_xml_actions_and_chunking_handle_wrapped_errors( ) -> None:
+	"""All XML action boundaries and shared chunking display wrapped errors locally."""
+	tree = ast.parse( read( 'app.py' ), filename='app.py' )
+	for label in ( 'Load XML (Semantic)', 'Split Semantic Documents', 'Load XML Tree',
+		'Run XPath Query' ):
+		action = next( node for node in ast.walk( tree ) if isinstance( node, ast.If )
+			and isinstance( node.test, ast.Call )
+			and isinstance( node.test.func, ast.Attribute ) and node.test.func.attr == 'button'
+			and node.test.args and isinstance( node.test.args[ 0 ], ast.Constant )
+			and node.test.args[ 0 ].value == label )
+		assert any( isinstance( node, ast.ExceptHandler ) and isinstance( node.type, ast.Name )
+			and node.type.id == 'Error' and any( isinstance( call, ast.Call )
+				and isinstance( call.func, ast.Attribute ) and call.func.attr == 'error'
+				for call in ast.walk( node ) ) for node in ast.walk( action ) )
+	chunk = next( node for node in ast.walk( tree ) if isinstance( node, ast.If )
+		and isinstance( node.test, ast.Name ) and node.test.id == 'chunk_clicked' )
+	assert any( isinstance( node, ast.ExceptHandler ) and isinstance( node.type, ast.Name )
+		and node.type.id == 'Error' and not any( isinstance( item, ast.Raise )
+			for item in ast.walk( node ) ) for node in ast.walk( chunk ) )
+
+
+def test_processing_widget_overlap_bounds( ) -> None:
+	"""The overlap slider must retain a valid range at the minimum chunk size."""
+	source = read( 'app.py' )
+	tree = ast.parse( source, filename='app.py' )
+	function = next( node for node in tree.body if isinstance( node, ast.FunctionDef )
+		and node.name == 'render_document_processing_inputs' )
+	slider = next( node for node in ast.walk( function ) if isinstance( node, ast.Call )
+		and isinstance( node.func, ast.Attribute ) and node.func.attr == 'slider'
+		and node.args and isinstance( node.args[ 0 ], ast.Constant )
+		and node.args[ 0 ].value == 'Chunk Overlap' )
+	keywords = { item.arg: item.value for item in slider.keywords }
+	for size in ( 1, 2, 1000, 5000 ):
+		namespace = { 'chunk_size': size, 'max_overlap': size - 1 }
+		lower = eval( compile( ast.Expression( body=keywords[ 'min_value' ] ),
+			'app.py', 'eval' ), namespace )
+		upper = eval( compile( ast.Expression( body=keywords[ 'max_value' ] ),
+			'app.py', 'eval' ), namespace )
+		disabled = eval( compile( ast.Expression( body=keywords[ 'disabled' ] ),
+			'app.py', 'eval' ), namespace )
+		assert lower < upper
+		assert disabled == ( size == 1 )
+		assert upper == max( 1, size - 1 )
+	assert 'st.session_state[ overlap_key ] = max_overlap' in ast.unparse( function ).replace(
+		'st.session_state[overlap_key]', 'st.session_state[ overlap_key ]' )
+
+
+def test_incompatible_numeric_widget_keys_are_isolated( ) -> None:
+	"""Loading and Demographic numeric limits must not share incompatible keys."""
+	source = read( 'app.py' )
+	loading = source.split( "if mode == 'Loading':", 1 )[ 1 ].split(
+		"elif mode == 'Scraping':", 1 )[ 0 ]
+	demographic = source.split( "elif mode == 'Demographic':", 1 )[ 1 ].split(
+		"elif mode == 'Generation':", 1 )[ 0 ]
+	for key in ( 'pubmed_max_docs', 'open_city_limit' ):
+		assert f"key='loading_{key}'" in loading
+		assert f"key='{key}'" not in loading
+		assert f"key='{key}'" in demographic
+
+
+def test_claude_budget_is_adjusted_before_widget_creation( ) -> None:
+	"""A reduced maximum token count cannot leave an out-of-range widget value."""
+	source = read( 'app.py' )
+	tree = ast.parse( source, filename='app.py' )
+	widget = next( node for node in ast.walk( tree ) if isinstance( node, ast.Call )
+		and isinstance( node.func, ast.Attribute ) and node.func.attr == 'number_input'
+		and node.args and isinstance( node.args[ 0 ], ast.Constant )
+		and node.args[ 0 ].value == 'Thinking Budget' )
+	keywords = { item.arg: item.value for item in widget.keywords }
+	assert 'value' not in keywords
+	assert ast.unparse( keywords[ 'max_value' ] ) == 'max_budget'
+	assert ast.unparse( keywords[ 'disabled' ] ) == 'claude_max_tokens <= 1024'
+	assert source.index( "st.session_state[ 'claude_thinking_budget_chat' ] = max_budget" ) < source.index(
+		"claude_thinking_budget = st.number_input( 'Thinking Budget'" )
+
+
+def test_provider_dispatch_rejects_unknown_keywords_and_preserves_values( ) -> None:
+	"""Validate actual application dispatch functions without making provider requests."""
+	tree = ast.parse( read( 'app.py' ), filename='app.py' )
+	names = { 'filter_kwargs_for_callable', '_invoke_provider' }
+	nodes = [ node for node in tree.body if isinstance( node, ast.FunctionDef )
+		and node.name in names ]
+	ns = source_namespace( )
+	ns[ 'inspect' ] = inspect
+	exec( compile( ast.Module( body=nodes, type_ignores=[ ] ), 'app.py', 'exec' ), ns )
+	calls = [ ]
+
+	def generate( prompt: str, temperature: float=0.7 ) -> str:
+		"""Record one valid provider invocation."""
+		calls.append( ( prompt, temperature ) )
+		return prompt
+
+	params = { 'temperature': 0.0 }
+	assert ns[ 'filter_kwargs_for_callable' ]( generate, params ) is params
+	provider = SimpleNamespace( generate_text=generate )
+	assert ns[ '_invoke_provider' ]( provider, 'test', params ) == 'test'
+	assert calls == [ ( 'test', 0.0 ) ]
+	try:
+		ns[ 'filter_kwargs_for_callable' ]( generate, { 'unknown': True } )
+	except TypeError:
+		pass
+	else:
+		raise AssertionError( 'Unsupported argument was accepted.' )
+	assert len( calls ) == 1
+
+
+def test_provider_stream_failures_are_not_promoted_as_success( ) -> None:
+	"""Both Responses API adapters must explicitly handle terminal failure events."""
+	tree = ast.parse( read( 'generators.py' ), filename='generators.py' )
+	for name in ( 'Chat', 'Grok' ):
+		cls = next( node for node in tree.body if isinstance( node, ast.ClassDef )
+			and node.name == name )
+		method = next( node for node in cls.body if isinstance( node, ast.FunctionDef )
+			and node.name == 'extract_output_text' )
+		events = { node.value for node in ast.walk( method ) if isinstance( node, ast.Constant )
+			and isinstance( node.value, str ) }
+		assert { 'response.completed', 'response.failed', 'response.incomplete', 'error' } <= events
+		assert 'Provider stream ended without a completion event.' in events
+
+
+def test_provider_search_and_sampling_contracts( ) -> None:
+	"""Check native OpenAI domain filters and Claude request constraints."""
+	tree = ast.parse( read( 'generators.py' ), filename='generators.py' )
+	chat = next( node for node in tree.body if isinstance( node, ast.ClassDef )
+		and node.name == 'Chat' )
+	method = next( node for node in chat.body if isinstance( node, ast.FunctionDef )
+		and node.name == 'build_tools' )
+	assert 'allowed_domains' in ast.unparse( method )
+	claude = next( node for node in tree.body if isinstance( node, ast.ClassDef )
+		and node.name == 'Claude' )
+	fetch = next( node for node in claude.body if isinstance( node, ast.FunctionDef )
+		and node.name == 'fetch' )
+	assert '1024 <= _budget < self.max_tokens' in ast.unparse( fetch )
+	assert '0.95 <= self.top_p <= 1.0' in ast.unparse( fetch )
 
 
 if __name__ == '__main__':

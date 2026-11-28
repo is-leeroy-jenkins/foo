@@ -247,38 +247,61 @@ def throw_if( name: str, value: object ) -> None:
 		raise ValueError( f'Argument "{name}" cannot be empty!' )
 
 def filter_kwargs_for_callable( fn: Any, kwargs: dict[ str, Any ] ) -> dict[ str, Any ]:
-	try:
-		sig = inspect.signature( fn )
-		accepted = set( sig.parameters.keys( ) )
-		return { k: v for k, v in kwargs.items( ) if k in accepted }
-	except Exception:
-		return kwargs
-
-def _invoke_provider( fetcher: Any, prompt: str, params: dict[ str, Any ] ) -> Any:
-	"""Invoke a provider through its public text-generation contract.
-
-	Purpose:
-		Executes one request without retrying a caught ``TypeError`` under a guessed signature.
+	"""Validate request keywords against a callable without silently discarding values.
 
 	Args:
-		fetcher (Any): Provider wrapper exposing ``generate_text``.
-		prompt (str): Prompt submitted to the provider wrapper.
-		params (dict[str, Any]): Generation parameters supplied by the UI.
+		fn (Any): Callable provider method.
+		kwargs (dict[str, Any]): Request keyword arguments, including an empty dictionary.
 
 	Returns:
-		Any: Provider result returned by ``generate_text``.
+		dict[str, Any]: Original validated keyword arguments.
 
 	Raises:
-		RuntimeError: Raised when the wrapper does not expose ``generate_text``.
+		TypeError: A keyword is unsupported or the callable contract cannot be inspected.
 	"""
-	throw_if( 'fetcher', fetcher )
-	throw_if( 'prompt', prompt )
-	if not hasattr( fetcher, 'generate_text' ) or not callable( getattr( fetcher, 'generate_text' ) ):
-		raise RuntimeError(
-			f"Provider '{type( fetcher ).__name__}' does not expose generate_text." )
-	fn = getattr( fetcher, 'generate_text' )
-	safe = filter_kwargs_for_callable( fn, params )
-	return fn( prompt, **safe )
+	throw_if( 'fn', fn )
+	if not isinstance( kwargs, dict ):
+		raise TypeError( 'kwargs must be a dictionary.' )
+	signature = inspect.signature( fn )
+	parameters = signature.parameters
+	if not any( parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in parameters.values( ) ):
+		accepted = { name for name, parameter in parameters.items( ) if parameter.kind in
+			( inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY ) }
+		unsupported = kwargs.keys( ) - accepted
+		if unsupported:
+			raise TypeError( f'Unsupported provider arguments: {", ".join( sorted( unsupported ) )}' )
+	return kwargs
+
+def _invoke_provider( fetcher: Any, prompt: str, params: dict[ str, Any ] ) -> Any:
+	"""Invoke a provider exactly once using its public text-generation contract.
+
+	Args:
+		fetcher (Any): Provider exposing generate_text.
+		prompt (str): Non-empty prompt.
+		params (dict[str, Any]): Request parameters.
+
+	Returns:
+		Any: Provider result.
+
+	Raises:
+		Error: Wraps and logs dispatch failures or propagates existing provider errors.
+	"""
+	try:
+		throw_if( 'fetcher', fetcher )
+		throw_if( 'prompt', prompt )
+		fn = fetcher.generate_text
+		validated = filter_kwargs_for_callable( fn, params )
+		inspect.signature( fn ).bind( prompt, **validated )
+		return fn( prompt, **validated )
+	except Error:
+		raise
+	except Exception as e:
+		exception = Error( e )
+		exception.module = 'app'
+		exception.cause = 'Generation'
+		exception.method = '_invoke_provider( fetcher, prompt, params ) -> Any'
+		Logger( ).write( exception )
+		raise exception
 
 def _render_output( container: Any, result: Any ) -> None:
 	if result is None:
@@ -707,71 +730,124 @@ def normalize( obj ):
 			return str( obj )
 	return str( obj )
 
-def build_source_documents( mode_name: str, source_name: str,
-		result: Any ) -> List[ Document ]:
-	"""Convert a provider result into record-oriented documents.
+def build_source_documents( mode_name: str, source_name: str, result: Any ) -> List[ Document ]:
+	"""Convert provider results into record-oriented documents.
 
 	Purpose:
-		Preserves individual rows, features, observations, events, and records so chunking does
-		not destroy the provider's natural retrieval boundaries.
+		Preserve record boundaries and original loader text and metadata. Empty record
+		collections produce no documents; standalone structured responses remain supported.
+
+	Args:
+		mode_name (str): Non-empty application mode identifier.
+		source_name (str): Non-empty processing source identifier.
+		result (Any): Provider response, document collection, or structured result.
+
+	Returns:
+		List[Document]: Non-empty source documents suitable for downstream processing.
+
+	Raises:
+		Error: Wraps and logs argument or result-conversion failures.
 	"""
-	throw_if( 'mode_name', mode_name )
-	throw_if( 'source_name', source_name )
-	if result is None:
-		return [ ]
+	try:
+		throw_if( 'mode_name', mode_name )
+		throw_if( 'source_name', source_name )
+		if result is None:
+			return [ ]
 
-	values: List[ Any ] = [ ]
-	container_metadata: Dict[ str, Any ] = { }
-	if isinstance( result, dict ):
-		for key in ( 'rows', 'features', 'items', 'results', 'events', 'observations',
-				'records', 'data' ):
-			candidate = result.get( key )
-			if isinstance( candidate, list ):
-				values = candidate
-				container_metadata[ 'result_key' ] = key
-				break
-		if not values:
+		values: List[ Any ] = [ ]
+		container_metadata: Dict[ str, Any ] = { }
+		if isinstance( result, dict ):
+			if not result:
+				return [ ]
+			record_collection = False
+			for key in ( 'rows', 'features', 'items', 'results', 'events', 'observations',
+					'records', 'data' ):
+				candidate = result.get( key )
+				if isinstance( candidate, list ):
+					record_collection = True
+					if candidate:
+						values = candidate
+						container_metadata[ 'result_key' ] = key
+						break
+			if not values:
+				if record_collection:
+					return [ ]
+				values = [ result ]
+		elif isinstance( result, ( list, tuple, set ) ):
+			values = list( result )
+		else:
 			values = [ result ]
-	elif isinstance( result, ( list, tuple, set ) ):
-		values = list( result )
-	else:
-		values = [ result ]
 
-	documents: List[ Document ] = [ ]
-	for index, value in enumerate( values, start=1 ):
-		if isinstance( value, Document ):
-			metadata = dict( value.metadata or { } )
+		# These result caches retain the original loader text and metadata in each record.
+		content_key = ''
+		if mode_name == 'Retrieval' and source_name in ( 'Jupyter Notebook',
+				'Google Cloud File', 'AWS S3 File', 'OneDrive', 'Google Speech-to-Text',
+				'AWS S3 Bucket', 'Google Cloud Bucket' ):
+			content_key = 'Content'
+		elif mode_name == 'Demographic':
+			if source_name == 'pub_med_search':
+				content_key = 'Summary'
+			elif source_name == 'open_city_data':
+				content_key = 'Row'
+
+		documents: List[ Document ] = [ ]
+		for index, value in enumerate( values, start=1 ):
+			if isinstance( value, Document ):
+				content = value.page_content or ''
+				metadata = dict( value.metadata or { } )
+			elif content_key and isinstance( value, dict ) and content_key in value:
+				content = value[ content_key ]
+				metadata = dict( value.get( 'Metadata' ) or { } )
+			else:
+				if value is None or ( isinstance( value, ( dict, list, tuple, set ) ) and not value ):
+					continue
+				metadata = dict( container_metadata )
+				if isinstance( value, dict ):
+					for key in ( 'id', 'feature_id', 'latitude', 'longitude', 'lat', 'lon',
+							'lng', 'time', 'date', 'timestamp', 'provider', 'endpoint', 'units' ):
+						if key in value and isinstance( value[ key ], ( str, int, float, bool ) ):
+							metadata[ key ] = value[ key ]
+					content = json.dumps( normalize( value ), indent=2, ensure_ascii=False,
+						default=str )
+				else:
+					content = str( value )
+
 			metadata.setdefault( 'mode', mode_name )
 			metadata.setdefault( 'source', source_name )
 			metadata.setdefault( 'record_id', index )
-			documents.append( Document( page_content=value.page_content or '', metadata=metadata ) )
-			continue
-
-		metadata = dict( container_metadata )
-		metadata.update( { 'mode': mode_name, 'source': source_name, 'record_id': index } )
-		if isinstance( value, dict ):
-			for key in ( 'id', 'feature_id', 'latitude', 'longitude', 'lat', 'lon', 'lng',
-					'time', 'date', 'timestamp', 'provider', 'endpoint', 'units' ):
-				if key in value and isinstance( value[ key ], ( str, int, float, bool ) ):
-					metadata[ key ] = value[ key ]
-			content = json.dumps( normalize( value ), indent=2, ensure_ascii=False, default=str )
-		else:
-			content = str( value )
-		if content.strip( ):
-			documents.append( Document( page_content=content, metadata=metadata ) )
-	return documents
+			if isinstance( content, str ) and content.strip( ):
+				documents.append( Document( page_content=content, metadata=metadata ) )
+		return documents
+	except Error:
+		raise
+	except Exception as e:
+		exception = Error( e )
+		exception.module = 'app'
+		exception.cause = 'DocumentProcessing'
+		exception.method = 'build_source_documents( mode_name, source_name, result ) -> List[ Document ]'
+		Logger( ).write( exception )
+		raise exception
 
 def promote_source_result( mode_name: str, source_name: str, result: Any ) -> List[ Document ]:
-	"""Write a provider result to Foo's canonical document-processing state."""
-	activate_processing_source( source_name )
+	"""Promote a provider result into canonical document-processing state.
+
+	Purpose:
+		Use one source identity and retain valid processing outputs on unchanged reruns.
+
+	Args:
+		mode_name (str): Non-empty application mode identifier.
+		source_name (str): Non-empty processing source identifier.
+		result (Any): Provider response or cached result.
+
+	Returns:
+		List[Document]: Source documents represented by the result.
+
+	Raises:
+		Error: Propagates a logged document-conversion or promotion failure.
+	"""
 	documents = build_source_documents( mode_name=mode_name, source_name=source_name,
 		result=result )
-	st.session_state[ 'documents' ] = documents
-	st.session_state[ 'raw_documents' ] = list( documents )
-	st.session_state[ 'raw_text' ] = '\n\n'.join( document.page_content for document in documents
-		if isinstance( document.page_content, str ) and document.page_content.strip( ) )
-	st.session_state[ 'processed_text' ] = ''
-	st.session_state[ 'active_loader' ] = source_name
+	_promote_loader_documents( documents, source_name )
 	return documents
 
 def metric_with_tooltip( label: str, value: str, tooltip: str ):
@@ -795,30 +871,47 @@ def metric_with_tooltip( label: str, value: str, tooltip: str ):
 	            """, unsafe_allow_html=True, )
 
 def clear_if_active( loader_name: str ) -> None:
-	if st.session_state.active_loader == loader_name:
-		st.session_state.documents = None
-		st.session_state.active_loader = None
-		st.session_state.tokens = None
-		st.session_state.vocabulary = None
-		st.session_state.token_counts = None
-		st.session_state.chunks = None
-		st.session_state.chunk_modes = None
-		st.session_state.chunked_documents = None
-		st.session_state.embeddings = None
-		st.session_state.active_table = None
-		st.session_state.df_frequency = None
-		st.session_state.df_tables = None
-		st.session_state.df_schema = None
-		st.session_state.df_preview = None
-		st.session_state.df_count = None
-		st.session_state.df_chunks = None
-		st.session_state.lines = None
-	states = st.session_state.get( 'source_processing_states', { } )
-	if isinstance( states, dict ):
+	"""Clear documents and processing state owned by the specified source.
+
+	Purpose:
+		Removes the requested source's cached processing results without clearing another
+		source's documents or derived state.
+
+	Args:
+		loader_name (str): Non-empty source identifier.
+
+	Returns:
+		None: This function updates Streamlit session state.
+
+	Raises:
+		Error: Wraps and logs an invalid argument or state operation.
+	"""
+	try:
+		throw_if( 'loader_name', loader_name )
+		ensure_document_processing_state( )
+		if st.session_state.get( 'active_loader' ) == loader_name:
+			st.session_state.documents = None
+			st.session_state.raw_documents = [ ]
+			st.session_state.raw_text = ''
+			st.session_state.active_loader = None
+			st.session_state.processed_text = ''
+			st.session_state.active_table = None
+			st.session_state.df_tables = None
+			st.session_state.df_schema = None
+			st.session_state.df_preview = None
+			st.session_state.df_count = None
+		states = st.session_state[ 'source_processing_states' ]
 		states.pop( loader_name, None )
-	if st.session_state.get( 'processing_active_source', '' ) == loader_name:
-		clear_document_processing_outputs( )
-		st.session_state[ 'processing_active_source' ] = ''
+		if st.session_state[ 'processing_active_source' ] == loader_name:
+			clear_document_processing_outputs( )
+			st.session_state[ 'processing_active_source' ] = ''
+	except Exception as e:
+		exception = Error( e )
+		exception.module = 'app'
+		exception.cause = 'DocumentProcessing'
+		exception.method = 'clear_if_active( loader_name: str ) -> None'
+		Logger( ).write( exception )
+		raise exception
 
 # =====================================================================
 # DOCUMENT CHUNKING / EMBEDDING / VECTOR STORAGE
@@ -837,6 +930,8 @@ EMBEDDING_MODELS: Dict[ str, List[ str ] ] = {
 				'sentence-transformers/all-mpnet-base-v2', ], }
 VECTOR_STORES = [ 'Chroma', 'Pinecone' ]
 DOCUMENT_PROCESSING_STATE: Dict[ str, Any ] = { 'chunked_documents': None,
+		'chunks': None, 'tokens': None, 'vocabulary': None, 'token_counts': None,
+		'chunk_modes': None, 'df_chunks': None, 'df_frequency': None, 'lines': None,
 		'chunk_source_signature': '', 'chunk_size_used': 0, 'chunk_overlap_used': 0,
 		'df_chunking': None, 'embedder': None, 'embeddings': None, 'embedding_provider': '',
 		'embedding_model': '', 'embedding_model_path': '', 'embedding_documents': None,
@@ -887,21 +982,32 @@ def clear_document_processing_outputs( ) -> None:
 	ensure_document_processing_state( )
 	for key, value in DOCUMENT_PROCESSING_STATE.items( ):
 		st.session_state[ key ] = value
-	st.session_state[ 'chunks' ] = None
-	st.session_state[ 'df_chunks' ] = None
 
 def reset_document_processing_controls( key_prefix: str ) -> None:
 	"""Request a reset for one loader's processing controls.
 
+	Purpose:
+		Resets widget values on the next execution without clearing another source's data.
+
 	Args:
-		key_prefix (str): Unique Streamlit key prefix assigned to the loader.
+		key_prefix (str): Non-empty Streamlit key prefix assigned to the loader.
 
 	Returns:
 		None: This function updates Streamlit session state.
+
+	Raises:
+		Error: Wraps and logs an invalid argument or state operation.
 	"""
-	throw_if( 'key_prefix', key_prefix )
-	clear_document_processing_outputs( )
-	st.session_state[ f'{key_prefix}_processing_reset_request' ] = True
+	try:
+		throw_if( 'key_prefix', key_prefix )
+		st.session_state[ f'{key_prefix}_processing_reset_request' ] = True
+	except Exception as e:
+		exception = Error( e )
+		exception.module = 'app'
+		exception.cause = 'DocumentProcessing'
+		exception.method = 'reset_document_processing_controls( key_prefix: str ) -> None'
+		Logger( ).write( exception )
+		raise exception
 
 def document_signature( documents: List[ Document ] ) -> str:
 	"""Create a deterministic signature for loaded documents.
@@ -1020,44 +1126,36 @@ def render_document_processing_inputs( loader_name: str, key_prefix: str ) -> No
 		if key not in st.session_state:
 			st.session_state[ key ] = value
 	
-	if int( st.session_state[ overlap_key ] ) >= int( st.session_state[ size_key ] ):
-		st.session_state[ overlap_key ] = max( 0, int( st.session_state[ size_key ] ) // 5, )
-	
-	chunk_max = max( 5000, int( st.session_state[ size_key ] ) )
+	chunk_max = max( 5000, st.session_state[ size_key ] )
 	chunk_c1, chunk_c2 = st.columns( 2, border=True )
 	with chunk_c1:
-		st.slider( 'Chunk Size', min_value=1, max_value=chunk_max, step=1, key=size_key, )
-	
+		chunk_size = st.slider( 'Chunk Size', min_value=1, max_value=chunk_max, step=1,
+			key=size_key, )
+
 	with chunk_c2:
-		st.slider( 'Chunk Overlap', min_value=0, max_value=max( 0, int(
-			st.session_state[ size_key ] ) - 1 ), step=1, key=overlap_key, )
-	
+		max_overlap = chunk_size - 1
+		if st.session_state[ overlap_key ] > max_overlap:
+			st.session_state[ overlap_key ] = max_overlap
+		st.slider( 'Chunk Overlap', min_value=0, max_value=max( 1, max_overlap ), step=1,
+			key=overlap_key, disabled=chunk_size == 1, )
+
 	provider_options = list( EMBEDDING_MODELS.keys( ) ) + [ 'Local GGUF' ]
-	provider = st.session_state[ provider_key ]
-	if provider != 'Local GGUF':
-		model_c1, model_c2 = st.columns( 2, border=True )
-		with model_c1:
-			provider = st.selectbox( 'Embedding Provider', options=provider_options,
-				key=provider_key, )
-		
-		with model_c2:
-			if provider != 'Local GGUF':
-				model_options = EMBEDDING_MODELS[ provider ]
-				if st.session_state.get( model_key, '' ) not in model_options:
-					st.session_state[ model_key ] = model_options[ 0 ]
-				
-				st.selectbox( 'Embedding Model', options=model_options, key=model_key, )
-	else:
-		model_c1, model_c2 = st.columns( 2, border=True )
-		with model_c1:
-			provider = st.selectbox( 'Embedding Provider', options=provider_options,
-				key=provider_key, )
-	
-		with model_c2:
-			if provider == 'Local GGUF':
-				st.text_input( 'Local GGUF Model', key=path_key,
-					placeholder='Path to a local embedding GGUF model', )
-	
+	model_c1, model_c2 = st.columns( 2, border=True )
+	with model_c1:
+		provider = st.selectbox( 'Embedding Provider', options=provider_options,
+			key=provider_key, )
+
+	with model_c2:
+		if provider == 'Local GGUF':
+			st.text_input( 'Local GGUF Model', key=path_key,
+				placeholder='Path to a local embedding GGUF model', )
+		else:
+			model_options = EMBEDDING_MODELS[ provider ]
+			if st.session_state.get( model_key, '' ) not in model_options:
+				st.session_state[ model_key ] = model_options[ 0 ]
+
+			st.selectbox( 'Embedding Model', options=model_options, key=model_key, )
+
 	st.divider( )
 	
 	store_provider = st.selectbox( 'Vector Store', options=VECTOR_STORES, key=store_key, )
@@ -1172,15 +1270,15 @@ def render_document_processing_actions( loader_name: str, key_prefix: str ) -> N
 			st.session_state[ 'vector_store_namespace' ] = ''
 			st.success( f'Created {len( chunks )} chunk(s) containing {len( all_tokens )} '
 				f'word token(s).' )
-		except Error:
-			raise
+		except Error as e:
+			st.error( e.message or str( e ) )
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'app'
 			exception.cause = 'DocumentProcessing'
 			exception.method = 'render_document_processing_actions( loader_name, key_prefix )'
 			Logger( ).write( exception )
-			st.error( str( exception ) )
+			st.error( exception.message or str( exception ) )
 	
 	if embed_clicked:
 		try:
@@ -1268,9 +1366,20 @@ def render_document_processing_tabs( key_prefix: str='loading' ) -> None:
 	throw_if( 'key_prefix', key_prefix )
 	ensure_document_processing_state( )
 	documents = st.session_state.get( 'documents' ) or [ ]
+	active_loader = st.session_state.get( 'active_loader' )
+	mode_source_keys = { 'retrieval': 'retrieval_active_source',
+			'geospatial': 'geospatial_active_source', 'environmental': 'environmental_active_source',
+			'astronomical': 'astronomical_active_source', 'demographic': 'demographic_active_source',
+			'generation': 'generation_active_source', }
+	if key_prefix in mode_source_keys:
+		if active_loader != st.session_state.get( mode_source_keys[ key_prefix ], '' ):
+			documents = [ ]
+	elif key_prefix == 'web_scraper' and active_loader != 'Web Scraper':
+		documents = [ ]
 	current_signature = document_signature( documents ) if documents else ''
-	derived_current = bool( documents ) and current_signature == st.session_state.get(
-		'chunk_source_signature', '' )
+	derived_current = ( bool( documents ) and active_loader ==
+		st.session_state.get( 'processing_active_source', '' ) and current_signature ==
+		st.session_state.get( 'chunk_source_signature', '' ) )
 	document_tab, chunk_tab, embedding_tab = st.tabs( [ 'Document', 'Chunks', 'Embeddings' ] )
 	with document_tab:
 		if not documents:
@@ -1345,26 +1454,67 @@ def set_sidebar_mode( source_key: str ) -> None:
 		st.session_state[ 'mode' ] = selected_mode
 
 def _promote_loader_documents( documents: List[ Document ] | None, active_loader: str ) -> int:
-	docs: List[ Document ] = list( documents or [ ] )
-	activate_processing_source( active_loader )
-	st.session_state.documents = docs
-	st.session_state.raw_documents = list( docs )
-	st.session_state.raw_text = '\n\n'.join( doc.page_content for doc in docs if
-			hasattr( doc, 'page_content' ) and isinstance( doc.page_content, str ) and doc.page_content.strip( ) )
-	st.session_state.processed_text = ''
-	st.session_state.tokens = None
-	st.session_state.vocabulary = None
-	st.session_state.token_counts = None
-	st.session_state.active_loader = active_loader
-	return len( docs )
+	"""Synchronize loaded documents with their processing source.
+
+	Purpose:
+		Retain valid derived outputs for identical document signatures, invalidate changed
+		collections, and avoid clearing another source when a result is empty.
+
+	Args:
+		documents (List[Document] | None): Loaded document collection.
+		active_loader (str): Non-empty processing source identifier.
+
+	Returns:
+		int: Number of source documents.
+
+	Raises:
+		Error: Wraps and logs invalid arguments or state failures.
+	"""
+	try:
+		throw_if( 'active_loader', active_loader )
+		docs: List[ Document ] = list( documents or [ ] )
+		if not docs:
+			clear_if_active( active_loader )
+			return 0
+
+		signature = document_signature( docs )
+		current_documents = st.session_state.get( 'documents' ) or [ ]
+		current_owner = st.session_state.get( 'active_loader' )
+		unchanged = ( current_owner == active_loader and bool( current_documents )
+			and document_signature( current_documents ) == signature )
+		activate_processing_source( active_loader )
+		stored_signature = st.session_state.get( 'chunk_source_signature', '' )
+		if stored_signature != signature and ( not unchanged or stored_signature ):
+			clear_document_processing_outputs( )
+		if unchanged:
+			return len( docs )
+
+		st.session_state.documents = docs
+		st.session_state.raw_documents = list( docs )
+		st.session_state.raw_text = rebuild_raw_text_from_documents( ) or ''
+		st.session_state.processed_text = ''
+		st.session_state.active_loader = active_loader
+		return len( docs )
+	except Error:
+		raise
+	except Exception as e:
+		exception = Error( e )
+		exception.module = 'app'
+		exception.cause = 'DocumentProcessing'
+		exception.method = '_promote_loader_documents( documents, active_loader ) -> int'
+		Logger( ).write( exception )
+		raise exception
 
 def _clear_loader_documents( loader_name: str ) -> int:
+	"""Clear source-owned documents and return the remaining document count.
+
+	Args:
+		loader_name (str): Non-empty source identifier validated by clear_if_active.
+
+	Returns:
+		int: Number of documents remaining in shared state.
+	"""
 	clear_if_active( loader_name )
-	st.session_state.raw_text = rebuild_raw_text_from_documents( ) or ''
-	st.session_state.processed_text = ''
-	st.session_state.tokens = None
-	st.session_state.vocabulary = None
-	st.session_state.token_counts = None
 	remaining = st.session_state.get( 'documents' ) or [ ]
 	return len( remaining )
 
@@ -1505,14 +1655,26 @@ if mode == 'Loading':
 				# ------------------------------------------------------------------
 				# Clear
 				# ------------------------------------------------------------------
-				if clear_nltk and st.session_state.get( 'documents' ):
-					st.session_state.documents = [ d for d in st.session_state.documents if
-							d.metadata.get( 'loader' ) != 'NLTKLoader' ]
-					
-					st.session_state.raw_text = ("\n\n".join( d.page_content for d in
-							st.session_state.documents ) if st.session_state.documents else None)
-					
-					st.session_state.active_loader = None
+				if clear_nltk:
+					documents = st.session_state.get( 'documents' ) or [ ]
+					remaining = [ d for d in documents if d.metadata.get( 'loader' ) != 'NLTKLoader' ]
+					active_loader = st.session_state.get( 'active_loader' )
+					if len( remaining ) != len( documents ):
+						clear_if_active( 'NLTKLoader' )
+						st.session_state.documents = remaining
+						st.session_state.raw_documents = list( remaining )
+						st.session_state.raw_text = rebuild_raw_text_from_documents( ) or ''
+						st.session_state.processed_text = ''
+						if active_loader == 'NLTKLoader':
+							active_loader = next( ( d.metadata.get( 'loader' ) for d in reversed( remaining )
+								if d.metadata.get( 'loader' ) ), None )
+						st.session_state.active_loader = active_loader
+						if active_loader:
+							activate_processing_source( active_loader )
+							clear_document_processing_outputs( )
+					else:
+						if active_loader != 'NLTKLoader' or not documents:
+							clear_if_active( 'NLTKLoader' )
 					st.info( 'NLTKLoader documents removed.' )
 				
 				# ------------------------------------------------------------------
@@ -1561,7 +1723,7 @@ if mode == 'Loading':
 							st.session_state.documents.extend( documents )
 						else:
 							st.session_state.documents = documents
-							st.session_state.raw_documents = list( documents )
+						st.session_state.raw_documents = list( st.session_state.documents )
 						
 						st.session_state.raw_text = "\n\n".join(
 							d.page_content for d in st.session_state.documents )
@@ -1746,43 +1908,64 @@ if mode == 'Loading':
 						if xml_file is None:
 							st.warning( 'Please select an XML file.' )
 						else:
-							with tempfile.TemporaryDirectory( ) as tmp:
-								path = os.path.join( tmp, xml_file.name )
-								with open( path, 'wb' ) as f:
-									f.write( xml_file.read( ) )
-								
-								with st.spinner( 'Loading XML via UnstructuredXMLLoader...' ):
-									documents = loader.load( path )
-						
-						if documents:
-							raw_text = '\n\n'.join( d.page_content for d in documents if
-									hasattr( d, 'page_content' ) and isinstance(
-										d.page_content, str ) and d.page_content.strip( ) )
-							
-							st.session_state.documents = documents
-							st.session_state.raw_documents = list( documents )
-							st.session_state.raw_text = raw_text
-							st.session_state.processed_text = None
-							st.session_state.active_loader = 'XmlLoader'
-							st.session_state[ 'xml_documents' ] = documents
-							st.session_state[ 'xml_tree_loaded' ] = False
-							st.session_state[ 'xml_xpath_results' ] = None
-							st.session_state[ 'xml_namespaces' ] = None
-						else:
-							st.warning( 'No extractable text found in XML.' )
+							try:
+								candidate = XmlLoader( )
+								with tempfile.TemporaryDirectory( ) as tmp:
+									path = os.path.join( tmp, xml_file.name )
+									with open( path, 'wb' ) as f:
+										f.write( xml_file.getvalue( ) )
+
+									with st.spinner( 'Loading XML via UnstructuredXMLLoader...' ):
+										xml_documents = candidate.load( path )
+
+								if xml_documents:
+									_promote_loader_documents( xml_documents, 'XmlLoader' )
+									st.session_state.xml_loader = candidate
+									loader = candidate
+									st.session_state[ 'xml_documents' ] = xml_documents
+									st.session_state[ 'xml_split_documents' ] = None
+									st.session_state[ 'xml_tree_loaded' ] = False
+									st.session_state[ 'xml_xpath_results' ] = None
+									st.session_state[ 'xml_namespaces' ] = None
+								else:
+									st.warning( 'No extractable text found in XML.' )
+							except Error as e:
+								st.error( e.message or str( e ) )
+							except Exception as e:
+								exception = Error( e )
+								exception.module = 'app'
+								exception.cause = 'XmlLoader'
+								exception.method = 'XML Loader: Semantic Load'
+								Logger( ).write( exception )
+								st.error( exception.message or str( exception ) )
 				
 				# --------------------------------------------------
 				# Split Semantic Documents
 				# --------------------------------------------------
 				with btn_c2:
 					if st.button( 'Split Semantic Documents', use_container_width=True, icon='➗', ):
-						with st.spinner( 'Splitting documents...' ):
-							split_docs = loader.split( size=int( chunk_size ),
-								amount=int( overlap_amount ) )
-						
+						try:
+							if not loader.documents:
+								raise ValueError( 'Load semantic XML documents before splitting.' )
+							if overlap_amount >= chunk_size:
+								raise ValueError( 'Chunk Overlap must be less than Chunk Size.' )
+							with st.spinner( 'Splitting documents...' ):
+								split_docs = loader.split( size=chunk_size, amount=overlap_amount )
+
 							if split_docs:
 								st.session_state[ 'xml_split_documents' ] = split_docs
 								st.success( f'Produced {len( split_docs )} document chunks.' )
+							else:
+								st.warning( 'No semantic document chunks were produced.' )
+						except Error as e:
+							st.error( e.message or str( e ) )
+						except Exception as e:
+							exception = Error( e )
+							exception.module = 'app'
+							exception.cause = 'XmlLoader'
+							exception.method = 'XML Loader: Semantic Split'
+							Logger( ).write( exception )
+							st.error( exception.message or str( exception ) )
 				
 				# ------------------------------------------------------------------
 				# Structured XML Tree Loading
@@ -1793,25 +1976,41 @@ if mode == 'Loading':
 					if xml_file is None:
 						st.warning( 'Please select an XML file.' )
 					else:
-						with tempfile.TemporaryDirectory( ) as tmp:
-							path = os.path.join( tmp, xml_file.name )
-							with open( path, 'wb' ) as f:
-								f.write( xml_file.read( ) )
-							
-							with st.spinner( 'Parsing XML into ElementTree...' ):
-								tree = loader.load_tree( path )
-						
-						if tree is not None:
-							xml_text = etree.tostring( tree, pretty_print=True, encoding='unicode' )
-							st.session_state.raw_text = xml_text
-							st.session_state.processed_text = None
-							st.session_state.active_loader = 'XmlLoader'
-							st.session_state[ 'xml_tree_loaded' ] = True
-							st.session_state[ 'xml_namespaces' ] = loader.xml_namespaces
-							st.session_state[ 'xml_xpath_results' ] = None
-							st.success( 'XML tree loaded successfully.' )
-						else:
-							st.warning( 'Failed to parse XML tree.' )
+						try:
+							candidate = XmlLoader( )
+							with tempfile.TemporaryDirectory( ) as tmp:
+								path = os.path.join( tmp, xml_file.name )
+								with open( path, 'wb' ) as f:
+									f.write( xml_file.getvalue( ) )
+
+								with st.spinner( 'Parsing XML into ElementTree...' ):
+									tree = candidate.load_tree( path )
+
+							if tree is not None and candidate.xml_root is not None:
+								xml_text = etree.tostring( tree, pretty_print=True, encoding='unicode' )
+								xml_documents = [ Document( page_content=xml_text, metadata={
+									'loader': 'XmlLoader', 'source': xml_file.name,
+									'load_mode': 'structured_xml', } ) ]
+								_promote_loader_documents( xml_documents, 'XmlLoader' )
+								st.session_state.xml_loader = candidate
+								loader = candidate
+								st.session_state[ 'xml_documents' ] = xml_documents
+								st.session_state[ 'xml_split_documents' ] = None
+								st.session_state[ 'xml_tree_loaded' ] = True
+								st.session_state[ 'xml_namespaces' ] = candidate.xml_namespaces
+								st.session_state[ 'xml_xpath_results' ] = None
+								st.success( 'XML tree loaded successfully.' )
+							else:
+								st.warning( 'Failed to parse XML tree.' )
+						except Error as e:
+							st.error( e.message or str( e ) )
+						except Exception as e:
+							exception = Error( e )
+							exception.module = 'app'
+							exception.cause = 'XmlLoader'
+							exception.method = 'XML Loader: Structured Load'
+							Logger( ).write( exception )
+							st.error( exception.message or str( exception ) )
 				
 				# ------------------------------------------------------------------
 				# XPath Query Interface
@@ -1829,12 +2028,22 @@ if mode == 'Loading':
 						help='Use namespace prefixes if applicable.' )
 					
 					if st.button( 'Run XPath Query', use_container_width=True, icon='🏃', ):
-						with st.spinner( 'Executing XPath...' ):
-							elements = xml_loader.get_elements( xpath_expr )
-						
-						if elements is not None:
-							st.session_state[ 'xml_xpath_results' ] = elements
-							st.success( f'Returned {len( elements )} elements.' )
+						try:
+							with st.spinner( 'Executing XPath...' ):
+								elements = xml_loader.get_elements( xpath_expr )
+
+							if elements is not None:
+								st.session_state[ 'xml_xpath_results' ] = elements
+								st.success( f'Returned {len( elements )} elements.' )
+						except Error as e:
+							st.error( e.message or str( e ) )
+						except Exception as e:
+							exception = Error( e )
+							exception.module = 'app'
+							exception.cause = 'XmlLoader'
+							exception.method = 'XML Loader: XPath Query'
+							Logger( ).write( exception )
+							st.error( exception.message or str( exception ) )
 					
 					if 'xml_xpath_results' in st.session_state and st.session_state[
 						'xml_xpath_results' ] is not None:
@@ -1842,8 +2051,11 @@ if mode == 'Loading':
 						st.caption( f'Previewing first {preview_count} elements' )
 						
 						for el in st.session_state[ 'xml_xpath_results' ][ :preview_count ]:
-							st.code( etree.tostring( el, pretty_print=True,
-								encoding='unicode' ), language='xml' )
+							if isinstance( el, etree._Element ):
+								st.code( etree.tostring( el, pretty_print=True,
+									encoding='unicode' ), language='xml' )
+							else:
+								st.write( el )
 				
 				# ------------------------------------------------------------------
 				# Debug / Introspection
@@ -2261,23 +2473,28 @@ if mode == 'Loading':
 				# --------------------------------------------------
 				# Clear (remove only ExcelLoader documents)
 				# --------------------------------------------------
-				if clear_excel and st.session_state.get( 'documents' ):
+				if clear_excel:
 					reset_document_processing_controls( 'excel' )
-					st.session_state.documents = [ d for d in st.session_state.documents if
-							d.metadata.get( 'loader' ) != 'ExcelLoader' ]
-					
-					st.session_state.raw_documents = [ d for d in st.session_state.documents if
-							isinstance( getattr(
-								d, 'metadata', None ), dict ) ] if st.session_state.documents else [ ]
-					
-					st.session_state.raw_text = ('\n\n'.join(
-						d.page_content for d in st.session_state.documents if
-								isinstance( d.page_content, str ) \
-								and d.page_content.strip( ) ) if st.session_state.documents else None)
-					
-					st.session_state.processed_text = None
-					st.session_state.active_loader = None
-					st.info( "ExcelLoader documents removed." )
+					documents = st.session_state.get( 'documents' ) or [ ]
+					remaining = [ d for d in documents if d.metadata.get( 'loader' ) != 'ExcelLoader' ]
+					active_loader = st.session_state.get( 'active_loader' )
+					if len( remaining ) != len( documents ):
+						clear_if_active( 'ExcelLoader' )
+						st.session_state.documents = remaining
+						st.session_state.raw_documents = list( remaining )
+						st.session_state.raw_text = rebuild_raw_text_from_documents( ) or ''
+						st.session_state.processed_text = ''
+						if active_loader == 'ExcelLoader':
+							active_loader = next( ( d.metadata.get( 'loader' ) for d in reversed( remaining )
+								if d.metadata.get( 'loader' ) ), None )
+						st.session_state.active_loader = active_loader
+						if active_loader:
+							activate_processing_source( active_loader )
+							clear_document_processing_outputs( )
+					else:
+						if active_loader != 'ExcelLoader' or not documents:
+							clear_if_active( 'ExcelLoader' )
+					st.info( 'ExcelLoader documents removed.' )
 				
 				# --------------------------------------------------
 				# Load
@@ -2996,7 +3213,7 @@ if mode == 'Loading':
 					key='pubmed_query', placeholder='e.g. transformer models biomedical NLP', )
 				
 				pubmed_max_docs = st.number_input( 'Maximum Documents', min_value=1,
-					value=5, step=1, key='pubmed_max_docs', )
+					value=5, step=1, key='loading_pubmed_max_docs', )
 				
 				# Save
 				col_load, col_clear, col_save = st.columns( 3 )
@@ -3063,7 +3280,7 @@ if mode == 'Loading':
 					help='Dataset identifier from the city portal.', icon='💾', width='stretch' )
 				
 				open_city_limit = st.number_input( 'Maximum Records', min_value=1, value=100,
-					step=1, key='open_city_limit', )
+					step=1, key='loading_open_city_limit', )
 				
 				# Save
 				col_load, col_clear, col_save = st.columns( 3 )
@@ -3996,6 +4213,7 @@ elif mode == 'Scraping':
 						for err in errors:
 							st.error( err )
 
+		promote_source_result( mode_name='Scraping', source_name='Web Scraper', result=results )
 		render_document_processing_tabs( key_prefix='web_scraper' )
 
 # ==============================================================================
@@ -4022,6 +4240,7 @@ elif mode == 'Retrieval':
 			if st.session_state.get( 'arxiv_clear_request', False ):
 				st.session_state[ 'arxiv_input' ] = ''
 				st.session_state[ 'arxiv_results' ] = [ ]
+				clear_if_active( 'ArXiv' )
 				st.session_state[ 'arxiv_max_docs' ] = 5
 				st.session_state[ 'arxiv_full_documents' ] = False
 				st.session_state[ 'arxiv_include_metadata' ] = False
@@ -4111,6 +4330,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'googledrive_mode' ] = 'documents'
 				st.session_state[ 'googledrive_mime_type' ] = ''
 				st.session_state[ 'googledrive_results' ] = [ ]
+				clear_if_active( 'Google Drive' )
 				st.session_state[ 'googledrive_clear_request' ] = False
 			
 			def _clear_googledrive_state( ) -> None:
@@ -4211,6 +4431,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'wikipedia_max_docs' ] = 5
 				st.session_state[ 'wikipedia_include_metadata' ] = False
 				st.session_state[ 'wikipedia_results' ] = [ ]
+				clear_if_active( 'Wikipedia' )
 				st.session_state[ 'wikipedia_clear_request' ] = False
 			
 			def _clear_wikipedia_state( ) -> None:
@@ -4314,6 +4535,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'googlesearch_cse_id' ] = ''
 				st.session_state[ 'googlesearch_timeout' ] = 10
 				st.session_state[ 'googlesearch_results' ] = { }
+				clear_if_active( 'Google Search' )
 				st.session_state[ 'googlesearch_clear_request' ] = False
 			
 			def _clear_googlesearch_state( ) -> None:
@@ -4468,6 +4690,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'openscience_format' ] = 'json'
 				st.session_state[ 'openscience_timeout' ] = 20
 				st.session_state[ 'openscience_results' ] = { }
+				clear_if_active( 'Open Science' )
 				st.session_state[ 'openscience_clear_request' ] = False
 			
 			def _clear_openscience_state( ) -> None:
@@ -4526,6 +4749,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'govinfo_start_date' ] = '2025-01-01T00:00:00Z'
 				st.session_state[ 'govinfo_timeout' ] = 20
 				st.session_state[ 'govinfo_results' ] = { }
+				clear_if_active( 'Gov Info' )
 				st.session_state[ 'govinfo_clear_request' ] = False
 			
 			def _clear_govinfo_state( ) -> None:
@@ -4745,6 +4969,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'congress_conference' ] = False
 				st.session_state[ 'congress_timeout' ] = 20
 				st.session_state[ 'congress_results' ] = { }
+				clear_if_active( 'US Congress' )
 				st.session_state[ 'congress_clear_request' ] = False
 			
 			def _clear_congress_state( ) -> None:
@@ -4972,6 +5197,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'internetarchive_collection' ] = ''
 				st.session_state[ 'internetarchive_timeout' ] = 20
 				st.session_state[ 'internetarchive_results' ] = { }
+				clear_if_active( 'Internet Archive' )
 				st.session_state[ 'internetarchive_clear_request' ] = False
 			
 			def _clear_internetarchive_state( ) -> None:
@@ -5158,6 +5384,7 @@ elif mode == 'Retrieval':
 				st.session_state[ 'grokipedia_offset' ] = 0
 				st.session_state[ 'grokipedia_include_content' ] = True
 				st.session_state[ 'grokipedia_results' ] = { }
+				clear_if_active( 'Grokipedia' )
 				st.session_state[ 'grokipedia_auto_fetch_page' ] = False
 				st.session_state[ 'grokipedia_clear_request' ] = False
 			
@@ -5402,7 +5629,7 @@ elif mode == 'Retrieval':
 			
 			with b3:
 				can_save = (
-							st.session_state.get( 'active_loader' ) == 'JupyterNotebookLoader' \
+							st.session_state.get( 'active_loader' ) == 'Jupyter Notebook' \
 							and isinstance( st.session_state.get( 'raw_text' ), str ) \
 							and st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -5438,7 +5665,7 @@ elif mode == 'Retrieval':
 			
 			with b3:
 				can_save = ( st.session_state.get( 'active_loader' ) == \
-				             'GoogleCloudStorageFileLoader' and \
+				             'Google Cloud File' and \
 				             isinstance( st.session_state.get( 'raw_text' ), str ) \
 				             and st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -5477,7 +5704,7 @@ elif mode == 'Retrieval':
 			
 			with b3:
 				can_save = (st.session_state.get( 'active_loader' ) == \
-							'AwsFileLoader' and isinstance(
+							'AWS S3 File' and isinstance(
 							st.session_state.get( 'raw_text' ), str ) and \
 							st.session_state.get( 'raw_text' ).strip( ) )
 				
@@ -5518,7 +5745,7 @@ elif mode == 'Retrieval':
 					use_container_width=True, width='stretch' )
 			
 			with b3:
-				can_save = (st.session_state.get( 'active_loader' ) == 'OneDriveDocLoader' \
+				can_save = (st.session_state.get( 'active_loader' ) == 'OneDrive' \
 							and isinstance( st.session_state.get( 'raw_text' ), str ) \
 				            and st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -5560,7 +5787,7 @@ elif mode == 'Retrieval':
 					key='google_speech_to_text_clear', use_container_width=True, width='stretch' )
 			
 			with b3:
-				can_save = (st.session_state.get( 'active_loader' ) == 'GoogleSpeechToTextLoader' \
+				can_save = (st.session_state.get( 'active_loader' ) == 'Google Speech-to-Text' \
 							and isinstance( st.session_state.get( 'raw_text' ), str ) \
 				            and st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -5600,7 +5827,7 @@ elif mode == 'Retrieval':
 					use_container_width=True, width='stretch' )
 			
 			with b3:
-				can_save = (st.session_state.get( 'active_loader' ) == 'AmazonBucketLoader' \
+				can_save = (st.session_state.get( 'active_loader' ) == 'AWS S3 Bucket' \
 				            and isinstance( st.session_state.get( 'raw_text' ), str ) \
 				            and st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -5640,7 +5867,7 @@ elif mode == 'Retrieval':
 			
 			with b3:
 				can_save = (
-							st.session_state.get( 'active_loader' ) == 'GoogleBucketLoader' \
+							st.session_state.get( 'active_loader' ) == 'Google Cloud Bucket' \
 							and isinstance( st.session_state.get( 'raw_text' ), str ) \
 							and st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -5692,6 +5919,44 @@ elif mode == 'Retrieval':
 	
 	with right:
 		st.markdown( '##### Results' )
+		if jupyter_clear:
+			st.session_state[ 'jupyter_notebook_results' ] = { }
+			remaining = _clear_loader_documents( 'Jupyter Notebook' )
+			st.info(
+				f'Jupyter Notebook Loader state cleared. Remaining documents: {remaining}.')
+
+		if google_cloud_file_clear:
+			st.session_state[ 'google_cloud_file_results' ] = { }
+			remaining = _clear_loader_documents( 'Google Cloud File' )
+			st.info( f'Google Cloud File Loader state cleared. Remaining documents: '
+			         f'{remaining}.' )
+
+		if aws_file_clear:
+			st.session_state[ 'aws_file_results' ] = { }
+			remaining = _clear_loader_documents( 'AWS S3 File' )
+			st.info( f'AWS S3 File Loader state cleared. Remaining documents: {remaining}.' )
+
+		if onedrive_clear:
+			st.session_state[ 'onedrive_results' ] = { }
+			remaining = _clear_loader_documents( 'OneDrive' )
+			st.info( f'OneDrive Loader state cleared. Remaining documents: {remaining}.' )
+
+		if google_speech_clear:
+			st.session_state[ 'google_speech_to_text_results' ] = { }
+			remaining = _clear_loader_documents( 'Google Speech-to-Text' )
+			st.info( f'Google Speech-to-Text Loader state cleared. Remaining documents: '
+			         f'{remaining}.' )
+
+		if aws_bucket_clear:
+			st.session_state[ 'aws_bucket_results' ] = { }
+			remaining = _clear_loader_documents( 'AWS S3 Bucket' )
+			st.info( f'AWS S3 Bucket Loader state cleared. Remaining documents: {remaining}.' )
+
+		if google_bucket_clear:
+			st.session_state[ 'google_bucket_results' ] = { }
+			remaining = _clear_loader_documents( 'Google Cloud Bucket' )
+			st.info( f'Google Bucket Loader state cleared. Remaining documents: {remaining}.' )
+
 		active_source = st.session_state.get( 'retrieval_active_source', '' )
 		if not active_source:
 			st.info( 'Select a source, configure the request, and submit it to display results.' )
@@ -6031,11 +6296,6 @@ elif mode == 'Retrieval':
 		
 		# -------- Jupyter Notebook
 		if active_source == 'Jupyter Notebook':
-			if jupyter_clear:
-				st.session_state[ 'jupyter_notebook_results' ] = { }
-				remaining = _clear_loader_documents( 'JupyterNotebookLoader' )
-				st.info(
-					f'Jupyter Notebook Loader state cleared. Remaining documents: {remaining}.')
 			
 			if jupyter_submit:
 				if not notebook_file:
@@ -6052,7 +6312,7 @@ elif mode == 'Retrieval':
 								max_output_length=int( max_output_length ),
 								remove_newline=remove_newline, traceback=include_traceback ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'JupyterNotebookLoader' )
+						count = len( documents )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
@@ -6107,11 +6367,6 @@ elif mode == 'Retrieval':
 		
 		# -------- Google Cloud FIle
 		if active_source == 'Google Cloud File':
-			if google_cloud_file_clear:
-				st.session_state[ 'google_cloud_file_results' ] = { }
-				remaining = _clear_loader_documents( 'GoogleCloudStorageFileLoader' )
-				st.info( f'Google Cloud File Loader state cleared. Remaining documents: '
-				         f'{remaining}.' )
 			
 			if google_cloud_file_submit:
 				if not project_name or not project_name.strip( ):
@@ -6126,8 +6381,7 @@ elif mode == 'Retrieval':
 						documents = loader.load( project_name=project_name.strip( ),
 							bucket=bucket.strip( ), blob=blob.strip( ) ) or [ ]
 						
-						count = _promote_loader_documents(
-							documents, 'GoogleCloudStorageFileLoader' )
+						count = len( documents )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
@@ -6179,10 +6433,6 @@ elif mode == 'Retrieval':
 		
 		# -------- AWS S3 File
 		if active_source == 'AWS S3 File':
-			if aws_file_clear:
-				st.session_state[ 'aws_file_results' ] = { }
-				remaining = _clear_loader_documents( 'AwsFileLoader' )
-				st.info( f'AWS S3 File Loader state cleared. Remaining documents: {remaining}.' )
 			
 			if aws_file_submit:
 				if not bucket or not bucket.strip( ):
@@ -6195,7 +6445,7 @@ elif mode == 'Retrieval':
 						documents = loader.load( bucket=bucket.strip( ), key=key_name.strip( ),
 							region_name=region_name.strip( ) or None ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'AwsFileLoader' )
+						count = len( documents )
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
 							metadata = (
@@ -6246,10 +6496,6 @@ elif mode == 'Retrieval':
 		
 		# -------- OneDrive
 		if active_source == 'OneDrive':
-			if onedrive_clear:
-				st.session_state[ 'onedrive_results' ] = { }
-				remaining = _clear_loader_documents( 'OneDriveDocLoader' )
-				st.info( f'OneDrive Loader state cleared. Remaining documents: {remaining}.' )
 			
 			if onedrive_submit:
 				if not drive_id or not drive_id.strip( ):
@@ -6266,7 +6512,7 @@ elif mode == 'Retrieval':
 							folder_path=folder_path.strip( ) or None, object_ids=object_ids,
 							auth_with_token=auth_with_token ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'OneDriveDocLoader' )
+						count = len( documents )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
@@ -6323,11 +6569,6 @@ elif mode == 'Retrieval':
 		
 		# -------- Google STT
 		if active_source == 'Google Speech-to-Text':
-			if google_speech_clear:
-				st.session_state[ 'google_speech_to_text_results' ] = { }
-				remaining = _clear_loader_documents( 'GoogleSpeechToTextLoader' )
-				st.info( f'Google Speech-to-Text Loader state cleared. Remaining documents: '
-				         f'{remaining}.' )
 			
 			if google_speech_submit:
 				if not project_id or not project_id.strip( ):
@@ -6355,7 +6596,7 @@ elif mode == 'Retrieval':
 								documents = loader.load( project_id=project_id.strip( ),
 									file_path=path, config=config ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'GoogleSpeechToTextLoader' )
+						count = len( documents )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
@@ -6412,10 +6653,6 @@ elif mode == 'Retrieval':
 		
 		# -------- AWS S3 Bucket
 		if active_source == 'AWS S3 Bucket':
-			if aws_bucket_clear:
-				st.session_state[ 'aws_bucket_results' ] = { }
-				remaining = _clear_loader_documents( 'AmazonBucketLoader' )
-				st.info( f'AWS S3 Bucket Loader state cleared. Remaining documents: {remaining}.' )
 			
 			if aws_bucket_submit:
 				if not bucket_name or not bucket_name.strip( ):
@@ -6428,7 +6665,7 @@ elif mode == 'Retrieval':
 							region_name=region_name.strip( ) or None,
 							endpoint_url=endpoint_url.strip( ) or None ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'AmazonBucketLoader' )
+						count = len( documents )
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
 							metadata = ( doc.metadata if isinstance(
@@ -6484,10 +6721,6 @@ elif mode == 'Retrieval':
 		
 		# -------- Google Cloud Bucket
 		if active_source == 'Google Cloud Bucket':
-			if google_bucket_clear:
-				st.session_state[ 'google_bucket_results' ] = { }
-				remaining = _clear_loader_documents( 'GoogleBucketLoader' )
-				st.info( f'Google Bucket Loader state cleared. Remaining documents: {remaining}.' )
 			
 			if google_bucket_submit:
 				if not project_name or not project_name.strip( ):
@@ -6501,7 +6734,7 @@ elif mode == 'Retrieval':
 							bucket=bucket_name.strip( ), prefix=prefix.strip( ) or None,
 							continue_on_failure=continue_on_failure ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'GoogleBucketLoader' )
+						count = len( documents )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						for i, doc in enumerate( documents, start=1 ):
@@ -6603,13 +6836,6 @@ elif mode == 'Geospatial':
 		documents = promote_source_result( mode_name='Geospatial', source_name=source, result=result )
 		st.session_state[ 'geospatial_raw_result' ] = result
 		st.session_state[ 'geospatial_documents' ] = documents
-		st.session_state[ 'documents' ] = documents
-		st.session_state[ 'raw_documents' ] = list( documents )
-		st.session_state[ 'raw_text' ] = '\n\n'.join(
-			document.page_content for document in documents if
-			isinstance( document.page_content, str ) and document.page_content.strip( ) )
-		st.session_state[ 'processed_text' ] = ''
-		st.session_state[ 'active_loader' ] = source
 		return documents
 	
 	st.subheader( '📡 Geospatial & Weather' )
@@ -6638,6 +6864,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'googlegeocoding_location_type' ] = ''
 				st.session_state[ 'googlegeocoding_timeout' ] = 10
 				st.session_state[ 'googlegeocoding_results' ] = { }
+				clear_if_active( 'Geocoding' )
 				st.session_state[ 'googlegeocoding_clear_request' ] = False
 			
 			def _clear_googlegeocoding_state( ) -> None:
@@ -6791,6 +7018,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'googlemaps_destination' ] = ''
 				st.session_state[ 'googlemaps_travel_mode' ] = 'driving'
 				st.session_state[ 'googlemaps_results' ] = { }
+				clear_if_active( 'Google Maps' )
 				st.session_state[ 'googlemaps_clear_request' ] = False
 			
 			googlemaps_mode = st.selectbox( 'Mode', options=GOOGLEMAPS_MODES,
@@ -6917,6 +7145,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'googleweather_days' ] = 5
 				st.session_state[ 'googleweather_timeout' ] = 10
 				st.session_state[ 'googleweather_results' ] = { }
+				clear_if_active( 'Google Weather' )
 				st.session_state[ 'googleweather_clear_request' ] = False
 			
 			gw_location = st.text_area( 'Location', height=70, key='googleweather_location',
@@ -6996,6 +7225,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'openweather_past_days' ] = 0
 				st.session_state[ 'openweather_count' ] = 10
 				st.session_state[ 'openweather_results' ] = { }
+				clear_if_active( 'Open Weather' )
 				st.session_state[ 'openweather_clear_request' ] = False
 			
 			def _clear_openweather_state( ) -> None:
@@ -7063,6 +7293,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'historicalweather_timezone' ] = 'auto'
 				st.session_state[ 'historicalweather_count' ] = 10
 				st.session_state[ 'historicalweather_results' ] = { }
+				clear_if_active( 'Historical Weather' )
 				st.session_state[ 'historicalweather_clear_request' ] = False
 			
 			def _clear_historicalweather_state( ) -> None:
@@ -7202,6 +7433,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'usgsearthquakes_max_radius_km' ] = ''
 				st.session_state[ 'usgsearthquakes_timeout' ] = 20
 				st.session_state[ 'usgsearthquakes_results' ] = { }
+				clear_if_active( 'USGS Earthquakes' )
 				st.session_state[ 'usgsearthquakes_clear_request' ] = False
 			
 			usgseq_mode = st.selectbox( 'Mode', options=USGSEARTHQUAKES_MODES,
@@ -7309,6 +7541,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'earthobservatory_end_date' ] = ''
 				st.session_state[ 'earthobservatory_timeout' ] = 20
 				st.session_state[ 'earthobservatory_results' ] = { }
+				clear_if_active( 'NASA Earth Observatory' )
 				st.session_state[ 'earthobservatory_clear_request' ] = False
 			
 			def _clear_earthobservatory_state( ) -> None:
@@ -7467,6 +7700,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'usgstnm_offset' ] = 0
 				st.session_state[ 'usgstnm_timeout' ] = 20
 				st.session_state[ 'usgstnm_results' ] = { }
+				clear_if_active( 'The National Map' )
 				st.session_state[ 'usgstnm_clear_request' ] = False
 			usgstnm_mode = st.selectbox( 'Mode', options=USGSTNM_MODES, index=USGSTNM_MODES.index(
 				st.session_state.get( 'usgstnm_mode', 'products' ) ), key='usgstnm_mode' )
@@ -7570,6 +7804,7 @@ elif mode == 'Geospatial':
 				st.session_state[ 'usgssb_fields' ] = [ ]
 				st.session_state[ 'usgssb_timeout' ] = 20
 				st.session_state[ 'usgssb_results' ] = { }
+				clear_if_active( 'USGS Science Base' )
 				st.session_state[ 'usgssb_clear_request' ] = False
 			
 			usgssb_mode = st.selectbox( 'Mode', options=USGSSB_MODES,
@@ -7625,6 +7860,7 @@ elif mode == 'Geospatial':
 		with st.expander( label='Open Sky', icon='✈️', expanded=False ):
 			def _clear_opensky_state( ) -> None:
 				st.session_state[ 'opensky_results' ] = { }
+				clear_if_active( 'Open Sky' )
 				st.session_state[ 'opensky_mode' ] = 'states_bbox'
 				st.session_state[ 'opensky_icao24' ] = ''
 				st.session_state[ 'opensky_airport' ] = ''
@@ -8707,13 +8943,6 @@ elif mode == 'Environmental':
 		documents = promote_source_result( mode_name='Environmental', source_name=source, result=result )
 		st.session_state[ 'environmental_raw_result' ] = result
 		st.session_state[ 'environmental_documents' ] = documents
-		st.session_state[ 'documents' ] = documents
-		st.session_state[ 'raw_documents' ] = list( documents )
-		st.session_state[ 'raw_text' ] = '\n\n'.join(
-			document.page_content for document in documents if
-			isinstance( document.page_content, str ) and document.page_content.strip( ) )
-		st.session_state[ 'processed_text' ] = ''
-		st.session_state[ 'active_loader' ] = source
 		return documents
 	
 	st.subheader( '🌍 Environmental Data' )
@@ -8740,6 +8969,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'airnow_distance' ] = 25
 				st.session_state[ 'airnow_timeout' ] = 20
 				st.session_state[ 'airnow_results' ] = { }
+				clear_if_active( 'Air Now' )
 				st.session_state[ 'airnow_clear_request' ] = False
 			
 			def _clear_airnow_state( ) -> None:
@@ -8865,6 +9095,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'climatedata_offset' ] = 0
 				st.session_state[ 'climatedata_timeout' ] = 20
 				st.session_state[ 'climatedata_results' ] = { }
+				clear_if_active( 'NOAA Climate Data' )
 				st.session_state[ 'climatedata_clear_request' ] = False
 			
 			climatedata_mode = st.selectbox( 'Mode', options=CLIMATEDATA_MODES,
@@ -9025,6 +9256,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'eonet_bbox' ] = ''
 				st.session_state[ 'eonet_timeout' ] = 20
 				st.session_state[ 'eonet_results' ] = { }
+				clear_if_active( 'NASA EONET' )
 				st.session_state[ 'eonet_clear_request' ] = False
 			
 			eonet_mode = st.selectbox( 'Mode', options=EONET_MODES, index=EONET_MODES.index( st.session_state.get( 'eonet_mode', 'events' ) ), key='eonet_mode' )
@@ -9121,6 +9353,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'envirofacts_limit' ] = 25
 				st.session_state[ 'envirofacts_timeout' ] = 20
 				st.session_state[ 'envirofacts_results' ] = { }
+				clear_if_active( 'EPA Envirofacts' )
 				st.session_state[ 'envirofacts_clear_request' ] = False
 			
 			envirofacts_table_name = st.selectbox( 'Table', options=ENVIROFACTS_TABLES, index=ENVIROFACTS_TABLES.index( st.session_state.get( 'envirofacts_table_name', 'TRI_FACILITY' ) ), key='envirofacts_table_name' )
@@ -9208,6 +9441,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'tidesandcurrents_interval' ] = 'hilo'
 				st.session_state[ 'tidesandcurrents_timeout' ] = 20
 				st.session_state[ 'tidesandcurrents_results' ] = { }
+				clear_if_active( 'NOAA Tides & Currents' )
 				st.session_state[ 'tidesandcurrents_clear_request' ] = False
 			
 			tac_mode = st.selectbox( 'Mode', options=TIDESANDCURRENTS_MODES, index=TIDESANDCURRENTS_MODES.index( st.session_state.get( 'tidesandcurrents_mode', 'water-level' ) ), key='tidesandcurrents_mode' )
@@ -9302,6 +9536,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'uvindex_state' ] = 'VA'
 				st.session_state[ 'uvindex_timeout' ] = 20
 				st.session_state[ 'uvindex_results' ] = { }
+				clear_if_active( 'EPA UV Index' )
 				st.session_state[ 'uvindex_clear_request' ] = False
 			
 			uvindex_mode = st.selectbox( 'Mode', options=UVINDEX_MODES, index=UVINDEX_MODES.index( st.session_state.get( 'uvindex_mode', 'daily-zip' ) ), key='uvindex_mode' )
@@ -9449,6 +9684,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'purpleair_fields' ] = PURPLEAIR_SENSOR_LIST_DEFAULT_FIELDS
 				st.session_state[ 'purpleair_timeout' ] = 20
 				st.session_state[ 'purpleair_results' ] = { }
+				clear_if_active( 'Purple Air' )
 				st.session_state[ 'purpleair_clear_request' ] = False
 			
 			purpleair_mode = st.selectbox( 'Mode', options=PURPLEAIR_MODES, index=PURPLEAIR_MODES.index( st.session_state.get( 'purpleair_mode', 'sensors' ) ), key='purpleair_mode' )
@@ -9589,6 +9825,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'openaq_page' ] = 1
 				st.session_state[ 'openaq_timeout' ] = 20
 				st.session_state[ 'openaq_results' ] = { }
+				clear_if_active( 'Open Air Quality' )
 				st.session_state[ 'openaq_clear_request' ] = False
 			
 			openaq_mode = st.selectbox( 'Mode', options=OPENAQ_MODES, index=OPENAQ_MODES.index( st.session_state.get( 'openaq_mode', 'locations' ) ), key='openaq_mode', help=(
@@ -9734,6 +9971,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'firms_sensor' ] = 'ALL'
 				st.session_state[ 'firms_timeout' ] = 20
 				st.session_state[ 'firms_results' ] = { }
+				clear_if_active( 'NASA FIRMS' )
 				st.session_state[ 'firms_clear_request' ] = False
 			
 			firms_mode = st.selectbox( 'Mode', options=FIRMS_MODES, index=FIRMS_MODES.index( st.session_state.get( 'firms_mode', 'area' ) ), key='firms_mode' )
@@ -9835,6 +10073,7 @@ elif mode == 'Environmental':
 				st.session_state[ 'usgswaterdata_limit' ] = 25
 				st.session_state[ 'usgswaterdata_timeout' ] = 20
 				st.session_state[ 'usgswaterdata_results' ] = { }
+				clear_if_active( 'USGS Water Data' )
 				st.session_state[ 'usgswaterdata_clear_request' ] = False
 			
 			usgswd_mode = st.selectbox( 'Mode', options=USGSWATERDATA_MODES,
@@ -11050,13 +11289,6 @@ elif mode == 'Astronomical':
 		documents = promote_source_result( mode_name='Astronomical', source_name=source, result=result )
 		st.session_state[ 'astronomical_raw_result' ] = result
 		st.session_state[ 'astronomical_documents' ] = documents
-		st.session_state[ 'documents' ] = documents
-		st.session_state[ 'raw_documents' ] = list( documents )
-		st.session_state[ 'raw_text' ] = '\n\n'.join(
-			document.page_content for document in documents if
-			isinstance( document.page_content, str ) and document.page_content.strip( ) )
-		st.session_state[ 'processed_text' ] = ''
-		st.session_state[ 'active_loader' ] = source
 		return documents
 	
 	st.subheader( '🌌 Astronomical Data' )
@@ -11083,6 +11315,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'navalobservatory_location_label' ] = ''
 				st.session_state[ 'navalobservatory_timeout' ] = 20
 				st.session_state[ 'navalobservatory_results' ] = { }
+				clear_if_active( 'US Naval Observatory' )
 				st.session_state[ 'navalobservatory_clear_request' ] = False
 			
 			def _clear_navalobservatory_state( ) -> None:
@@ -11150,6 +11383,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'satellitecenter_resolution_factor' ] = 1
 				st.session_state[ 'satellitecenter_timeout' ] = 20
 				st.session_state[ 'satellitecenter_results' ] = { }
+				clear_if_active( 'Satellite Center' )
 				st.session_state[ 'satellitecenter_clear_request' ] = False
 			
 			def _clear_satellitecenter_state( ) -> None:
@@ -11270,6 +11504,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'astrocatalog_format' ] = 'json'
 				st.session_state[ 'astrocatalog_timeout' ] = 20
 				st.session_state[ 'astrocatalog_results' ] = { }
+				clear_if_active( 'Astro Catalog' )
 				st.session_state[ 'astrocatalog_clear_request' ] = False
 			
 			def _clear_astrocatalog_state( ) -> None:
@@ -11368,6 +11603,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'astroquery_radius_unit' ] = 'deg'
 				st.session_state[ 'astroquery_row_limit' ] = 100
 				st.session_state[ 'astroquery_results' ] = { }
+				clear_if_active( 'Astro Query' )
 				st.session_state[ 'astroquery_clear_request' ] = False
 			
 			def _clear_astroquery_state( ) -> None:
@@ -11462,6 +11698,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'starmap_show_const_names' ] = False
 				st.session_state[ 'starmap_timeout' ] = 20
 				st.session_state[ 'starmap_results' ] = { }
+				clear_if_active( 'Star Map' )
 				st.session_state[ 'starmap_clear_request' ] = False
 			
 			def _clear_starmap_state( ) -> None:
@@ -11578,6 +11815,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'simbad_radius_unit' ] = 'deg'
 				st.session_state[ 'simbad_row_limit' ] = 100
 				st.session_state[ 'simbad_results' ] = { }
+				clear_if_active( 'SIMBAD' )
 				st.session_state[ 'simbad_clear_request' ] = False
 			
 			def _clear_simbad_state( ) -> None:
@@ -11675,6 +11913,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'spaceweather_keyword' ] = ''
 				st.session_state[ 'spaceweather_timeout' ] = 20
 				st.session_state[ 'spaceweather_results' ] = { }
+				clear_if_active( 'Space Weather' )
 				st.session_state[ 'spaceweather_clear_request' ] = False
 			
 			def _clear_spaceweather_state( ) -> None:
@@ -11803,6 +12042,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'starchart_magnitude' ] = 7.5
 				st.session_state[ 'starchart_timeout' ] = 20
 				st.session_state[ 'starchart_results' ] = { }
+				clear_if_active( 'Star Chart' )
 				st.session_state[ 'starchart_clear_request' ] = False
 			
 			def _clear_starchart_state( ) -> None:
@@ -11967,6 +12207,7 @@ elif mode == 'Astronomical':
 				st.session_state[ 'nearbyobjects_include_discovery' ] = True
 				st.session_state[ 'nearbyobjects_timeout' ] = 20
 				st.session_state[ 'nearbyobjects_results' ] = { }
+				clear_if_active( 'Near Earth Objects' )
 				st.session_state[ 'nearbyobjects_clear_request' ] = False
 			
 			def _clear_nearbyobjects_state( ) -> None:
@@ -13089,6 +13330,7 @@ elif mode == 'Demographic':
 				st.session_state[ 'census_predicates' ] = ''
 				st.session_state[ 'census_timeout' ] = 20
 				st.session_state[ 'census_results' ] = { }
+				clear_if_active( 'u_s_census_bureau' )
 				st.session_state[ 'census_clear_request' ] = False
 			
 			census_mode = st.selectbox( 'Mode', options=CENSUS_MODES, index=CENSUS_MODES.index(
@@ -13214,6 +13456,7 @@ elif mode == 'Demographic':
 				st.session_state[ 'socrata_offset' ] = 0
 				st.session_state[ 'socrata_timeout' ] = 20
 				st.session_state[ 'socrata_results' ] = { }
+				clear_if_active( 'cdc_socrata' )
 				st.session_state[ 'socrata_clear_request' ] = False
 			
 			socrata_mode = st.selectbox( 'Mode', options=SOCRATA_MODES, index=SOCRATA_MODES.index(
@@ -13358,6 +13601,7 @@ elif mode == 'Demographic':
 				st.session_state[ 'healthdata_offset' ] = 0
 				st.session_state[ 'healthdata_timeout' ] = 20
 				st.session_state[ 'healthdata_results' ] = { }
+				clear_if_active( 'u_s_health' )
 				st.session_state[ 'healthdata_clear_request' ] = False
 			
 			healthdata_mode = st.selectbox( 'Mode', options=HEALTHDATA_MODES,
@@ -13509,6 +13753,7 @@ elif mode == 'Demographic':
 				st.session_state[ 'who_format' ] = 'json'
 				st.session_state[ 'who_timeout' ] = 20
 				st.session_state[ 'who_results' ] = { }
+				clear_if_active( 'who_global' )
 				st.session_state[ 'who_clear_request' ] = False
 			
 			who_mode = st.selectbox( 'Mode', options=WHO_MODES, index=WHO_MODES.index(
@@ -13623,6 +13868,7 @@ elif mode == 'Demographic':
 				st.session_state[ 'un_custom_query_path' ] = ''
 				st.session_state[ 'un_timeout' ] = 20
 				st.session_state[ 'un_results' ] = { }
+				clear_if_active( 'united_nations' )
 				st.session_state[ 'un_clear_request' ] = False
 			
 			un_mode = st.selectbox( 'Mode', options=UN_MODES, index=UN_MODES.index(
@@ -13755,6 +14001,7 @@ elif mode == 'Demographic':
 				st.session_state[ 'worldpop_page_size' ] = 25
 				st.session_state[ 'worldpop_timeout' ] = 20
 				st.session_state[ 'worldpop_results' ] = { }
+				clear_if_active( 'world_population' )
 				st.session_state[ 'worldpop_clear_request' ] = False
 			
 			worldpop_mode = st.selectbox( 'Mode', options=WORLDPOP_MODES,
@@ -13897,6 +14144,7 @@ elif mode == 'Demographic':
 				st.session_state[ 'wonder_request_xml' ] = ''
 				st.session_state[ 'wonder_timeout' ] = 20
 				st.session_state[ 'wonder_results' ] = { }
+				clear_if_active( 'cdc_wonder' )
 				st.session_state[ 'wonder_clear_request' ] = False
 			
 			wonder_mode = st.selectbox( 'Mode', options=WONDER_MODES, index=WONDER_MODES.index(
@@ -13989,7 +14237,7 @@ elif mode == 'Demographic':
 			
 			with b3:
 				can_save = (
-						st.session_state.get( 'active_loader' ) == 'PubMedSearchLoader' and
+						st.session_state.get( 'active_loader' ) == 'pub_med_search' and
 						isinstance( st.session_state.get( 'raw_text' ), str ) and
 						st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -14117,7 +14365,7 @@ elif mode == 'Demographic':
 			
 			with b3:
 				can_save = (
-						st.session_state.get( 'active_loader' ) == 'OpenCityLoader' and
+						st.session_state.get( 'active_loader' ) == 'open_city_data' and
 						isinstance( st.session_state.get( 'raw_text' ), str ) and
 						st.session_state.get( 'raw_text' ).strip( ))
 				
@@ -14137,6 +14385,15 @@ elif mode == 'Demographic':
 	
 	with right:
 		st.markdown( '##### Results' )
+		if pubmed_clear:
+			remaining = _clear_loader_documents( 'pub_med_search' )
+			st.info( f'PubMed Loader state cleared. Remaining documents: {remaining}.' )
+
+		if open_city_clear:
+			remaining = _clear_loader_documents( 'open_city_data' )
+			st.info( f'Open City Data Loader state cleared. Remaining documents: '
+			         f'{remaining}.' )
+
 		active_source = st.session_state.get( 'demographic_active_source', '' )
 		display_names: Dict[ str, str ] = { 'u_s_census_bureau': 'U.S. Census Bureau',
 				'cdc_socrata': 'CDC Socrata', 'u_s_health': 'U.S. Health',
@@ -14630,9 +14887,6 @@ elif mode == 'Demographic':
 		# -------- Pub Med
 		elif active_source == 'pub_med_search':
 			st.markdown( '##### Pub Med Search' )
-			if pubmed_clear:
-				remaining = _clear_loader_documents( 'PubMedSearchLoader' )
-				st.info( f'PubMed Loader state cleared. Remaining documents: {remaining}.' )
 			
 			if pubmed_submit:
 				if not pubmed_query or not pubmed_query.strip( ):
@@ -14643,7 +14897,7 @@ elif mode == 'Demographic':
 						documents = loader.load( query=pubmed_query.strip( ), max_docs=int(
 							pubmed_max_docs ) ) or [ ]
 						
-						count = _promote_loader_documents( documents, 'PubMedSearchLoader' )
+						count = len( documents )
 						
 						items: list[ dict[ str, Any ] ] = [ ]
 						
@@ -14722,10 +14976,6 @@ elif mode == 'Demographic':
 		# -------- Open City
 		elif active_source == 'open_city_data':
 			st.markdown( '##### Open City Data' )
-			if open_city_clear:
-				remaining = _clear_loader_documents( 'OpenCityLoader' )
-				st.info( f'Open City Data Loader state cleared. Remaining documents: '
-				         f'{remaining}.' )
 			
 			if open_city_submit:
 				try:
@@ -14739,7 +14989,7 @@ elif mode == 'Demographic':
 					documents = loader.load( city_id=clean_city_id, dataset_id=clean_dataset_id,
 						limit=int( limit ) ) or [ ]
 					
-					count = _promote_loader_documents( documents, 'OpenCityLoader' )
+					count = len( documents )
 					
 					items: list[ dict[ str, Any ] ] = [ ]
 					for i, doc in enumerate( documents, start=1 ):
@@ -14835,76 +15085,80 @@ elif mode == 'Generation':
 		st.session_state[ 'generation_active_source' ] = ''
 	
 	def _promote_generation_result( provider: str, result: Any ) -> None:
-		"""Promote a provider response into the shared generation document state.
+		"""Promote a successful provider response into shared document-processing state.
 
 		Purpose:
-		    Converts the active provider response into LangChain documents used by the shared
-		    right-column viewer while retaining the original response object for provider-specific
-		    rendering.
+			Preserve the original response and its provider identity while synchronizing the
+			canonical documents and derived processing results.
 
 		Args:
-		    provider (str): Name of the provider that generated the response.
-		    result (Any): Response returned by the provider wrapper.
+			provider (str): Non-empty generation provider name.
+			result (Any): Provider response.
 
 		Returns:
-		    None: This function updates Streamlit session state.
+			None: This function updates Streamlit session state.
+
+		Raises:
+			Error: Wraps and logs invalid arguments or promotion failures.
 		"""
-		if not str( provider or '' ).strip( ):
-			raise ValueError( 'Provider cannot be empty.' )
-		
-		documents: list[ Document ] = [ ]
-		
-		if isinstance( result, list ) and all( isinstance( item, Document ) for item in result ):
-			documents = list( result )
-		else:
-			if isinstance( result, (dict, list) ):
-				page_content = json.dumps( normalize( result ), indent=2, ensure_ascii=False )
+		try:
+			throw_if( 'provider', provider )
+			if result is None or ( isinstance( result, ( str, list, dict ) ) and not result ):
+				st.warning( 'No response returned.' )
+				return
+			if isinstance( result, list ) and all( isinstance( item, Document ) for item in result ):
+				documents = [ Document( page_content=item.page_content,
+					metadata=dict( item.metadata or { } ) ) for item in result
+					if item.page_content.strip( ) ]
 			else:
-				page_content = str( result or '' )
-			
-			documents = [ Document( page_content=page_content, metadata={ 'mode': 'Generation',
-					'provider': provider, } ) ]
-		
-		for document in documents:
-			if not isinstance( getattr( document, 'metadata', None ), dict ):
-				document.metadata = { }
-			
-			document.metadata.setdefault( 'mode', 'Generation' )
-			document.metadata.setdefault( 'provider', provider )
-		
-		st.session_state[ 'documents' ] = list( documents )
-		st.session_state[ 'raw_documents' ] = list( documents )
-		st.session_state[ 'raw_text' ] = '\n\n'.join(
-			document.page_content for document in documents if
-					isinstance( getattr( document, 'page_content', None ), str ) )
-		st.session_state[ 'generation_documents' ] = list( documents )
-		st.session_state[ 'generation_raw_result' ] = result
-		st.session_state[ 'generation_active_source' ] = provider
-	
-	def _clear_generation_result( provider: str ) -> None:
-		"""Clear the shared generation result for the active provider.
+				page_content = json.dumps( normalize( result ), indent=2, ensure_ascii=False,
+					default=str ) if isinstance( result, ( dict, list ) ) else str( result )
+				documents = [ Document( page_content=page_content, metadata={ } ) ] \
+					if page_content.strip( ) else [ ]
+			if not documents:
+				st.warning( 'No response returned.' )
+				return
+			for document in documents:
+				document.metadata.setdefault( 'mode', 'Generation' )
+				document.metadata.setdefault( 'provider', provider )
+			_promote_loader_documents( documents, provider )
+			st.session_state[ 'generation_documents' ] = list( documents )
+			st.session_state[ 'generation_raw_result' ] = result
+			st.session_state[ 'generation_active_source' ] = provider
+		except Error:
+			raise
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'app'
+			exception.cause = 'Generation'
+			exception.method = '_promote_generation_result( provider, result ) -> None'
+			Logger( ).write( exception )
+			raise exception
 
-		Purpose:
-		    Removes the shared generated document only when the provider being cleared currently
-		    owns
-		    the active result.
+	def _clear_generation_result( provider: str ) -> None:
+		"""Clear only the specified generation provider's owned state.
 
 		Args:
-		    provider (str): Name of the provider whose controls are being cleared.
+			provider (str): Non-empty provider identifier.
 
 		Returns:
-		    None: This function updates Streamlit session state.
+			None: This function updates Streamlit session state.
+
+		Raises:
+			Error: Propagates a logged source-clearing failure.
 		"""
+		clear_if_active( provider )
 		if st.session_state.get( 'generation_active_source', '' ) != provider:
 			return
-		
-		st.session_state[ 'documents' ] = [ ]
-		st.session_state[ 'raw_documents' ] = [ ]
-		st.session_state[ 'raw_text' ] = ''
 		st.session_state[ 'generation_documents' ] = [ ]
 		st.session_state[ 'generation_raw_result' ] = None
 		st.session_state[ 'generation_active_source' ] = ''
-	
+
+	# Restore the cached generated documents before rendering processing controls.
+	generation_source = st.session_state[ 'generation_active_source' ]
+	if generation_source and st.session_state[ 'generation_documents' ]:
+		_promote_loader_documents( st.session_state[ 'generation_documents' ], generation_source )
+
 	left, right = st.columns( [ 0.4, 0.6 ], gap='xxsmall', border=True )
 	
 	# ------------------------------------------------------------------
@@ -15569,11 +15823,12 @@ elif mode == 'Generation':
 			# Reasoning Budget
 			# -----------------------------
 			if claude_thinking:
+				max_budget = max( 1024, claude_max_tokens - 1 )
+				if st.session_state[ 'claude_thinking_budget_chat' ] > max_budget:
+					st.session_state[ 'claude_thinking_budget_chat' ] = max_budget
 				claude_thinking_budget = st.number_input( 'Thinking Budget', min_value=1024,
-					max_value=max( 1024, int( claude_max_tokens ) - 1 ), value=min( int(
-						st.session_state.get( 'claude_thinking_budget_chat', 1024 ) ), max( 1024,
-						int( claude_max_tokens ) - 1 ) ), step=1024,
-					key='claude_thinking_budget_chat', help='Must be less than Max Tokens.' )
+					max_value=max_budget, step=1024, key='claude_thinking_budget_chat',
+					disabled=claude_max_tokens <= 1024, help='Must be less than Max Tokens.' )
 			else:
 				claude_thinking_budget = None
 			
@@ -15621,6 +15876,40 @@ elif mode == 'Generation':
 				st.button( 'Clear', key='claude_clear_chat', on_click=_clear_claude_state,
 					use_container_width=True )
 		
+			# -----------------------------
+			# Submit Button
+			# -----------------------------
+			if claude_submit:
+				try:
+					throw_if( 'claude_prompt', claude_prompt )
+					if claude_thinking and claude_thinking_budget >= claude_max_tokens:
+						raise ValueError( 'Thinking Budget must be less than Max Tokens.' )
+					allowed_domains = _normalize_claude_domains( claude_domains ) \
+						if claude_web_search else [ ]
+					blocked_domains = _normalize_claude_domains( claude_blocked_domains ) \
+						if claude_web_search else [ ]
+					if allowed_domains and blocked_domains:
+						raise ValueError( 'Specify either allowed or blocked search domains, not both.' )
+					stop_lines = _normalize_claude_stop_lines( claude_stop )
+					fetcher = Claude( )
+					result = fetcher.generate_text( query=claude_prompt, model=claude_model,
+						temperature=claude_temperature, max_tokens=claude_max_tokens,
+						top_p=claude_top_p, top_k=claude_top_k if claude_top_k > 0 else None,
+						system=claude_system if claude_system.strip( ) else None,
+						stop_sequences=stop_lines or None, thinking=claude_thinking,
+						thinking_budget=claude_thinking_budget, web_search=claude_web_search,
+						search_domains=allowed_domains or None, blocked_domains=blocked_domains or None )
+					_promote_generation_result( provider='Claude', result=result )
+				except Error as e:
+					st.error( e.message or str( e ) )
+				except Exception as e:
+					exception = Error( e )
+					exception.module = 'app'
+					exception.cause = 'Claude'
+					exception.method = 'Generation: Claude Submit'
+					Logger( ).write( exception )
+					st.error( exception.message or str( exception ) )
+
 		# ---------------------
 		# ---- Expander GEMINI
 		# ---------------------
@@ -15987,11 +16276,26 @@ elif mode == 'Generation':
 					
 					params = { key: value for key, value in params.items( ) if value is not None }
 					
-					result = _invoke_provider( fetcher, mistral_prompt, params )
+					result = fetcher.fetch( query=mistral_prompt, **params )
 					_promote_generation_result( provider='Mistral', result=result )
 				
 				except Exception as exc:
 					st.error( str( exc ) )
+
+	# ------------------------------------------------------------------
+	# RIGHT COLUMN — GENERATION RESULTS
+	# ------------------------------------------------------------------
+	with right:
+		st.markdown( '##### Results' )
+		generation_source = st.session_state.get( 'generation_active_source', '' )
+		if generation_source and st.session_state[ 'generation_documents' ]:
+			st.caption( f'Active Source: {generation_source}' )
+			_render_output( st, st.session_state[ 'generation_raw_result' ] )
+			render_source_processing_controls( generation_source, 'generation_processing' )
+		else:
+			st.info( 'Select a provider, configure the request, and submit a prompt.' )
+
+		render_document_processing_tabs( key_prefix='generation' )
 
 # ======================================================================================
 # FOOTER — SECTION
