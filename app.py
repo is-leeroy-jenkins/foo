@@ -1255,15 +1255,15 @@ def render_document_processing_actions( loader_name: str, key_prefix: str ) -> N
 			st.session_state[ 'vector_store_namespace' ] = ''
 			st.success( f'Created {len( chunks )} chunk(s) containing {len( all_tokens )} '
 				f'word token(s).' )
-		except Error:
-			raise
+		except Error as e:
+			st.error( e.message or str( e ) )
 		except Exception as e:
 			exception = Error( e )
 			exception.module = 'app'
 			exception.cause = 'DocumentProcessing'
 			exception.method = 'render_document_processing_actions( loader_name, key_prefix )'
 			Logger( ).write( exception )
-			st.error( str( exception ) )
+			st.error( exception.message or str( exception ) )
 	
 	if embed_clicked:
 		try:
@@ -1893,43 +1893,64 @@ if mode == 'Loading':
 						if xml_file is None:
 							st.warning( 'Please select an XML file.' )
 						else:
-							with tempfile.TemporaryDirectory( ) as tmp:
-								path = os.path.join( tmp, xml_file.name )
-								with open( path, 'wb' ) as f:
-									f.write( xml_file.read( ) )
-								
-								with st.spinner( 'Loading XML via UnstructuredXMLLoader...' ):
-									documents = loader.load( path )
-						
-						if documents:
-							raw_text = '\n\n'.join( d.page_content for d in documents if
-									hasattr( d, 'page_content' ) and isinstance(
-										d.page_content, str ) and d.page_content.strip( ) )
-							
-							st.session_state.documents = documents
-							st.session_state.raw_documents = list( documents )
-							st.session_state.raw_text = raw_text
-							st.session_state.processed_text = None
-							st.session_state.active_loader = 'XmlLoader'
-							st.session_state[ 'xml_documents' ] = documents
-							st.session_state[ 'xml_tree_loaded' ] = False
-							st.session_state[ 'xml_xpath_results' ] = None
-							st.session_state[ 'xml_namespaces' ] = None
-						else:
-							st.warning( 'No extractable text found in XML.' )
+							try:
+								candidate = XmlLoader( )
+								with tempfile.TemporaryDirectory( ) as tmp:
+									path = os.path.join( tmp, xml_file.name )
+									with open( path, 'wb' ) as f:
+										f.write( xml_file.getvalue( ) )
+
+									with st.spinner( 'Loading XML via UnstructuredXMLLoader...' ):
+										xml_documents = candidate.load( path )
+
+								if xml_documents:
+									_promote_loader_documents( xml_documents, 'XmlLoader' )
+									st.session_state.xml_loader = candidate
+									loader = candidate
+									st.session_state[ 'xml_documents' ] = xml_documents
+									st.session_state[ 'xml_split_documents' ] = None
+									st.session_state[ 'xml_tree_loaded' ] = False
+									st.session_state[ 'xml_xpath_results' ] = None
+									st.session_state[ 'xml_namespaces' ] = None
+								else:
+									st.warning( 'No extractable text found in XML.' )
+							except Error as e:
+								st.error( e.message or str( e ) )
+							except Exception as e:
+								exception = Error( e )
+								exception.module = 'app'
+								exception.cause = 'XmlLoader'
+								exception.method = 'XML Loader: Semantic Load'
+								Logger( ).write( exception )
+								st.error( exception.message or str( exception ) )
 				
 				# --------------------------------------------------
 				# Split Semantic Documents
 				# --------------------------------------------------
 				with btn_c2:
 					if st.button( 'Split Semantic Documents', use_container_width=True, icon='➗', ):
-						with st.spinner( 'Splitting documents...' ):
-							split_docs = loader.split( size=int( chunk_size ),
-								amount=int( overlap_amount ) )
-						
+						try:
+							if not loader.documents:
+								raise ValueError( 'Load semantic XML documents before splitting.' )
+							if overlap_amount >= chunk_size:
+								raise ValueError( 'Chunk Overlap must be less than Chunk Size.' )
+							with st.spinner( 'Splitting documents...' ):
+								split_docs = loader.split( size=chunk_size, amount=overlap_amount )
+
 							if split_docs:
 								st.session_state[ 'xml_split_documents' ] = split_docs
 								st.success( f'Produced {len( split_docs )} document chunks.' )
+							else:
+								st.warning( 'No semantic document chunks were produced.' )
+						except Error as e:
+							st.error( e.message or str( e ) )
+						except Exception as e:
+							exception = Error( e )
+							exception.module = 'app'
+							exception.cause = 'XmlLoader'
+							exception.method = 'XML Loader: Semantic Split'
+							Logger( ).write( exception )
+							st.error( exception.message or str( exception ) )
 				
 				# ------------------------------------------------------------------
 				# Structured XML Tree Loading
@@ -1940,25 +1961,41 @@ if mode == 'Loading':
 					if xml_file is None:
 						st.warning( 'Please select an XML file.' )
 					else:
-						with tempfile.TemporaryDirectory( ) as tmp:
-							path = os.path.join( tmp, xml_file.name )
-							with open( path, 'wb' ) as f:
-								f.write( xml_file.read( ) )
-							
-							with st.spinner( 'Parsing XML into ElementTree...' ):
-								tree = loader.load_tree( path )
-						
-						if tree is not None:
-							xml_text = etree.tostring( tree, pretty_print=True, encoding='unicode' )
-							st.session_state.raw_text = xml_text
-							st.session_state.processed_text = None
-							st.session_state.active_loader = 'XmlLoader'
-							st.session_state[ 'xml_tree_loaded' ] = True
-							st.session_state[ 'xml_namespaces' ] = loader.xml_namespaces
-							st.session_state[ 'xml_xpath_results' ] = None
-							st.success( 'XML tree loaded successfully.' )
-						else:
-							st.warning( 'Failed to parse XML tree.' )
+						try:
+							candidate = XmlLoader( )
+							with tempfile.TemporaryDirectory( ) as tmp:
+								path = os.path.join( tmp, xml_file.name )
+								with open( path, 'wb' ) as f:
+									f.write( xml_file.getvalue( ) )
+
+								with st.spinner( 'Parsing XML into ElementTree...' ):
+									tree = candidate.load_tree( path )
+
+							if tree is not None and candidate.xml_root is not None:
+								xml_text = etree.tostring( tree, pretty_print=True, encoding='unicode' )
+								xml_documents = [ Document( page_content=xml_text, metadata={
+									'loader': 'XmlLoader', 'source': xml_file.name,
+									'load_mode': 'structured_xml', } ) ]
+								_promote_loader_documents( xml_documents, 'XmlLoader' )
+								st.session_state.xml_loader = candidate
+								loader = candidate
+								st.session_state[ 'xml_documents' ] = xml_documents
+								st.session_state[ 'xml_split_documents' ] = None
+								st.session_state[ 'xml_tree_loaded' ] = True
+								st.session_state[ 'xml_namespaces' ] = candidate.xml_namespaces
+								st.session_state[ 'xml_xpath_results' ] = None
+								st.success( 'XML tree loaded successfully.' )
+							else:
+								st.warning( 'Failed to parse XML tree.' )
+						except Error as e:
+							st.error( e.message or str( e ) )
+						except Exception as e:
+							exception = Error( e )
+							exception.module = 'app'
+							exception.cause = 'XmlLoader'
+							exception.method = 'XML Loader: Structured Load'
+							Logger( ).write( exception )
+							st.error( exception.message or str( exception ) )
 				
 				# ------------------------------------------------------------------
 				# XPath Query Interface
@@ -1976,12 +2013,22 @@ if mode == 'Loading':
 						help='Use namespace prefixes if applicable.' )
 					
 					if st.button( 'Run XPath Query', use_container_width=True, icon='🏃', ):
-						with st.spinner( 'Executing XPath...' ):
-							elements = xml_loader.get_elements( xpath_expr )
-						
-						if elements is not None:
-							st.session_state[ 'xml_xpath_results' ] = elements
-							st.success( f'Returned {len( elements )} elements.' )
+						try:
+							with st.spinner( 'Executing XPath...' ):
+								elements = xml_loader.get_elements( xpath_expr )
+
+							if elements is not None:
+								st.session_state[ 'xml_xpath_results' ] = elements
+								st.success( f'Returned {len( elements )} elements.' )
+						except Error as e:
+							st.error( e.message or str( e ) )
+						except Exception as e:
+							exception = Error( e )
+							exception.module = 'app'
+							exception.cause = 'XmlLoader'
+							exception.method = 'XML Loader: XPath Query'
+							Logger( ).write( exception )
+							st.error( exception.message or str( exception ) )
 					
 					if 'xml_xpath_results' in st.session_state and st.session_state[
 						'xml_xpath_results' ] is not None:
@@ -1989,8 +2036,11 @@ if mode == 'Loading':
 						st.caption( f'Previewing first {preview_count} elements' )
 						
 						for el in st.session_state[ 'xml_xpath_results' ][ :preview_count ]:
-							st.code( etree.tostring( el, pretty_print=True,
-								encoding='unicode' ), language='xml' )
+							if isinstance( el, etree._Element ):
+								st.code( etree.tostring( el, pretty_print=True,
+									encoding='unicode' ), language='xml' )
+							else:
+								st.write( el )
 				
 				# ------------------------------------------------------------------
 				# Debug / Introspection
