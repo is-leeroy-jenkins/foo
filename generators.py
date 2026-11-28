@@ -564,7 +564,13 @@ class Grok( Generator ):
 						parts.append( event.delta )
 					elif event.type == 'response.completed':
 						return event.response.output_text
-				return ''.join( parts )
+					elif event.type == 'response.failed':
+						raise RuntimeError( str( event.response.error or 'Provider response failed.' ) )
+					elif event.type == 'error':
+						raise RuntimeError( event.message )
+					elif event.type == 'response.incomplete':
+						raise RuntimeError( f'Provider response incomplete: {event.response.incomplete_details}' )
+				raise RuntimeError( 'Provider stream ended without a completion event.' )
 			if isinstance( response, dict ):
 				text = response.get( 'output_text' ) or response.get( 'text' )
 				if text:
@@ -696,6 +702,8 @@ class Grok( Generator ):
 			
 			if seed is not None:
 				raise ValueError( 'The Responses API does not support seed.' )
+			if stop:
+				raise ValueError( 'The Responses API does not support stop.' )
 			
 			format_payload = self.build_response_format( response_format )
 			if format_payload:
@@ -713,9 +721,6 @@ class Grok( Generator ):
 			if not is_reasoning:
 				self.params[ 'temperature' ] = self.temperature
 				self.params[ 'top_p' ] = self.top_p
-				
-				if stop:
-					raise ValueError( 'The Responses API does not support stop.' )
 			
 			self.response = self.create_response( self.params )
 			return self.extract_output_text( self.response )
@@ -1798,6 +1803,8 @@ class Claude( Generator ):
 			self.client = Anthropic( api_key=self.api_key )
 			self.search_domains = self.normalize_domains( search_domains )
 			self.blocked_domains = self.normalize_domains( blocked_domains )
+			if self.web_search and self.search_domains and self.blocked_domains:
+				raise ValueError( 'Specify either allowed or blocked search domains, not both.' )
 			self.thinking_budget = thinking_budget
 			self.messages = [ { 'role': 'user', 'content': self.query } ]
 			self.params = \
@@ -1815,8 +1822,8 @@ class Claude( Generator ):
 			
 			if thinking and self.supports_thinking( self.model ):
 				_budget = self.thinking_budget if self.thinking_budget is not None else 1024
-				if _budget >= self.max_tokens:
-					raise ValueError( 'Thinking Budget must be less than Max Tokens.' )
+				if not 1024 <= _budget < self.max_tokens:
+					raise ValueError( 'Thinking Budget must be at least 1024 and less than Max Tokens.' )
 				
 				self.params[ 'thinking' ] = \
 					{
@@ -1824,11 +1831,17 @@ class Claude( Generator ):
 							'budget_tokens': _budget,
 					}
 				
-				if self.top_p is not None:
+				if not 0.95 <= self.top_p <= 1.0:
+					raise ValueError( 'Extended thinking requires Top-P between 0.95 and 1.0.' )
+				if self.top_p < 1.0:
 					self.params[ 'top_p' ] = self.top_p
 			else:
-				self.params[ 'temperature' ] = self.temperature
-				self.params[ 'top_p' ] = self.top_p
+				if self.top_p < 1.0:
+					if self.temperature != 0.7:
+						raise ValueError( 'Use either a custom Temperature or Top-P, not both.' )
+					self.params[ 'top_p' ] = self.top_p
+				else:
+					self.params[ 'temperature' ] = self.temperature
 				
 				if self.top_k is not None and self.top_k > 0:
 					self.params[ 'top_k' ] = self.top_k
@@ -2564,7 +2577,11 @@ class Chat( Generator ):
 			tools: List[ Dict[ str, Any ] ] = [ ]
 			
 			if web_search:
-				tools.append( { 'type': 'web_search' } )
+				domains = self.normalize_domains( search_domains )
+				tool = { 'type': 'web_search' }
+				if domains:
+					tool[ 'filters' ] = { 'allowed_domains': domains }
+				tools.append( tool )
 			
 			if file_search:
 				store_ids = vector_store_ids or self.vector_store_ids
@@ -2610,7 +2627,13 @@ class Chat( Generator ):
 						parts.append( event.delta )
 					elif event.type == 'response.completed':
 						return event.response.output_text
-				return ''.join( parts )
+					elif event.type == 'response.failed':
+						raise RuntimeError( str( event.response.error or 'Provider response failed.' ) )
+					elif event.type == 'error':
+						raise RuntimeError( event.message )
+					elif event.type == 'response.incomplete':
+						raise RuntimeError( f'Provider response incomplete: {event.response.incomplete_details}' )
+				raise RuntimeError( 'Provider stream ended without a completion event.' )
 			if isinstance( response, dict ):
 				text = response.get( 'output_text' ) or response.get( 'text' )
 				if text:
