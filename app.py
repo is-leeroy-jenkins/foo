@@ -795,30 +795,47 @@ def metric_with_tooltip( label: str, value: str, tooltip: str ):
 	            """, unsafe_allow_html=True, )
 
 def clear_if_active( loader_name: str ) -> None:
-	if st.session_state.active_loader == loader_name:
-		st.session_state.documents = None
-		st.session_state.active_loader = None
-		st.session_state.tokens = None
-		st.session_state.vocabulary = None
-		st.session_state.token_counts = None
-		st.session_state.chunks = None
-		st.session_state.chunk_modes = None
-		st.session_state.chunked_documents = None
-		st.session_state.embeddings = None
-		st.session_state.active_table = None
-		st.session_state.df_frequency = None
-		st.session_state.df_tables = None
-		st.session_state.df_schema = None
-		st.session_state.df_preview = None
-		st.session_state.df_count = None
-		st.session_state.df_chunks = None
-		st.session_state.lines = None
-	states = st.session_state.get( 'source_processing_states', { } )
-	if isinstance( states, dict ):
+	"""Clear documents and processing state owned by the specified source.
+
+	Purpose:
+		Removes the requested source's cached processing results without clearing another
+		source's documents or derived state.
+
+	Args:
+		loader_name (str): Non-empty source identifier.
+
+	Returns:
+		None: This function updates Streamlit session state.
+
+	Raises:
+		Error: Wraps and logs an invalid argument or state operation.
+	"""
+	try:
+		throw_if( 'loader_name', loader_name )
+		ensure_document_processing_state( )
+		if st.session_state.get( 'active_loader' ) == loader_name:
+			st.session_state.documents = None
+			st.session_state.raw_documents = [ ]
+			st.session_state.raw_text = ''
+			st.session_state.active_loader = None
+			st.session_state.processed_text = ''
+			st.session_state.active_table = None
+			st.session_state.df_tables = None
+			st.session_state.df_schema = None
+			st.session_state.df_preview = None
+			st.session_state.df_count = None
+		states = st.session_state[ 'source_processing_states' ]
 		states.pop( loader_name, None )
-	if st.session_state.get( 'processing_active_source', '' ) == loader_name:
-		clear_document_processing_outputs( )
-		st.session_state[ 'processing_active_source' ] = ''
+		if st.session_state[ 'processing_active_source' ] == loader_name:
+			clear_document_processing_outputs( )
+			st.session_state[ 'processing_active_source' ] = ''
+	except Exception as e:
+		exception = Error( e )
+		exception.module = 'app'
+		exception.cause = 'DocumentProcessing'
+		exception.method = 'clear_if_active( loader_name: str ) -> None'
+		Logger( ).write( exception )
+		raise exception
 
 # =====================================================================
 # DOCUMENT CHUNKING / EMBEDDING / VECTOR STORAGE
@@ -837,6 +854,8 @@ EMBEDDING_MODELS: Dict[ str, List[ str ] ] = {
 				'sentence-transformers/all-mpnet-base-v2', ], }
 VECTOR_STORES = [ 'Chroma', 'Pinecone' ]
 DOCUMENT_PROCESSING_STATE: Dict[ str, Any ] = { 'chunked_documents': None,
+		'chunks': None, 'tokens': None, 'vocabulary': None, 'token_counts': None,
+		'chunk_modes': None, 'df_chunks': None, 'df_frequency': None, 'lines': None,
 		'chunk_source_signature': '', 'chunk_size_used': 0, 'chunk_overlap_used': 0,
 		'df_chunking': None, 'embedder': None, 'embeddings': None, 'embedding_provider': '',
 		'embedding_model': '', 'embedding_model_path': '', 'embedding_documents': None,
@@ -887,21 +906,32 @@ def clear_document_processing_outputs( ) -> None:
 	ensure_document_processing_state( )
 	for key, value in DOCUMENT_PROCESSING_STATE.items( ):
 		st.session_state[ key ] = value
-	st.session_state[ 'chunks' ] = None
-	st.session_state[ 'df_chunks' ] = None
 
 def reset_document_processing_controls( key_prefix: str ) -> None:
 	"""Request a reset for one loader's processing controls.
 
+	Purpose:
+		Resets widget values on the next execution without clearing another source's data.
+
 	Args:
-		key_prefix (str): Unique Streamlit key prefix assigned to the loader.
+		key_prefix (str): Non-empty Streamlit key prefix assigned to the loader.
 
 	Returns:
 		None: This function updates Streamlit session state.
+
+	Raises:
+		Error: Wraps and logs an invalid argument or state operation.
 	"""
-	throw_if( 'key_prefix', key_prefix )
-	clear_document_processing_outputs( )
-	st.session_state[ f'{key_prefix}_processing_reset_request' ] = True
+	try:
+		throw_if( 'key_prefix', key_prefix )
+		st.session_state[ f'{key_prefix}_processing_reset_request' ] = True
+	except Exception as e:
+		exception = Error( e )
+		exception.module = 'app'
+		exception.cause = 'DocumentProcessing'
+		exception.method = 'reset_document_processing_controls( key_prefix: str ) -> None'
+		Logger( ).write( exception )
+		raise exception
 
 def document_signature( documents: List[ Document ] ) -> str:
 	"""Create a deterministic signature for loaded documents.
@@ -1359,12 +1389,15 @@ def _promote_loader_documents( documents: List[ Document ] | None, active_loader
 	return len( docs )
 
 def _clear_loader_documents( loader_name: str ) -> int:
+	"""Clear source-owned documents and return the remaining document count.
+
+	Args:
+		loader_name (str): Non-empty source identifier validated by clear_if_active.
+
+	Returns:
+		int: Number of documents remaining in shared state.
+	"""
 	clear_if_active( loader_name )
-	st.session_state.raw_text = rebuild_raw_text_from_documents( ) or ''
-	st.session_state.processed_text = ''
-	st.session_state.tokens = None
-	st.session_state.vocabulary = None
-	st.session_state.token_counts = None
 	remaining = st.session_state.get( 'documents' ) or [ ]
 	return len( remaining )
 
@@ -1505,14 +1538,26 @@ if mode == 'Loading':
 				# ------------------------------------------------------------------
 				# Clear
 				# ------------------------------------------------------------------
-				if clear_nltk and st.session_state.get( 'documents' ):
-					st.session_state.documents = [ d for d in st.session_state.documents if
-							d.metadata.get( 'loader' ) != 'NLTKLoader' ]
-					
-					st.session_state.raw_text = ("\n\n".join( d.page_content for d in
-							st.session_state.documents ) if st.session_state.documents else None)
-					
-					st.session_state.active_loader = None
+				if clear_nltk:
+					documents = st.session_state.get( 'documents' ) or [ ]
+					remaining = [ d for d in documents if d.metadata.get( 'loader' ) != 'NLTKLoader' ]
+					active_loader = st.session_state.get( 'active_loader' )
+					if len( remaining ) != len( documents ):
+						clear_if_active( 'NLTKLoader' )
+						st.session_state.documents = remaining
+						st.session_state.raw_documents = list( remaining )
+						st.session_state.raw_text = rebuild_raw_text_from_documents( ) or ''
+						st.session_state.processed_text = ''
+						if active_loader == 'NLTKLoader':
+							active_loader = next( ( d.metadata.get( 'loader' ) for d in reversed( remaining )
+								if d.metadata.get( 'loader' ) ), None )
+						st.session_state.active_loader = active_loader
+						if active_loader:
+							activate_processing_source( active_loader )
+							clear_document_processing_outputs( )
+					else:
+						if active_loader != 'NLTKLoader' or not documents:
+							clear_if_active( 'NLTKLoader' )
 					st.info( 'NLTKLoader documents removed.' )
 				
 				# ------------------------------------------------------------------
@@ -1561,7 +1606,7 @@ if mode == 'Loading':
 							st.session_state.documents.extend( documents )
 						else:
 							st.session_state.documents = documents
-							st.session_state.raw_documents = list( documents )
+						st.session_state.raw_documents = list( st.session_state.documents )
 						
 						st.session_state.raw_text = "\n\n".join(
 							d.page_content for d in st.session_state.documents )
@@ -2261,23 +2306,28 @@ if mode == 'Loading':
 				# --------------------------------------------------
 				# Clear (remove only ExcelLoader documents)
 				# --------------------------------------------------
-				if clear_excel and st.session_state.get( 'documents' ):
+				if clear_excel:
 					reset_document_processing_controls( 'excel' )
-					st.session_state.documents = [ d for d in st.session_state.documents if
-							d.metadata.get( 'loader' ) != 'ExcelLoader' ]
-					
-					st.session_state.raw_documents = [ d for d in st.session_state.documents if
-							isinstance( getattr(
-								d, 'metadata', None ), dict ) ] if st.session_state.documents else [ ]
-					
-					st.session_state.raw_text = ('\n\n'.join(
-						d.page_content for d in st.session_state.documents if
-								isinstance( d.page_content, str ) \
-								and d.page_content.strip( ) ) if st.session_state.documents else None)
-					
-					st.session_state.processed_text = None
-					st.session_state.active_loader = None
-					st.info( "ExcelLoader documents removed." )
+					documents = st.session_state.get( 'documents' ) or [ ]
+					remaining = [ d for d in documents if d.metadata.get( 'loader' ) != 'ExcelLoader' ]
+					active_loader = st.session_state.get( 'active_loader' )
+					if len( remaining ) != len( documents ):
+						clear_if_active( 'ExcelLoader' )
+						st.session_state.documents = remaining
+						st.session_state.raw_documents = list( remaining )
+						st.session_state.raw_text = rebuild_raw_text_from_documents( ) or ''
+						st.session_state.processed_text = ''
+						if active_loader == 'ExcelLoader':
+							active_loader = next( ( d.metadata.get( 'loader' ) for d in reversed( remaining )
+								if d.metadata.get( 'loader' ) ), None )
+						st.session_state.active_loader = active_loader
+						if active_loader:
+							activate_processing_source( active_loader )
+							clear_document_processing_outputs( )
+					else:
+						if active_loader != 'ExcelLoader' or not documents:
+							clear_if_active( 'ExcelLoader' )
+					st.info( 'ExcelLoader documents removed.' )
 				
 				# --------------------------------------------------
 				# Load
