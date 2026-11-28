@@ -4009,9 +4009,8 @@ elif mode == 'Retrieval':
 	st.divider( )
 	left, right = st.columns( [ 0.4, 0.6 ], gap='xxsmall', border=True )
 	with left:
-		# ----------------------------
-		# -------- Expander (ArXiv)
-		# ----------------------------
+		
+		# -------- ArXiv
 		with st.expander( label='ArXiv', icon='📘', expanded=False ):
 			st.badge( label='Information', help=cfg.ARXIV )
 			if 'arxiv_results' not in st.session_state:
@@ -4094,9 +4093,8 @@ elif mode == 'Retrieval':
 		
 
 			render_source_processing_controls( 'ArXiv', 'retrieval_arxiv' )
-		# ----------------------------
-		# -------- Expander (Google Drive)
-		# ----------------------------
+		
+		# -------- Google Drive
 		with st.expander( label='Google Drive', icon='🛡️', expanded=False ):
 			st.badge( label='Information', help=cfg.GOOGLE_DRIVE )
 			if 'googledrive_results' not in st.session_state:
@@ -4196,11 +4194,9 @@ elif mode == 'Retrieval':
 					st.error( 'Google Drive request failed.' )
 					st.exception( exc )
 		
-
 			render_source_processing_controls( 'Google Drive', 'retrieval_google_drive' )
-		# ----------------------------
-		# -------- Expander (Wikipedia)
-		# ----------------------------
+		
+		# -------- Wikipedia
 		with st.expander( label='Wikipedia', icon='📖', expanded=False ):
 			st.badge( label='Information', help=cfg.WIKIPEDIA )
 			if 'wikipedia_results' not in st.session_state:
@@ -4229,12 +4225,21 @@ elif mode == 'Retrieval':
 			
 			c1, c2 = st.columns( 2 )
 			with c1:
-				wiki_language = st.text_input( 'Language Code', value=st.session_state.get( 'wikipedia_language', 'en' ), key='wikipedia_language', placeholder='en', help='Wikipedia language code, e.g. en, fr, de, ja.' )
+				wiki_language = st.text_input( 'Language Code',
+					value=st.session_state.get( 'wikipedia_language', 'en' ),
+					key='wikipedia_language', placeholder='en',
+					help='Wikipedia language code, e.g. en, fr, de, ja.' )
 			
 			with c2:
-				wiki_max_docs = st.number_input( 'Max Docs', min_value=1, max_value=300, value=int( st.session_state.get( 'wikipedia_max_docs', 5 ) ), step=1, key='wikipedia_max_docs', help='Maximum number of Wikipedia documents to retrieve.' )
+				wiki_max_docs = st.number_input( 'Max Docs', min_value=1, max_value=300,
+					value=int( st.session_state.get( 'wikipedia_max_docs', 5 ) ),
+					step=1, key='wikipedia_max_docs',
+					help='Maximum number of Wikipedia documents to retrieve.' )
 			
-			wiki_include_metadata = st.checkbox( 'Include All Metadata', value=st.session_state.get( 'wikipedia_include_metadata', False ), key='wikipedia_include_metadata', help='Include additional metadata fields when available.' )
+			wiki_include_metadata = st.checkbox( 'Include All Metadata',
+				value=st.session_state.get( 'wikipedia_include_metadata', False ),
+				key='wikipedia_include_metadata',
+				help='Include additional metadata fields when available.' )
 			
 			st.caption( 'No API key is required for Wikipedia retrieval. '
 			            'Optional only: LANGSMITH_API_KEY for tracing.' )
@@ -4276,7 +4281,6 @@ elif mode == 'Retrieval':
 			with st.expander( label='Information', expanded=False ):
 				st.help( Wikipedia )
 		
-
 			render_source_processing_controls( 'Wikipedia', 'retrieval_wikipedia' )
 		
 		# -------- Google Search
@@ -4446,7 +4450,6 @@ elif mode == 'Retrieval':
 				st.button( 'Clear', key='googlesearch_clear', on_click=_clear_googlesearch_state,
 					width='stretch' )
 		
-
 			render_source_processing_controls( 'Google Search', 'retrieval_google_search' )
 		
 		# -------- Open Science
@@ -4948,7 +4951,6 @@ elif mode == 'Retrieval':
 				
 				with st.expander( 'Raw Result', expanded=False ):
 					st.json( result )
-		
 
 			render_source_processing_controls( 'US Congress', 'retrieval_us_congress' )
 		
@@ -7101,7 +7103,6 @@ elif mode == 'Geospatial':
 			if historicalweather_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'Historical Weather'
 		
-
 			render_source_processing_controls( 'Historical Weather', 'api_historical_weather' )
 		
 		# ------ USGS Earthquakes
@@ -8719,6 +8720,7 @@ elif mode == 'Environmental':
 	st.divider( )
 	left, right = st.columns( [ 0.4, 0.6 ], gap='xxsmall', border=True )
 	with left:
+		
 		# ----------------------------
 		# -------- Expander Air Now
 		# ----------------------------
@@ -8799,6 +8801,7 @@ elif mode == 'Environmental':
 		
 
 			render_source_processing_controls( 'Air Now', 'api_air_now' )
+		
 		# ----------------------------
 		# -------- Expander NOAA Climate Data
 		# ----------------------------
@@ -8928,6 +8931,7 @@ elif mode == 'Environmental':
 		
 
 			render_source_processing_controls( 'NOAA Climate Data', 'api_noaa_climate_data' )
+		
 		# ----------------------------
 		# -------- Expander NASA EONET
 		# ----------------------------
@@ -9144,6 +9148,7 @@ elif mode == 'Environmental':
 		
 
 			render_source_processing_controls( 'EPA Envirofacts', 'api_epa_envirofacts' )
+		
 		# ----------------------------
 		# -------- Expander NOAA Tides & Currents
 		# ----------------------------
@@ -9254,6 +9259,7 @@ elif mode == 'Environmental':
 		
 
 			render_source_processing_controls( 'NOAA Tides & Currents', 'api_noaa_tides_currents' )
+		
 		# ----------------------------
 		# -------- Expander EPA UV Index
 		# ----------------------------
@@ -9331,6 +9337,7 @@ elif mode == 'Environmental':
 		
 
 			render_source_processing_controls( 'EPA UV Index', 'api_epa_uv_index' )
+		
 		# ----------------------------
 		# -------- Expander Purple Air
 		# ----------------------------
@@ -9512,6 +9519,7 @@ elif mode == 'Environmental':
 		
 
 			render_source_processing_controls( 'Purple Air', 'api_purple_air' )
+		
 		# ----------------------------
 		# -------- Expander Open Air Quality
 		# ----------------------------
@@ -9643,6 +9651,7 @@ elif mode == 'Environmental':
 		
 
 			render_source_processing_controls( 'Open Air Quality', 'api_open_air_quality' )
+		
 		# ----------------------------
 		# -------- Expander NASA FIRMS
 		# ----------------------------
@@ -9763,6 +9772,7 @@ elif mode == 'Environmental':
 		
 
 			render_source_processing_controls( 'NASA FIRMS', 'api_nasa_firms' )
+		
 		# ----------------------------
 		# -------- Expander USGS Water Data
 		# ----------------------------
@@ -9890,6 +9900,7 @@ elif mode == 'Environmental':
 	
 
 			render_source_processing_controls( 'USGS Water Data', 'api_usgs_water_data' )
+	
 	with right:
 		st.markdown( '### Results' )
 		active_source = st.session_state.get( 'environmental_active_source', '' )
@@ -11004,13 +11015,14 @@ elif mode == 'Environmental':
 				with st.expander( 'Raw Result', expanded=False ):
 					st.json( result )
 
-# ==============================================================================
-# ASTRONOMICAL MODE
 		if active_source == 'USGS Water Data':
 			_promote_environmental_result( source=active_source,
 				result=st.session_state.get( 'usgswaterdata_results' ) )
+		
 		render_document_processing_tabs( key_prefix='environmental' )
 
+# ==============================================================================
+# ASTRONOMICAL MODE
 # ==============================================================================
 elif mode == 'Astronomical':
 	st.session_state.setdefault( 'astronomical_active_source', '' )
@@ -11047,11 +11059,12 @@ elif mode == 'Astronomical':
 		st.session_state[ 'active_loader' ] = source
 		return documents
 	
-	st.subheader( '🌌 Physics & Astronomical Data' )
+	st.subheader( '🌌 Astronomical Data' )
 	st.divider( )
 	left, right = st.columns( [ 0.4, 0.6 ], gap='xxsmall', border=True )
 	
 	with left:
+		
 		# ----------------------------
 		# -------- Expander US Naval Observatory
 		# ----------------------------
@@ -11117,6 +11130,7 @@ elif mode == 'Astronomical':
 		
 
 			render_source_processing_controls( 'US Naval Observatory', 'api_us_naval_observatory' )
+		
 		# ----------------------------
 		# -------- Expander Satellite Center
 		# ----------------------------
@@ -11233,6 +11247,7 @@ elif mode == 'Astronomical':
 		
 
 			render_source_processing_controls( 'Satellite Center', 'api_satellite_center' )
+		
 		# ----------------------------
 		# -------- Expander Astro Catalog
 		# ----------------------------
@@ -11333,6 +11348,7 @@ elif mode == 'Astronomical':
 		
 
 			render_source_processing_controls( 'Astro Catalog', 'api_astro_catalog' )
+		
 		# ----------------------------
 		# -------- Expander Astro Query
 		# ----------------------------
@@ -11420,6 +11436,7 @@ elif mode == 'Astronomical':
 		
 
 			render_source_processing_controls( 'Astro Query', 'api_astro_query' )
+		
 		# ----------------------------
 		# -------- Expander Star Map
 		# ----------------------------
@@ -11541,6 +11558,7 @@ elif mode == 'Astronomical':
 		
 
 			render_source_processing_controls( 'Star Map', 'api_star_map' )
+		
 		# ----------------------------
 		# -------- Expander Simbad
 		# ----------------------------
@@ -11632,6 +11650,7 @@ elif mode == 'Astronomical':
 		
 
 			render_source_processing_controls( 'SIMBAD', 'api_simbad' )
+		
 		# ----------------------------
 		# -------- Expander Space Weather
 		# ----------------------------
@@ -11755,6 +11774,7 @@ elif mode == 'Astronomical':
 		
 
 			render_source_processing_controls( 'Space Weather', 'api_space_weather' )
+		
 		# ----------------------------
 		# -------- Expander Astro Catalog
 		# ----------------------------
@@ -11914,6 +11934,7 @@ elif mode == 'Astronomical':
 		
 
 			render_source_processing_controls( 'Star Chart', 'api_star_chart' )
+		
 		# ----------------------------
 		# -------- Expander Near Earth Object
 		# ----------------------------
@@ -12115,6 +12136,7 @@ elif mode == 'Astronomical':
 	
 
 			render_source_processing_controls( 'Near Earth Objects', 'api_near_earth_objects' )
+	
 	with right:
 		active_source = st.session_state.get( 'astronomical_active_source', '' )
 		result_keys: Dict[ str, str ] = { 'US Naval Observatory': 'navalobservatory_results',
@@ -12129,7 +12151,8 @@ elif mode == 'Astronomical':
 			st.info( 'Select a source, configure the request, and submit it to display results.' )
 		else:
 			st.caption( f'Active Source: {active_source}' )
-		
+
+		# -------- Naval Observatory
 		if active_source == 'US Naval Observatory':
 			naval_output = st.empty( )
 			
@@ -12537,7 +12560,6 @@ elif mode == 'Astronomical':
 		# -------- Star Map
 		if active_source == 'Star Map':
 			st.markdown( 'Results' )
-			
 			if starmap_submit:
 				try:
 					f = StarMap( )
@@ -12951,13 +12973,13 @@ elif mode == 'Astronomical':
 				with st.expander( 'Raw Result', expanded=False ):
 					st.json( result )
 
-# ==============================================================================
-# POPULATION MODE
 		if active_source in result_keys:
 			_promote_astronomical_result( source=active_source,
 				result=st.session_state.get( result_keys[ active_source ] ) )
 		render_document_processing_tabs( key_prefix='astronomical' )
 
+# ==============================================================================
+# POPULATION MODE
 # ==============================================================================
 elif mode == 'Demographic':
 	st.subheader( f'🩺 Demographics & Health Data' )
@@ -12967,6 +12989,7 @@ elif mode == 'Demographic':
 		st.session_state[ 'demographic_active_source' ] = ''
 	
 	with left:
+		
 		# ---------------------
 		# ---- Expander U.S. Census Bureau
 		# ---------------------
@@ -13012,8 +13035,8 @@ elif mode == 'Demographic':
 				
 				return ','.join( fields )
 			
-			def _validate_census_geography_clause( name: str, value: object, required: bool =
-			False ) -> str:
+			def _validate_census_geography_clause( name: str, value: object,
+					required: bool = False ) -> str:
 				text = str( value or '' ).strip( )
 				
 				if not text:
@@ -13119,6 +13142,7 @@ elif mode == 'Demographic':
 		
 
 			render_source_processing_controls( 'u_s_census_bureau', 'api_u_s_census_bureau' )
+		
 		# ---------------------
 		# ---- Expander CDC SOCRATA
 		# ---------------------
@@ -13262,6 +13286,7 @@ elif mode == 'Demographic':
 		
 
 			render_source_processing_controls( 'cdc_socrata', 'api_cdc_socrata' )
+		
 		# ---------------------
 		# ---- Expander US Health Data
 		# ---------------------
@@ -13408,6 +13433,7 @@ elif mode == 'Demographic':
 		
 
 			render_source_processing_controls( 'u_s_health', 'api_u_s_health' )
+		
 		# ---------------------
 		# ---- Expander WHO Global Health
 		# ---------------------
@@ -13526,6 +13552,7 @@ elif mode == 'Demographic':
 		
 
 			render_source_processing_controls( 'who_global', 'api_who_global' )
+		
 		# ---------------------
 		# ---- Expander United Nations Data
 		# ---------------------
@@ -13634,6 +13661,7 @@ elif mode == 'Demographic':
 		
 
 			render_source_processing_controls( 'united_nations', 'api_united_nations' )
+		
 		# ---------------------
 		# ---- Expander World Population
 		# ---------------------
@@ -13788,6 +13816,7 @@ elif mode == 'Demographic':
 		
 
 			render_source_processing_controls( 'world_population', 'api_world_population' )
+		
 		# ---------------------
 		# ---- Expander CDC WONDER
 		# ---------------------
@@ -13912,6 +13941,7 @@ elif mode == 'Demographic':
 		
 
 			render_source_processing_controls( 'cdc_wonder', 'api_cdc_wonder' )
+		
 		# ---------------------
 		# ---- Expander Pub Med
 		# ---------------------
@@ -13975,6 +14005,7 @@ elif mode == 'Demographic':
 		
 
 			render_source_processing_controls( 'pub_med_search', 'api_pub_med_search' )
+		
 		# ---------------------
 		# ---- Expander Open City
 		# ---------------------
@@ -14103,6 +14134,7 @@ elif mode == 'Demographic':
 	
 
 			render_source_processing_controls( 'open_city_data', 'api_open_city_data' )
+	
 	with right:
 		st.markdown( '##### Results' )
 		active_source = st.session_state.get( 'demographic_active_source', '' )
@@ -14772,19 +14804,21 @@ elif mode == 'Demographic':
 				
 				_render_fallback_raw( result )
 
-# ==============================================================================
-# TEXT GENERATION MODE
 		demographic_result_keys: Dict[ str, str ] = {
 			'u_s_census_bureau': 'census_results', 'cdc_socrata': 'socrata_results',
 			'u_s_health': 'healthdata_results', 'who_global': 'who_results',
 			'united_nations': 'un_results', 'world_population': 'worldpop_results',
 			'cdc_wonder': 'wonder_results', 'pub_med_search': 'pubmed_results',
 			'open_city_data': 'open_city_results', }
+		
 		if active_source in demographic_result_keys:
 			promote_source_result( mode_name='Demographic', source_name=active_source,
 				result=st.session_state.get( demographic_result_keys[ active_source ] ) )
+		
 		render_document_processing_tabs( key_prefix='demographic' )
 
+# ==============================================================================
+# TEXT GENERATION MODE
 # ==============================================================================
 elif mode == 'Generation':
 	st.subheader( '🧠  Generative AI' )
@@ -14877,6 +14911,7 @@ elif mode == 'Generation':
 	# LEFT COLUMN — GENERATION CONTROLS
 	# ------------------------------------------------------------------
 	with left:
+		
 		# ---------------------
 		# ---- Expander GPT
 		# ---------------------
