@@ -1354,7 +1354,8 @@ def render_document_processing_tabs( key_prefix: str='loading' ) -> None:
 	active_loader = st.session_state.get( 'active_loader' )
 	mode_source_keys = { 'retrieval': 'retrieval_active_source',
 			'geospatial': 'geospatial_active_source', 'environmental': 'environmental_active_source',
-			'astronomical': 'astronomical_active_source', 'demographic': 'demographic_active_source', }
+			'astronomical': 'astronomical_active_source', 'demographic': 'demographic_active_source',
+			'generation': 'generation_active_source', }
 	if key_prefix in mode_source_keys:
 		if active_loader != st.session_state.get( mode_source_keys[ key_prefix ], '' ):
 			documents = [ ]
@@ -15019,76 +15020,80 @@ elif mode == 'Generation':
 		st.session_state[ 'generation_active_source' ] = ''
 	
 	def _promote_generation_result( provider: str, result: Any ) -> None:
-		"""Promote a provider response into the shared generation document state.
+		"""Promote a successful provider response into shared document-processing state.
 
 		Purpose:
-		    Converts the active provider response into LangChain documents used by the shared
-		    right-column viewer while retaining the original response object for provider-specific
-		    rendering.
+			Preserve the original response and its provider identity while synchronizing the
+			canonical documents and derived processing results.
 
 		Args:
-		    provider (str): Name of the provider that generated the response.
-		    result (Any): Response returned by the provider wrapper.
+			provider (str): Non-empty generation provider name.
+			result (Any): Provider response.
 
 		Returns:
-		    None: This function updates Streamlit session state.
+			None: This function updates Streamlit session state.
+
+		Raises:
+			Error: Wraps and logs invalid arguments or promotion failures.
 		"""
-		if not str( provider or '' ).strip( ):
-			raise ValueError( 'Provider cannot be empty.' )
-		
-		documents: list[ Document ] = [ ]
-		
-		if isinstance( result, list ) and all( isinstance( item, Document ) for item in result ):
-			documents = list( result )
-		else:
-			if isinstance( result, (dict, list) ):
-				page_content = json.dumps( normalize( result ), indent=2, ensure_ascii=False )
+		try:
+			throw_if( 'provider', provider )
+			if result is None or ( isinstance( result, ( str, list, dict ) ) and not result ):
+				st.warning( 'No response returned.' )
+				return
+			if isinstance( result, list ) and all( isinstance( item, Document ) for item in result ):
+				documents = [ Document( page_content=item.page_content,
+					metadata=dict( item.metadata or { } ) ) for item in result
+					if item.page_content.strip( ) ]
 			else:
-				page_content = str( result or '' )
-			
-			documents = [ Document( page_content=page_content, metadata={ 'mode': 'Generation',
-					'provider': provider, } ) ]
-		
-		for document in documents:
-			if not isinstance( getattr( document, 'metadata', None ), dict ):
-				document.metadata = { }
-			
-			document.metadata.setdefault( 'mode', 'Generation' )
-			document.metadata.setdefault( 'provider', provider )
-		
-		st.session_state[ 'documents' ] = list( documents )
-		st.session_state[ 'raw_documents' ] = list( documents )
-		st.session_state[ 'raw_text' ] = '\n\n'.join(
-			document.page_content for document in documents if
-					isinstance( getattr( document, 'page_content', None ), str ) )
-		st.session_state[ 'generation_documents' ] = list( documents )
-		st.session_state[ 'generation_raw_result' ] = result
-		st.session_state[ 'generation_active_source' ] = provider
-	
-	def _clear_generation_result( provider: str ) -> None:
-		"""Clear the shared generation result for the active provider.
+				page_content = json.dumps( normalize( result ), indent=2, ensure_ascii=False,
+					default=str ) if isinstance( result, ( dict, list ) ) else str( result )
+				documents = [ Document( page_content=page_content, metadata={ } ) ] \
+					if page_content.strip( ) else [ ]
+			if not documents:
+				st.warning( 'No response returned.' )
+				return
+			for document in documents:
+				document.metadata.setdefault( 'mode', 'Generation' )
+				document.metadata.setdefault( 'provider', provider )
+			_promote_loader_documents( documents, provider )
+			st.session_state[ 'generation_documents' ] = list( documents )
+			st.session_state[ 'generation_raw_result' ] = result
+			st.session_state[ 'generation_active_source' ] = provider
+		except Error:
+			raise
+		except Exception as e:
+			exception = Error( e )
+			exception.module = 'app'
+			exception.cause = 'Generation'
+			exception.method = '_promote_generation_result( provider, result ) -> None'
+			Logger( ).write( exception )
+			raise exception
 
-		Purpose:
-		    Removes the shared generated document only when the provider being cleared currently
-		    owns
-		    the active result.
+	def _clear_generation_result( provider: str ) -> None:
+		"""Clear only the specified generation provider's owned state.
 
 		Args:
-		    provider (str): Name of the provider whose controls are being cleared.
+			provider (str): Non-empty provider identifier.
 
 		Returns:
-		    None: This function updates Streamlit session state.
+			None: This function updates Streamlit session state.
+
+		Raises:
+			Error: Propagates a logged source-clearing failure.
 		"""
+		clear_if_active( provider )
 		if st.session_state.get( 'generation_active_source', '' ) != provider:
 			return
-		
-		st.session_state[ 'documents' ] = [ ]
-		st.session_state[ 'raw_documents' ] = [ ]
-		st.session_state[ 'raw_text' ] = ''
 		st.session_state[ 'generation_documents' ] = [ ]
 		st.session_state[ 'generation_raw_result' ] = None
 		st.session_state[ 'generation_active_source' ] = ''
-	
+
+	# Restore the cached generated documents before rendering processing controls.
+	generation_source = st.session_state[ 'generation_active_source' ]
+	if generation_source and st.session_state[ 'generation_documents' ]:
+		_promote_loader_documents( st.session_state[ 'generation_documents' ], generation_source )
+
 	left, right = st.columns( [ 0.4, 0.6 ], gap='xxsmall', border=True )
 	
 	# ------------------------------------------------------------------
@@ -15805,6 +15810,40 @@ elif mode == 'Generation':
 				st.button( 'Clear', key='claude_clear_chat', on_click=_clear_claude_state,
 					use_container_width=True )
 		
+			# -----------------------------
+			# Submit Button
+			# -----------------------------
+			if claude_submit:
+				try:
+					throw_if( 'claude_prompt', claude_prompt )
+					if claude_thinking and claude_thinking_budget >= claude_max_tokens:
+						raise ValueError( 'Thinking Budget must be less than Max Tokens.' )
+					allowed_domains = _normalize_claude_domains( claude_domains ) \
+						if claude_web_search else [ ]
+					blocked_domains = _normalize_claude_domains( claude_blocked_domains ) \
+						if claude_web_search else [ ]
+					if allowed_domains and blocked_domains:
+						raise ValueError( 'Specify either allowed or blocked search domains, not both.' )
+					stop_lines = _normalize_claude_stop_lines( claude_stop )
+					fetcher = Claude( )
+					result = fetcher.generate_text( query=claude_prompt, model=claude_model,
+						temperature=claude_temperature, max_tokens=claude_max_tokens,
+						top_p=claude_top_p, top_k=claude_top_k if claude_top_k > 0 else None,
+						system=claude_system if claude_system.strip( ) else None,
+						stop_sequences=stop_lines or None, thinking=claude_thinking,
+						thinking_budget=claude_thinking_budget, web_search=claude_web_search,
+						search_domains=allowed_domains or None, blocked_domains=blocked_domains or None )
+					_promote_generation_result( provider='Claude', result=result )
+				except Error as e:
+					st.error( e.message or str( e ) )
+				except Exception as e:
+					exception = Error( e )
+					exception.module = 'app'
+					exception.cause = 'Claude'
+					exception.method = 'Generation: Claude Submit'
+					Logger( ).write( exception )
+					st.error( exception.message or str( exception ) )
+
 		# ---------------------
 		# ---- Expander GEMINI
 		# ---------------------
@@ -16171,11 +16210,26 @@ elif mode == 'Generation':
 					
 					params = { key: value for key, value in params.items( ) if value is not None }
 					
-					result = _invoke_provider( fetcher, mistral_prompt, params )
+					result = fetcher.fetch( query=mistral_prompt, **params )
 					_promote_generation_result( provider='Mistral', result=result )
 				
 				except Exception as exc:
 					st.error( str( exc ) )
+
+	# ------------------------------------------------------------------
+	# RIGHT COLUMN — GENERATION RESULTS
+	# ------------------------------------------------------------------
+	with right:
+		st.markdown( '##### Results' )
+		generation_source = st.session_state.get( 'generation_active_source', '' )
+		if generation_source and st.session_state[ 'generation_documents' ]:
+			st.caption( f'Active Source: {generation_source}' )
+			_render_output( st, st.session_state[ 'generation_raw_result' ] )
+			render_source_processing_controls( generation_source, 'generation_processing' )
+		else:
+			st.info( 'Select a provider, configure the request, and submit a prompt.' )
+
+		render_document_processing_tabs( key_prefix='generation' )
 
 # ======================================================================================
 # FOOTER — SECTION
