@@ -4352,7 +4352,8 @@ class GlobalImagery( Fetcher ):
 				'get_capabilities_url', 'build_wms_url', 'fetch_wms_map', 'fetch_map_services',
 				'fetch_mercator_map', 'create_schema' ]
 	
-	def get_capabilities_url( self, projection: str='epsg4326', quality: str='best', version: str='1.1.1' ) -> str:
+	def get_capabilities_url( self, projection: str='epsg4326', quality: str='best',
+			version: str='1.1.1' ) -> str:
 		"""Build a WMS capabilities URL.
 
 		Purpose:
@@ -4399,7 +4400,10 @@ class GlobalImagery( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def build_wms_url( self, layer: str, image_date: str, bbox: Tuple[ float, float, float, float ], width: int=1200, height: int=600, projection: str='epsg4326', quality: str='best', image_format: str='image/png', transparent: bool=True, version: str='1.1.1' ) -> str:
+	def build_wms_url( self, layer: str, image_date: str,
+			bbox: Tuple[ float, float, float, float ], width: int=1200,
+			height: int=600, projection: str='epsg4326', quality: str='best',
+			image_format: str='image/png', transparent: bool=True, version: str='1.1.1' ) -> str:
 		"""Build a WMS map URL.
 
 		Purpose:
@@ -4498,7 +4502,12 @@ class GlobalImagery( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_wms_map( self, layer: str, image_date: str, bbox: Tuple[ float, float, float, float ], width: int=1200, height: int=600, projection: str='epsg4326', quality: str='best', image_format: str='image/png', transparent: bool=True, output_dir: str='python-examples', output_name: str='', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_wms_map( self, layer: str, image_date: str,
+			bbox: Tuple[ float, float, float, float ], width: int=1200,
+			height: int=600, projection: str='epsg4326', quality: str='best',
+			image_format: str='image/png', transparent: bool=True,
+			output_dir: str='python-examples', output_name: str='',
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Download a GIBS map image.
 
 		Purpose:
@@ -4642,10 +4651,10 @@ class GlobalImagery( Fetcher ):
 		try:
 			return self.fetch_wms_map(
 				layer='Landsat_WELD_CorrectedReflectance_Bands157_Global_Annual',
-				image_date='2000-12-01', bbox=(
-					-8000000.0, -8000000.0, 8000000.0,
-					8000000.0), width=600, height=600, projection='epsg3857', quality='best',
-				image_format='image/png', transparent=True, output_dir='python-examples',
+				image_date='2000-12-01',
+				bbox=( -8000000.0, -8000000.0, 8000000.0, 8000000.0), width=600, height=600,
+				projection='epsg3857', quality='best', image_format='image/png', transparent=True,
+				output_dir='python-examples',
 				output_name='Landsat_WELD_CorrectedReflectance_Bands157_Global_Annual.png',
 				time=20 )
 		
@@ -4657,7 +4666,8 @@ class GlobalImagery( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -4836,7 +4846,6 @@ class NearbyObjects( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 
-
 	def validate_nhats_options( self, dv: float, dur: int, stay: int, launch: str ) -> None:
 		"""Validate NHATS mission filters.
 
@@ -4884,7 +4893,8 @@ class NearbyObjects( Fetcher ):
 			raise exception
 
 
-	def fetch_close_approaches( self, start_date: str, end_date: str, dist_max: str='10LD', body: str='Earth', sort: str='date', limit: int=20, time: int=20 ) -> Dict[ str, Any ]:
+	def fetch_close_approaches( self, start_date: str, end_date: str, dist_max: str='10LD',
+			body: str='Earth', sort: str='date', limit: int=20, time: int=20 ) -> Dict[ str, Any ]:
 		"""Retrieve small-body close approaches.
 
 		Purpose:
@@ -4950,7 +4960,10 @@ class NearbyObjects( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_object_lookup( self, query: str, query_type: str='sstr', include_physical: bool = True, include_close_approaches: bool=True, ca_body: str='Earth', include_discovery: bool = True, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_object_lookup( self, query: str, query_type: str='sstr',
+			include_physical: bool = True, include_close_approaches: bool=True,
+			ca_body: str='Earth', include_discovery: bool = True,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve small-body object details.
 
 		Purpose:
@@ -5009,7 +5022,9 @@ class NearbyObjects( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_nhats_summary( self, dv: float=6.0, dur: int=360, stay: int=8, launch: str = '2020-2045', h: float=26.0, occ: int=7, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_nhats_summary( self, dv: float=6.0, dur: int=360, stay: int=8,
+			launch: str = '2020-2045', h: float=26.0, occ: int=7,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve human-accessible target summaries.
 
 		Purpose:
@@ -5059,7 +5074,8 @@ class NearbyObjects( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_nhats_object( self, designation: str, dv: float=6.0, dur: int=360, stay: int = 8, launch: str='2020-2045', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_nhats_object( self, designation: str, dv: float=6.0, dur: int=360,
+			stay: int = 8, launch: str='2020-2045', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve accessibility data for a designated object.
 
 		Purpose:
@@ -5102,7 +5118,8 @@ class NearbyObjects( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_fireballs( self, date_min: str='', limit: int=20, time: int=20 ) -> (Dict[ str, Any ] | None):
+	def fetch_fireballs( self, date_min: str='', limit: int=20,
+			time: int=20 ) -> (Dict[ str, Any ] | None):
 		"""Retrieve fireball observations.
 
 		Purpose:
@@ -5149,7 +5166,12 @@ class NearbyObjects( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='close_approaches', start_date: str='', end_date: str='', query: str='', query_type: str='sstr', dist_max: str='10LD', body: str = 'Earth', sort: str='date', limit: int=20, dv: float=6.0, dur: int=360, stay: int=8, launch: str='2020-2045', h: float=26.0, occ: int=7, include_physical: bool=True, include_close_approaches: bool=True, ca_body: str = 'Earth', include_discovery: bool=True, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='close_approaches', start_date: str='', end_date: str='',
+			query: str='', query_type: str='sstr', dist_max: str='10LD', body: str='Earth',
+			sort: str='date', limit: int=20, dv: float=6.0, dur: int=360, stay: int=8,
+			launch: str='2020-2045', h: float=26.0, occ: int=7,
+			include_physical: bool=True, include_close_approaches: bool=True, ca_body: str='Earth',
+			include_discovery: bool=True, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a JPL SSD retrieval operation.
 
 		Purpose:
@@ -5227,7 +5249,8 @@ class NearbyObjects( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -5486,7 +5509,8 @@ class OpenScience( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_metadata( self, query: str, format_value: str='json', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_metadata( self, query: str, format_value: str='json',
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve dataset metadata.
 
 		Purpose:
@@ -5527,7 +5551,8 @@ class OpenScience( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_assays( self, query: str, format_value: str='json', time: int=20 ) -> (Dict[ str, Any ] | None):
+	def fetch_assays( self, query: str, format_value: str='json',
+			time: int=20 ) -> (Dict[ str, Any ] | None):
 		"""Retrieve assay information.
 
 		Purpose:
@@ -5568,7 +5593,8 @@ class OpenScience( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_data( self, query: str, format_value: str='json', time: int=20 ) -> (Dict[ str, Any ] | None):
+	def fetch_data( self, query: str, format_value: str='json',
+			time: int=20 ) -> (Dict[ str, Any ] | None):
 		"""Retrieve OSDR data.
 
 		Purpose:
@@ -5609,7 +5635,8 @@ class OpenScience( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='dataset', query: str='', accession: str='', format_value: str = 'json', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='dataset', query: str='', accession: str='',
+			format_value: str='json', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch an OSDR retrieval operation.
 
 		Purpose:
@@ -5657,7 +5684,8 @@ class OpenScience( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str,
+			parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -5747,7 +5775,6 @@ class SpaceWeather( Fetcher ):
 	notification_type: Optional[ str ]
 	limit_note: Optional[ str ]
 	agents: Optional[ str ]
-	
 	most_accurate_only: bool
 	complete_entry_only: bool
 	speed: int
@@ -5804,7 +5831,10 @@ class SpaceWeather( Fetcher ):
 				'location', 'catalog', 'notification_type', 'fetch_endpoint', 'fetch',
 				'create_schema' ]
 	
-	def fetch_endpoint( self, endpoint: str, start_date: str, end_date: str, time: int=20, location: str='', catalog: str='', notification_type: str='', most_accurate_only: bool=True, complete_entry_only: bool=True, speed: int=0, half_angle: int=0, keyword: str='' ) -> Dict[ str, Any ] | None:
+	def fetch_endpoint( self, endpoint: str, start_date: str, end_date: str, time: int=20,
+			location: str='', catalog: str='', notification_type: str='',
+			most_accurate_only: bool=True, complete_entry_only: bool=True, speed: int=0,
+			half_angle: int=0, keyword: str='' ) -> Dict[ str, Any ] | None:
 		"""Retrieve a DONKI endpoint response.
 
 		Purpose:
@@ -5913,7 +5943,10 @@ class SpaceWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='cme', start_date: str='', end_date: str='', time: int=20, location: str='ALL', catalog: str='ALL', notification_type: str='all', most_accurate_only: bool=True, complete_entry_only: bool=True, speed: int=0, half_angle: int=0, keyword: str='' ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='cme', start_date: str='', end_date: str='', time: int=20,
+			location: str='ALL', catalog: str='ALL', notification_type: str='all',
+			most_accurate_only: bool=True, complete_entry_only: bool=True, speed: int=0,
+			half_angle: int=0, keyword: str='' ) -> Dict[ str, Any ] | None:
 		"""Dispatch a DONKI retrieval operation.
 
 		Purpose:
@@ -5974,7 +6007,8 @@ class SpaceWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -6315,7 +6349,8 @@ class AstroCatalog( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 
-	def fetch_object( self, name: str, quantity: str='', attributes: str='', arguments: str='', data_format: str='json', time: int=20 ) -> Any:
+	def fetch_object( self, name: str, quantity: str='', attributes: str='', arguments: str='',
+			data_format: str='json', time: int=20 ) -> Any:
 		"""Query an astronomical object by name.
 
 		Purpose:
@@ -6370,7 +6405,8 @@ class AstroCatalog( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def cone_search( self, ra: str, dec: str, radius: int=2, quantity: str='', attributes: str='', arguments: str='', data_format: str='json', time: int=20 ) -> Any:
+	def cone_search( self, ra: str, dec: str, radius: int=2, quantity: str='', attributes: str='',
+			arguments: str='', data_format: str='json', time: int=20 ) -> Any:
 		"""Query an astronomical coordinate cone.
 
 		Purpose:
@@ -6434,7 +6470,9 @@ class AstroCatalog( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='object_query', query: str='', quantity: str='', attributes:str='', arguments: str='', ra: str='', dec: str='', radius: int=2, data_format: str='json', time: int=20 ) -> Any:
+	def fetch( self, mode: str='object_query', query: str='', quantity: str='', attributes:str='',
+			arguments: str='', ra: str='', dec: str='', radius: int=2,
+			data_format: str='json', time: int=20 ) -> Any:
 		"""Dispatch a catalog query.
 
 		Purpose:
@@ -6689,7 +6727,8 @@ class AstroQuery( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def region_search( self, ra: str, dec: str, radius: float=0.5, radius_unit: str='deg',row_limit: int=100 ) -> Dict[ str, Any ] | None:
+	def region_search( self, ra: str, dec: str, radius: float=0.5,
+			radius_unit: str='deg', row_limit: int=100 ) -> Dict[ str, Any ] | None:
 		"""Retrieve SIMBAD objects in a sky region.
 
 		Purpose:
@@ -6747,7 +6786,9 @@ class AstroQuery( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='object_search', query: str='', ra: str='', dec: str='', radius: float=0.5, radius_unit: str='deg', row_limit: int=100 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='object_search', query: str='', ra: str='',
+			dec: str='', radius: float=0.5, radius_unit: str='deg',
+			row_limit: int=100 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a SIMBAD retrieval operation.
 
 		Purpose:
@@ -6958,7 +6999,8 @@ class StarMap( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_object_link( self, name: str, zoom: int=5, box_color: str='yellow', show_box: bool=True, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_object_link( self, name: str, zoom: int=5, box_color: str='yellow',
+			show_box: bool=True, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve an interactive object map page.
 
 		Purpose:
@@ -7016,7 +7058,10 @@ class StarMap( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_coordinate_link( self, ra: float, dec: float, zoom: int=5, box_color: str = 'yellow', show_box: bool=True, show_grid: bool=True, show_lines: bool=True, show_boundaries: bool=True, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_coordinate_link( self, ra: float, dec: float, zoom: int=5,
+			box_color: str = 'yellow', show_box: bool=True, show_grid: bool=True,
+			show_lines: bool=True, show_boundaries: bool=True,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve an interactive coordinate map page.
 
 		Purpose:
@@ -7092,7 +7137,10 @@ class StarMap( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_snapshot( self, ra: float, dec: float, zoom: int=10, image_source: str='DSS2', show_grid: bool=True, show_lines: bool=True, show_boundaries: bool=True, show_const_names: bool=False, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_snapshot( self, ra: float, dec: float, zoom: int=10,
+			image_source: str='DSS2', show_grid: bool=True, show_lines: bool=True,
+			show_boundaries: bool=True, show_const_names: bool=False,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve snapshot image links.
 
 		Purpose:
@@ -7173,7 +7221,11 @@ class StarMap( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='object_link', query: str='', ra: float=0.0, dec: float = 0.0, zoom: int=5, image_source: str='DSS2', box_color: str='yellow', show_box: bool = True, show_grid: bool=True, show_lines: bool=True, show_boundaries: bool=True, show_const_names: bool=False, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='object_link', query: str='', ra: float=0.0,
+			dec: float=0.0, zoom: int=5, image_source: str='DSS2', box_color: str='yellow',
+			show_box: bool=True, show_grid: bool=True, show_lines: bool=True,
+			show_boundaries: bool=True, show_const_names: bool=False,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a Sky-Map retrieval operation.
 
 		Purpose:
@@ -7421,7 +7473,9 @@ class GovData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_search( self, query: str, page_size: int=10, offset_mark: str='*', sort_field: str = 'score', sort_order: str='DESC', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_search( self, query: str, page_size: int=10, offset_mark: str='*',
+			sort_field: str = 'score', sort_order: str='DESC',
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Search GovInfo publications.
 
 		Purpose:
@@ -7531,7 +7585,8 @@ class GovData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_collection( self, collection: str, start_date: str, page_size: int=10, offset_mark: str='*', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_collection( self, collection: str, start_date: str, page_size: int=10,
+			offset_mark: str='*', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve GovInfo collection packages.
 
 		Purpose:
@@ -7588,7 +7643,9 @@ class GovData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='search', query: str='', page_size: int=10, offset_mark: str = '*', sort_field: str='score', sort_order: str='DESC', package_id: str='', collection: str = '', start_date: str='', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='search', query: str='', page_size: int=10, offset_mark: str = '*',
+			sort_field: str='score', sort_order: str='DESC', package_id: str='',
+			collection: str='', start_date: str='', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a GovInfo retrieval operation.
 
 		Purpose:
@@ -7647,7 +7704,8 @@ class GovData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -7898,7 +7956,8 @@ class StarChart( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_object_chart( self, name: str, zoom: int=5, box_color: str='yellow', show_box: bool = True, image_source: str='', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_object_chart( self, name: str, zoom: int=5, box_color: str='yellow',
+			show_box: bool=True, image_source: str='', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Construct an interactive object chart and search for the object.
 
 		Purpose:
@@ -7955,7 +8014,10 @@ class StarChart( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_coordinate_chart( self, ra: float, dec: float, zoom: int=5, box_color: str = 'yellow', show_box: bool=True, show_grid: bool=True, show_lines: bool=True, show_boundaries: bool=True, image_source: str='' ) -> Dict[ str, Any ] | None:
+	def fetch_coordinate_chart( self, ra: float, dec: float, zoom: int=5,
+			box_color: str='yellow', show_box: bool=True, show_grid: bool=True,
+			show_lines: bool=True, show_boundaries: bool=True,
+			image_source: str='' ) -> Dict[ str, Any ] | None:
 		"""Construct an interactive coordinate chart URL.
 
 		Purpose:
@@ -8023,7 +8085,10 @@ class StarChart( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_static_chart( self, ra: float, dec: float, zoom: int=5, image_source: str = 'DSS2', show_grid: bool=True, show_lines: bool=True, show_boundaries: bool=True, show_const_names: bool=False, width: int=900, height: int=450, magnitude: float = 7.5 ) -> Dict[ str, Any ] | None:
+	def fetch_static_chart( self, ra: float, dec: float, zoom: int=5,
+			image_source: str='DSS2', show_grid: bool=True, show_lines: bool=True,
+			show_boundaries: bool=True, show_const_names: bool=False, width: int=900,
+			height: int=450, magnitude: float = 7.5 ) -> Dict[ str, Any ] | None:
 		"""Construct a static chart image URL.
 
 		Purpose:
@@ -8094,7 +8159,12 @@ class StarChart( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='object_chart', query: str='', ra: float=0.0, dec: float = 0.0, zoom: int=5, image_source: str='DSS2', box_color: str='yellow', show_box: bool = True, show_grid: bool=True, show_lines: bool=True, show_boundaries: bool=True, show_const_names: bool=False, width: int=900, height: int=450, magnitude: float = 7.5, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='object_chart', query: str='', ra: float=0.0,
+			dec: float=0.0, zoom: int=5, image_source: str='DSS2', box_color: str='yellow',
+			show_box: bool = True, show_grid: bool=True, show_lines: bool=True,
+			show_boundaries: bool=True, show_const_names: bool=False, width: int=900,
+			height: int=450, magnitude: float = 7.5,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a Sky-Map chart operation.
 
 		Purpose:
@@ -8159,7 +8229,8 @@ class StarChart( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -8395,9 +8466,7 @@ class Congress( Fetcher ):
 		try:
 			throw_if( 'bill_type', bill_type )
 			value = bill_type
-			
 			allowed = { 'hr', 's', 'hjres', 'sjres', 'hconres', 'sconres', 'hres', 'sres' }
-			
 			if value not in allowed:
 				raise ValueError( "Unsupported bill_type. Use 'hr', 's', 'hjres', 'sjres', "
 				                  "'hconres', 'sconres', 'hres', or 'sres'." )
@@ -8480,7 +8549,8 @@ class Congress( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def build_params( self, limit: int=20, offset: int=0, sort: str='updateDate+desc' ) -> Dict[ str, Any ]:
+	def build_params( self, limit: int=20, offset: int=0,
+			sort: str='updateDate+desc' ) -> Dict[ str, Any ]:
 		"""Construct common list-request parameters.
 
 		Purpose:
@@ -8516,7 +8586,8 @@ class Congress( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def request( self, mode: str, url: str, params: Dict[ str, Any ], time: int=20 ) -> Dict[ str, Any ] | None:
+	def request( self, mode: str, url: str, params: Dict[ str, Any ],
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Execute a Congress.gov request.
 
 		Purpose:
@@ -8566,7 +8637,8 @@ class Congress( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_congresses( self, limit: int=20, offset: int=0, time: int=20 ) -> (Dict[ str, Any ] | None):
+	def fetch_congresses( self, limit: int=20, offset: int=0,
+			time: int=20 ) -> (Dict[ str, Any ] | None):
 		"""Retrieve Congress records.
 
 		Purpose:
@@ -8603,7 +8675,9 @@ class Congress( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_bills( self, congress: int, bill_type: str='', offset: int=0, limit: int=20, sort: str='updateDate+desc', from_date_time: str='', to_date_time: str='', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_bills( self, congress: int, bill_type: str='', offset: int=0, limit: int=20,
+			sort: str='updateDate+desc', from_date_time: str='', to_date_time: str='',
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve bills for a Congress.
 
 		Purpose:
@@ -8663,7 +8737,8 @@ class Congress( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_bill( self, congress: int, bill_type: str, bill_number: int, time: int=20 ) -> ( Dict[ str, Any ] | None):
+	def fetch_bill( self, congress: int, bill_type: str, bill_number: int,
+			time: int=20 ) -> ( Dict[ str, Any ] | None):
 		"""Retrieve an individual bill.
 
 		Purpose:
@@ -8709,7 +8784,8 @@ class Congress( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_laws( self, congress: int, law_type: str='', offset: int=0, limit: int=20, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_laws( self, congress: int, law_type: str='', offset: int=0,
+			limit: int=20, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve laws for a Congress.
 
 		Purpose:
@@ -8758,7 +8834,8 @@ class Congress( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_law( self, congress: int, law_type: str, law_number: int, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_law( self, congress: int, law_type: str, law_number: int,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve an individual law.
 
 		Purpose:
@@ -8804,7 +8881,8 @@ class Congress( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_reports( self, congress: int, report_type: str='', offset: int=0, limit: int = 20, conference: bool=False, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_reports( self, congress: int, report_type: str='', offset: int=0,
+			limit: int=20, conference: bool=False, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve committee reports for a Congress.
 
 		Purpose:
@@ -8860,7 +8938,8 @@ class Congress( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_report( self, congress: int, report_type: str, report_number: int, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_report( self, congress: int, report_type: str, report_number: int,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve an individual committee report.
 
 		Purpose:
@@ -8904,7 +8983,11 @@ class Congress( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='congresses', congress: int=0, bill_type: str='', bill_number: int=0, law_type: str='', law_number: int=0, report_type: str='', report_number: int=0, offset: int=0, limit: int=20, sort: str = 'updateDate+desc', from_date_time: str='', to_date_time: str='', conference: bool = False, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='congresses', congress: int=0, bill_type: str='',
+			bill_number: int=0, law_type: str='', law_number: int=0, report_type: str='',
+			report_number: int=0, offset: int=0, limit: int=20, sort: str='updateDate+desc',
+			from_date_time: str='', to_date_time: str='', conference: bool=False,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a legislative retrieval operation.
 
 		Purpose:
@@ -8985,7 +9068,8 @@ class Congress( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -9211,7 +9295,9 @@ class InternetArchive( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, keywords: str, fields: List[ str ] | None = None, rows: int=10, page: int = 1, sort: str='downloads desc', media_type: str='', collection: str='', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, keywords: str, fields: List[ str ] | None = None, rows: int=10,
+			page: int=1, sort: str='downloads desc', media_type: str='', collection: str='',
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Search Internet Archive metadata.
 
 		Purpose:
@@ -9279,7 +9365,8 @@ class InternetArchive( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -9500,7 +9587,8 @@ class OpenWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_current( self, lat: float, long: float, zone: str='auto', past_days: int=0 ) -> Dict[ str, Any ] | None:
+	def fetch_current( self, lat: float, long: float, zone: str='auto',
+			past_days: int=0 ) -> Dict[ str, Any ] | None:
 		"""Retrieve current weather by coordinates.
 
 		Purpose:
@@ -9565,7 +9653,8 @@ class OpenWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_hourly( self, lat: float, long: float, zone: str='auto', forecast_days: int=7, past_days: int=0 ) -> Dict[ str, Any ] | None:
+	def fetch_hourly( self, lat: float, long: float, zone: str='auto',
+			forecast_days: int=7, past_days: int=0 ) -> Dict[ str, Any ] | None:
 		"""Retrieve hourly weather by coordinates.
 
 		Purpose:
@@ -9632,7 +9721,8 @@ class OpenWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_daily( self, lat: float, long: float, zone: str='auto', forecast_days: int=7, past_days: int=0 ) -> Dict[ str, Any ] | None:
+	def fetch_daily( self, lat: float, long: float, zone: str='auto',
+			forecast_days: int=7, past_days: int=0 ) -> Dict[ str, Any ] | None:
 		"""Retrieve daily weather by coordinates.
 
 		Purpose:
@@ -9698,7 +9788,8 @@ class OpenWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, location: str, mode: str='current', zone: str='auto', forecast_days: int=7, past_days: int=0, count: int=10 ) -> Dict[ str, Any ] | None:
+	def fetch( self, location: str, mode: str='current', zone: str='auto', forecast_days: int=7,
+			past_days: int=0, count: int=10 ) -> Dict[ str, Any ] | None:
 		"""Retrieve weather for a named location.
 
 		Purpose:
@@ -9761,7 +9852,8 @@ class OpenWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -9963,7 +10055,8 @@ class HistoricalWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_historical( self, lat: float, long: float, date: dt.date, zone: str='auto' ) -> Dict[ str, Any ] | None:
+	def fetch_historical( self, lat: float, long: float, date: dt.date,
+			zone: str='auto' ) -> Dict[ str, Any ] | None:
 		"""Retrieve historical weather for one date.
 
 		Purpose:
@@ -10030,7 +10123,8 @@ class HistoricalWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, location: str, date: dt.date, zone: str='auto', count: int=10 ) -> Dict[ str, Any ] | None:
+	def fetch( self, location: str, date: dt.date, zone: str='auto',
+			count: int=10 ) -> Dict[ str, Any ] | None:
 		"""Retrieve historical weather for a named location.
 
 		Purpose:
@@ -10081,7 +10175,8 @@ class HistoricalWeather( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -10286,7 +10381,8 @@ class Grokipedia( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='search', query: str='', page: str='', limit: int=12, offset: int=0, include_content: bool=True ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='search', query: str='', page: str='', limit: int=12, offset: int=0,
+			include_content: bool=True ) -> Dict[ str, Any ] | None:
 		"""Dispatch a Grokipedia retrieval operation.
 
 		Purpose:
@@ -10329,7 +10425,8 @@ class Grokipedia( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -10535,7 +10632,8 @@ class GoogleGeocoding( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_forward( self, query: str, language: str='en', region: str='', time: int=10 ) -> Dict[ str, Any ] | None:
+	def fetch_forward( self, query: str, language: str='en', region: str='',
+			time: int=10 ) -> Dict[ str, Any ] | None:
 		"""Geocode an address or location query.
 
 		Purpose:
@@ -10583,7 +10681,8 @@ class GoogleGeocoding( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_reverse( self, latitude: float, longitude: float, language: str='en', result_type: str='', location_type: str='', time: int=10 ) -> Dict[ str, Any ] | None:
+	def fetch_reverse( self, latitude: float, longitude: float, language: str='en',
+			result_type: str='', location_type: str='', time: int=10 ) -> Dict[ str, Any ] | None:
 		"""Reverse-geocode geographic coordinates.
 
 		Purpose:
@@ -10644,7 +10743,8 @@ class GoogleGeocoding( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_place( self, place_id: str, language: str='en', region: str='', time: int=10 ) -> Dict[ str, Any ] | None:
+	def fetch_place( self, place_id: str, language: str='en', region: str='',
+			time: int=10 ) -> Dict[ str, Any ] | None:
 		"""Geocode a Google place identifier.
 
 		Purpose:
@@ -10689,7 +10789,9 @@ class GoogleGeocoding( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='forward', query: str='', latitude: float=0.0, longitude: float=0.0, place_id: str='', language: str='en', region: str='', result_type: str='', location_type: str='', time: int=10 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='forward', query: str='', latitude: float=0.0,
+			longitude: float=0.0, place_id: str='', language: str='en', region: str='',
+			result_type: str='', location_type: str='', time: int=10 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a geocoding operation.
 
 		Purpose:
@@ -10750,7 +10852,8 @@ class GoogleGeocoding( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -11067,7 +11170,8 @@ class CensusData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_data( self, year: str, dataset: str, fields: str, geography_for: str='', geography_in: str='', predicates: str='', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_data( self, year: str, dataset: str, fields: str, geography_for: str='',
+			geography_in: str='', predicates: str='', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve Census geographic data.
 
 		Purpose:
@@ -11144,7 +11248,9 @@ class CensusData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='variables', year: str='2022', dataset: str='acs/acs5', fields: str='NAME,B01001_001E', geography_for: str='state:*', geography_in: str='', predicates: str='', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='variables', year: str='2022', dataset: str='acs/acs5',
+			fields: str='NAME,B01001_001E', geography_for: str='state:*', geography_in: str='',
+			predicates: str='', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a Census retrieval operation.
 
 		Purpose:
@@ -11195,7 +11301,8 @@ class CensusData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -11529,7 +11636,9 @@ class Socrata( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_rows( self, domain: str, dataset_id: str, select: str='', where: str='', order: str='', group: str='', limit: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_rows( self, domain: str, dataset_id: str, select: str='', where: str='',
+			order: str='', group: str='', limit: int=25, offset: int=0,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve dataset rows.
 
 		Purpose:
@@ -11610,7 +11719,9 @@ class Socrata( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='rows', domain: str='data.cdc.gov', dataset_id: str='', select: str='', where: str='', order: str='', group: str='', limit: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='rows', domain: str='data.cdc.gov', dataset_id: str='',
+			select: str='', where: str='', order: str='', group: str='', limit: int=25,
+			offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a dataset retrieval operation.
 
 		Purpose:
@@ -11659,7 +11770,8 @@ class Socrata( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -11993,7 +12105,8 @@ class HealthData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_rows( self, domain: str, dataset_id: str, select: str='', where: str='', order: str='', group: str='', limit: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_rows( self, domain: str, dataset_id: str, select: str='', where: str='',
+			order: str='', group: str='', limit: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve dataset rows.
 
 		Purpose:
@@ -12074,7 +12187,9 @@ class HealthData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='rows', domain: str='healthdata.gov', dataset_id: str='', select: str='', where: str='', order: str='', group: str='', limit: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='rows', domain: str='healthdata.gov', dataset_id: str='',
+			select: str='', where: str='', order: str='', group: str='', limit: int=25,
+			offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a dataset retrieval operation.
 
 		Purpose:
@@ -12123,7 +12238,8 @@ class HealthData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -12405,7 +12521,8 @@ class GlobalHealthData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='indicator_registry', query_path: str='', fmt: str='json', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='indicator_registry', query_path: str='',
+			fmt: str='json', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a WHO GHO retrieval operation.
 
 		Purpose:
@@ -12447,7 +12564,8 @@ class GlobalHealthData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str,
+			parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -12704,7 +12822,8 @@ class UnitedNations( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='datasets', query_path: str='', time: int=20 ) -> (Dict[ str, Any ] | None):
+	def fetch( self, mode: str='datasets', query_path: str='',
+			time: int=20 ) -> (Dict[ str, Any ] | None):
 		"""Dispatch a UNdata retrieval operation.
 
 		Purpose:
@@ -12745,7 +12864,8 @@ class UnitedNations( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str,
+			parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -13027,7 +13147,8 @@ class WorldPopulation( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def search_catalog( self, query: str='', page: int=1, page_size: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
+	def search_catalog( self, query: str='', page: int=1, page_size: int=25,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Search the configured WorldPop catalog.
 
 		Purpose:
@@ -13138,7 +13259,8 @@ class WorldPopulation( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='catalog', query: str='', asset_path: str='', page: int=1, page_size: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='catalog', query: str='', asset_path: str='',
+			page: int=1, page_size: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a WorldPop retrieval operation.
 
 		Purpose:
@@ -13185,7 +13307,8 @@ class WorldPopulation( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -13426,7 +13549,8 @@ class Wonder( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def submit_query( self, dataset_id: str, request_xml: str, time: int=20 ) -> (Dict[ str, Any ] | None):
+	def submit_query( self, dataset_id: str, request_xml: str,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Submit a CDC WONDER XML query.
 
 		Purpose:
@@ -13479,7 +13603,8 @@ class Wonder( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='metadata_template', dataset_id: str='D76', request_xml: str = '', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='metadata_template', dataset_id: str='D76', request_xml: str='',
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a CDC WONDER operation.
 
 		Purpose:
@@ -13523,7 +13648,8 @@ class Wonder( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -14163,7 +14289,11 @@ class USGSEarthquakes( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_search( self, start_date: str, end_date: str, min_magnitude: float=1.0, max_magnitude: float=10.0, limit: int=25, order_by: str='time', event_type: str = 'earthquake', latitude: float | None = None, longitude: float | None = None, max_radius_km: float | None = None, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_search( self, start_date: str, end_date: str, min_magnitude: float=1.0,
+			max_magnitude: float=10.0, limit: int=25, order_by: str='time',
+			event_type: str='earthquake', latitude: float | None=None,
+			longitude: float | None=None, max_radius_km: float | None=None,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Search USGS earthquake events.
 
 		Purpose:
@@ -14270,7 +14400,11 @@ class USGSEarthquakes( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='feed', feed: str='all_day.geojson', start_date: str='', end_date: str='', min_magnitude: float=1.0, max_magnitude: float=10.0, limit: int=25, order_by: str='time', event_type: str='earthquake', latitude: float | None = None, longitude: float | None = None, max_radius_km: float | None = None, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='feed', feed: str='all_day.geojson', start_date: str='',
+			end_date: str='', min_magnitude: float=1.0, max_magnitude: float=10.0,
+			limit: int=25, order_by: str='time', event_type: str='earthquake',
+			latitude: float | None=None, longitude: float | None=None,
+			max_radius_km: float | None=None, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch an earthquake retrieval operation.
 
 		Purpose:
@@ -14330,7 +14464,8 @@ class USGSEarthquakes( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -14621,7 +14756,8 @@ class USGSWaterData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def shape_monitoring_locations( self, records: List[ Dict[ str, Any ] ] ) -> List[ Dict[ str, Any ] ]:
+	def shape_monitoring_locations( self,
+			records: List[ Dict[ str, Any ] ] ) -> List[ Dict[ str, Any ] ]:
 		"""Shape monitoring location records.
 
 		Purpose:
@@ -14944,7 +15080,9 @@ class USGSWaterData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_monitoring_locations( self, monitoring_location_id: str='', state_code: str='', county_code: str='', site_type: str='', limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_monitoring_locations( self, monitoring_location_id: str='', state_code: str='',
+			county_code: str='', site_type: str='', limit: int=25,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve monitoring locations.
 
 		Purpose:
@@ -14998,7 +15136,8 @@ class USGSWaterData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_time_series_metadata( self, monitoring_location_id: str='', parameter_code: str = '', limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_time_series_metadata( self, monitoring_location_id: str='', parameter_code: str = '',
+			limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve time-series metadata.
 
 		Purpose:
@@ -15051,7 +15190,8 @@ class USGSWaterData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_latest_continuous( self, monitoring_location_id: str='', parameter_code: str='', limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_latest_continuous( self, monitoring_location_id: str='', parameter_code: str='',
+			limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve latest continuous observations.
 
 		Purpose:
@@ -15104,7 +15244,8 @@ class USGSWaterData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_latest_daily( self, monitoring_location_id: str='', parameter_code: str='', limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_latest_daily( self, monitoring_location_id: str='', parameter_code: str='',
+			limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve latest daily observations.
 
 		Purpose:
@@ -15156,7 +15297,9 @@ class USGSWaterData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='monitoring-locations', monitoring_location_id: str='', state_code: str='', county_code: str='', site_type: str='', parameter_code: str = '', limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='monitoring-locations', monitoring_location_id: str='',
+			state_code: str='', county_code: str='', site_type: str='', parameter_code: str = '',
+			limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a USGS Water Data retrieval operation.
 
 		Purpose:
@@ -15218,7 +15361,8 @@ class USGSWaterData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -15815,7 +15959,8 @@ class USGSTheNationalMap( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_products( self, dataset: str='', q: str='', bbox: str='', prod_formats: str = '', max_items: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_products( self, dataset: str='', q: str='', bbox: str='', prod_formats: str='',
+			max_items: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Search TNMAccess products.
 
 		Purpose:
@@ -15868,7 +16013,9 @@ class USGSTheNationalMap( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='products', dataset: str='', q: str='', bbox: str='', prod_formats: str='', max_items: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='products', dataset: str='', q: str='', bbox: str='',
+			prod_formats: str='', max_items: int=25, offset: int=0,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a TNMAccess operation.
 
 		Purpose:
@@ -15915,7 +16062,8 @@ class USGSTheNationalMap( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -16348,7 +16496,8 @@ class USGSScienceBase( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None, time: int=20 ) -> Dict[ str, Any ] | None:
+	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Execute a ScienceBase catalog request.
 
 		Purpose:
@@ -16411,7 +16560,8 @@ class USGSScienceBase( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_items( self, q: str='', max_items: int=25, offset: int=0, fields: str='', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_items( self, q: str='', max_items: int=25, offset: int=0, fields: str='',
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Search ScienceBase catalog items.
 
 		Purpose:
@@ -16493,7 +16643,8 @@ class USGSScienceBase( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='items', q: str='', item_id: str='', max_items: int=25, offset: int=0, fields: str='', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='items', q: str='', item_id: str='', max_items: int=25,
+			offset: int=0, fields: str='', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a ScienceBase retrieval operation.
 
 		Purpose:
@@ -16536,7 +16687,8 @@ class USGSScienceBase( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -16668,7 +16820,8 @@ class AirNow( Fetcher ):
 				'fetch_current_zip', 'fetch_current_latlon', 'fetch_forecast_zip',
 				'fetch_forecast_latlon', 'fetch', 'create_schema' ]
 	
-	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None, time: int=20 ) -> Dict[ str, Any ] | None:
+	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Execute an AirNow observation or forecast request.
 
 		Purpose:
@@ -16862,7 +17015,8 @@ class AirNow( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_current_zip( self, zip_code: str, distance: int=25, time: int=20 ) -> (Dict[ str, Any ] | None):
+	def fetch_current_zip( self, zip_code: str, distance: int=25,
+			time: int=20 ) -> (Dict[ str, Any ] | None):
 		"""Retrieve current observations by ZIP code.
 
 		Purpose:
@@ -16911,7 +17065,8 @@ class AirNow( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_current_latlon( self, latitude: float, longitude: float, distance: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_current_latlon( self, latitude: float, longitude: float, distance: int=25,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve current observations by coordinates.
 
 		Purpose:
@@ -16967,7 +17122,8 @@ class AirNow( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_forecast_zip( self, zip_code: str, date: str, distance: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_forecast_zip( self, zip_code: str, date: str, distance: int=25,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve forecasts by ZIP code.
 
 		Purpose:
@@ -17020,7 +17176,8 @@ class AirNow( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_forecast_latlon( self, latitude: float, longitude: float, date: str, distance: int = 25, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_forecast_latlon( self, latitude: float, longitude: float,
+			date: str, distance: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve forecasts by coordinates.
 
 		Purpose:
@@ -17080,7 +17237,9 @@ class AirNow( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='current-zip', zip_code: str='', latitude: float | None = None, longitude: float | None = None, date: str='', distance: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='current-zip', zip_code: str='', latitude: float | None=None,
+			longitude: float | None=None, date: str='', distance: int=25,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch an AirNow retrieval operation.
 
 		Purpose:
@@ -17137,7 +17296,8 @@ class AirNow( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -17637,7 +17797,8 @@ class ClimateData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_datasets( self, keyword: str='', start_date: str='', end_date: str='', limit: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_datasets( self, keyword: str='', start_date: str='', end_date: str='',
+			limit: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Search NCEI climate datasets.
 
 		Purpose:
@@ -17702,7 +17863,8 @@ class ClimateData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_data( self, dataset: str, start_date: str, end_date: str, stations: str='', data_types: str='', limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_data( self, dataset: str, start_date: str, end_date: str, stations: str='',
+			data_types: str='', limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve NCEI climate observations.
 
 		Purpose:
@@ -17762,7 +17924,9 @@ class ClimateData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='datasets', keyword: str='', dataset: str='', start_date: str = '', end_date: str='', stations: str='', data_types: str='', limit: int=25, offset: int=0, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='datasets', keyword: str='', dataset: str='', start_date: str='',
+			end_date: str='', stations: str='', data_types: str='', limit: int=25, offset: int=0,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch an NCEI retrieval operation.
 
 		Purpose:
@@ -17817,7 +17981,8 @@ class ClimateData( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -18368,7 +18533,8 @@ class EoNet( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None, time: int=20 ) -> Dict[ str, Any ] | None:
+	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Execute an EONET API request.
 
 		Purpose:
@@ -18435,7 +18601,9 @@ class EoNet( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_events( self, source: str='', category: str='', status: str='open', limit: int = 25, days: int=30, start_date: str='', end_date: str='', bbox: str='', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_events( self, source: str='', category: str='', status: str='open', limit: int=25,
+			days: int=30, start_date: str='', end_date: str='', bbox: str='',
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve EONET natural events.
 
 		Purpose:
@@ -18547,7 +18715,9 @@ class EoNet( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='events', source: str='', category: str='', status: str = 'open', limit: int=25, days: int=30, start_date: str='', end_date: str='', bbox: str = '', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='events', source: str='', category: str='', status: str = 'open',
+			limit: int=25, days: int=30, start_date: str='', end_date: str='', bbox: str = '',
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch an EONET retrieval operation.
 
 		Purpose:
@@ -18604,7 +18774,8 @@ class EoNet( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -18835,7 +19006,8 @@ class EnviroFacts( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def resolve_table_path( self, table_name: str, state_code: str='', facility_name: str='', limit: int=25 ) -> str:
+	def resolve_table_path( self, table_name: str, state_code: str='',
+			facility_name: str='', limit: int=25 ) -> str:
 		"""Construct an Envirofacts table query path.
 
 		Purpose:
@@ -19053,7 +19225,8 @@ class EnviroFacts( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_table( self, table_name: str, state_code: str='', facility_name: str='', limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_table( self, table_name: str, state_code: str='', facility_name: str='',
+			limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve a supported Envirofacts table.
 
 		Purpose:
@@ -19104,7 +19277,8 @@ class EnviroFacts( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, table_name: str='TRI_FACILITY', state_code: str='', facility_name: str = '', limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, table_name: str='TRI_FACILITY', state_code: str='', facility_name: str='',
+			limit: int=25, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve Envirofacts records using the public entry point.
 
 		Purpose:
@@ -19140,7 +19314,8 @@ class EnviroFacts( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -19700,7 +19875,8 @@ class TidesAndCurrents( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def request( self, url: str, params: Optional[ Dict[ str, Any ] ]=None, time: int=20 ) -> Dict[ str, Any ] | None:
+	def request( self, url: str, params: Optional[ Dict[ str, Any ] ]=None,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Execute a NOAA request.
 
 		Purpose:
@@ -19814,7 +19990,9 @@ class TidesAndCurrents( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_water_level( self, station_id: str, begin_date: str, end_date: str, datum: str = 'MLLW', units: str='metric', time_zone: str='gmt', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_water_level( self, station_id: str, begin_date: str, end_date: str,
+			datum: str='MLLW', units: str='metric', time_zone: str='gmt',
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve water-level observations.
 
 		Purpose:
@@ -19873,7 +20051,9 @@ class TidesAndCurrents( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_tide_predictions( self, station_id: str, begin_date: str, end_date: str, datum: str = 'MLLW', units: str='metric', time_zone: str='gmt', interval: str='hilo', time: int = 20 ) -> Dict[ str, Any ] | None:
+	def fetch_tide_predictions( self, station_id: str, begin_date: str, end_date: str,
+			datum: str='MLLW', units: str='metric', time_zone: str='gmt', interval: str='hilo',
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve tide predictions.
 
 		Purpose:
@@ -19936,7 +20116,9 @@ class TidesAndCurrents( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='water-level', station_id: str='', begin_date: str='', end_date: str='', datum: str='MLLW', units: str='metric', time_zone: str = 'gmt', interval: str='hilo', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='water-level', station_id: str='', begin_date: str='',
+			end_date: str='', datum: str='MLLW', units: str='metric', time_zone: str='gmt',
+			interval: str='hilo', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a NOAA CO-OPS retrieval operation.
 
 		Purpose:
@@ -19995,7 +20177,8 @@ class TidesAndCurrents( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -20383,7 +20566,8 @@ class UvIndex( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def request( self, url: str, params: Dict[ str, Any ], time: int=20 ) -> Dict[ str, Any ] | None:
+	def request( self, url: str, params: Dict[ str, Any ],
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Execute an EPA UV Index request.
 
 		Purpose:
@@ -20482,7 +20666,8 @@ class UvIndex( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_daily_city_state( self, city: str, state: str, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_daily_city_state( self, city: str, state: str,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve daily UV forecasts by city and state.
 
 		Purpose:
@@ -20580,7 +20765,8 @@ class UvIndex( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_hourly_city_state( self, city: str, state: str, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_hourly_city_state( self, city: str, state: str,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve hourly UV forecasts by city and state.
 
 		Purpose:
@@ -20631,7 +20817,8 @@ class UvIndex( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='daily-zip', zip_code: str='', city: str='', state: str='', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='daily-zip', zip_code: str='', city: str='', state: str='',
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch an EPA UV Index retrieval operation.
 
 		Purpose:
@@ -20682,7 +20869,8 @@ class UvIndex( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -21010,7 +21198,8 @@ class PurpleAir( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def validate_bbox( self, nwlng: float, nwlat: float, selng: float, selat: float ) -> Tuple[ float, float, float, float ]:
+	def validate_bbox( self, nwlng: float, nwlat: float, selng: float,
+			selat: float ) -> Tuple[ float, float, float, float ]:
 		"""Validate a northwest/southeast bounding box.
 
 		Purpose:
@@ -21314,7 +21503,8 @@ class PurpleAir( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def package_response( self, rows: List[ Dict[ str, Any ] ], params: Dict[ str, Any ] ) -> Dict[ str, Any ]:
+	def package_response( self, rows: List[ Dict[ str, Any ] ],
+			params: Dict[ str, Any ] ) -> Dict[ str, Any ]:
 		"""Package shaped PurpleAir records.
 
 		Purpose:
@@ -21346,7 +21536,8 @@ class PurpleAir( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None, time: int=20 ) -> Dict[ str, Any ] | None:
+	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Execute a PurpleAir request.
 
 		Purpose:
@@ -21417,7 +21608,9 @@ class PurpleAir( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_sensors( self, nwlng: float, nwlat: float, selng: float, selat: float, location_type: int=0, max_age: int=0, modified_since: int=0, fields: str='', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_sensors( self, nwlng: float, nwlat: float, selng: float,
+			selat: float, location_type: int=0, max_age: int=0, modified_since: int=0,
+			fields: str='', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve sensors within a geographic bounding box.
 
 		Purpose:
@@ -21483,7 +21676,8 @@ class PurpleAir( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_sensor( self, sensor_index: int, fields: str='', time: int=20 ) -> (Dict[ str, Any ] | None):
+	def fetch_sensor( self, sensor_index: int, fields: str='',
+			time: int=20 ) -> (Dict[ str, Any ] | None):
 		"""Retrieve an individual PurpleAir sensor.
 
 		Purpose:
@@ -21532,7 +21726,10 @@ class PurpleAir( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='sensors', sensor_index: int=None, nwlng: float | None = None, nwlat: float | None = None, selng: float | None = None, selat: float | None = None, location_type: int=0, max_age: int=0, modified_since: int=0, fields: str='', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='sensors', sensor_index: int=None, nwlng: float | None=None,
+			nwlat: float | None=None, selng: float | None=None,
+			selat: float | None=None, location_type: int=0, max_age: int=0,
+			modified_since: int=0, fields: str='', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a PurpleAir retrieval operation.
 
 		Purpose:
@@ -21609,7 +21806,8 @@ class PurpleAir( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -21842,7 +22040,8 @@ class OpenAQ( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def validate_positive_integer( self, name: str, value: Any, maximum: int | None = None ) -> ( int):
+	def validate_positive_integer( self, name: str, value: Any,
+			maximum: int | None=None ) -> ( int):
 		"""Validate a positive integer.
 
 		Purpose:
@@ -22256,7 +22455,8 @@ class OpenAQ( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def package_response( self, rows: List[ Dict[ str, Any ] ], params: Optional[ Dict[ str, Any ] ] = None ) -> Dict[ str, Any ]:
+	def package_response( self, rows: List[ Dict[ str, Any ] ],
+			params: Optional[ Dict[ str, Any ] ]=None ) -> Dict[ str, Any ]:
 		"""Package shaped OpenAQ records.
 
 		Purpose:
@@ -22289,7 +22489,8 @@ class OpenAQ( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None, time: int=20 ) -> Dict[ str, Any ] | None:
+	def request( self, endpoint: str, params: Optional[ Dict[ str, Any ] ]=None,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Execute an OpenAQ v3 request.
 
 		Purpose:
@@ -22356,7 +22557,8 @@ class OpenAQ( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_countries( self, providers_id: str='', parameters_id: str='', limit: int=100, page: int=1, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_countries( self, providers_id: str='', parameters_id: str='',
+			limit: int=100, page: int=1, time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve OpenAQ country resources.
 
 		Purpose:
@@ -22407,7 +22609,8 @@ class OpenAQ( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_providers( self, limit: int=100, page: int=1, time: int=20 ) -> (Dict[ str, Any ] | None):
+	def fetch_providers( self, limit: int=100, page: int=1,
+			time: int=20 ) -> (Dict[ str, Any ] | None):
 		"""Retrieve OpenAQ providers.
 
 		Purpose:
@@ -22451,7 +22654,8 @@ class OpenAQ( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_parameters( self, limit: int=100, page: int=1, time: int=20 ) -> (Dict[ str, Any ] | None):
+	def fetch_parameters( self, limit: int=100, page: int=1,
+			time: int=20 ) -> (Dict[ str, Any ] | None):
 		"""Retrieve OpenAQ parameters.
 
 		Purpose:
@@ -22495,7 +22699,8 @@ class OpenAQ( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_parameter_latest( self, parameter_id: int, limit: int=100, page: int=1, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_parameter_latest( self, parameter_id: int, limit: int=100, page: int=1,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve latest measurements by parameter.
 
 		Purpose:
@@ -22543,7 +22748,9 @@ class OpenAQ( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_locations( self, country_id: int=None, coordinates: str='', radius: int=25000, providers_id: str='', parameters_id: str='', limit: int=25, page: int=1, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_locations( self, country_id: int=None, coordinates: str='', radius: int=25000,
+			providers_id: str='', parameters_id: str='', limit: int=25, page: int=1,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve OpenAQ monitoring locations.
 
 		Purpose:
@@ -22649,7 +22856,10 @@ class OpenAQ( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='locations', location_id: int=None, parameter_id: int=None, country_id: int=None, coordinates: str='', radius: int=25000, providers_id: str = '', parameters_id: str='', limit: int=25, page: int=1, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='locations', location_id: int=None, parameter_id: int=None,
+			country_id: int=None, coordinates: str='', radius: int=25000, providers_id: str = '',
+			parameters_id: str='', limit: int=25, page: int=1,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch an OpenAQ retrieval operation.
 
 		Purpose:
@@ -22722,7 +22932,8 @@ class OpenAQ( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -23247,7 +23458,8 @@ class Firms( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_area( self, source: str, area_coordinates: str='world', day_range: int=1, date: str='', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch_area( self, source: str, area_coordinates: str='world', day_range: int=1,
+			date: str='', time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Retrieve FIRMS area fire-detection records.
 
 		Purpose:
@@ -23346,7 +23558,9 @@ class Firms( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='area', source: str='VIIRS_SNPP_NRT', area_coordinates: str = 'world', day_range: int=1, date: str='', sensor: str='ALL', time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='area', source: str='VIIRS_SNPP_NRT', area_coordinates: str='world',
+			day_range: int=1, date: str='', sensor: str='ALL',
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch a FIRMS retrieval operation.
 
 		Purpose:
@@ -23395,7 +23609,8 @@ class Firms( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
@@ -23868,7 +24083,8 @@ class OpenSky( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def validate_bbox( self, lamin: float, lomin: float, lamax: float, lomax: float ) -> Tuple[ float, float, float, float ]:
+	def validate_bbox( self, lamin: float, lomin: float, lamax: float,
+			lomax: float ) -> Tuple[ float, float, float, float ]:
 		"""Validate a geographic bounding box.
 
 		Purpose:
@@ -24088,7 +24304,8 @@ class OpenSky( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def normalize_flights( self, payload: List[ Dict[ str, Any ] ] | None, mode: str ) -> Dict[ str, Any ] | None:
+	def normalize_flights( self, payload: List[ Dict[ str, Any ] ] | None,
+			mode: str ) -> Dict[ str, Any ] | None:
 		"""Shape OpenSky flight records.
 
 		Purpose:
@@ -24202,7 +24419,9 @@ class OpenSky( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_states( self, icao24: str='', time_value: int=None, lamin: float | None = None, lomin: float | None = None, lamax: float | None = None, lomax: float | None = None, extended: bool=False ) -> Dict[ str, Any ] | None:
+	def fetch_states( self, icao24: str='', time_value: int=None, lamin: float | None=None,
+			lomin: float | None=None, lamax: float | None=None,
+			lomax: float | None=None, extended: bool=False ) -> Dict[ str, Any ] | None:
 		"""Retrieve OpenSky aircraft state vectors.
 
 		Purpose:
@@ -24285,7 +24504,8 @@ class OpenSky( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_flights_aircraft( self, icao24: str, begin: int, end: int ) -> Dict[ str, Any ] | None:
+	def fetch_flights_aircraft( self, icao24: str, begin: int,
+			end: int ) -> Dict[ str, Any ] | None:
 		"""Retrieve historical flights for an aircraft.
 
 		Purpose:
@@ -24327,7 +24547,8 @@ class OpenSky( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_arrivals_airport( self, airport: str, begin: int, end: int ) -> Dict[ str, Any ] | None:
+	def fetch_arrivals_airport( self, airport: str, begin: int,
+			end: int ) -> Dict[ str, Any ] | None:
 		"""Retrieve historical arrivals at an airport.
 
 		Purpose:
@@ -24369,7 +24590,8 @@ class OpenSky( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch_departures_airport( self, airport: str, begin: int, end: int ) -> Dict[ str, Any ] | None:
+	def fetch_departures_airport( self, airport: str, begin: int,
+			end: int ) -> Dict[ str, Any ] | None:
 		"""Retrieve historical departures from an airport.
 
 		Purpose:
@@ -24450,7 +24672,11 @@ class OpenSky( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def fetch( self, mode: str='states_bbox', icao24: str='', airport: str='', begin: int = None, end: int=None, time_value: int=None, lamin: float | None = None, lomin: float | None = None, lamax: float | None = None, lomax: float | None = None, extended: bool=False, time: int=20 ) -> Dict[ str, Any ] | None:
+	def fetch( self, mode: str='states_bbox', icao24: str='', airport: str='', begin: int=None,
+			end: int=None, time_value: int=None, lamin: float | None=None,
+			lomin: float | None=None, lamax: float | None=None,
+			lomax: float | None=None, extended: bool=False,
+			time: int=20 ) -> Dict[ str, Any ] | None:
 		"""Dispatch an OpenSky retrieval operation.
 
 		Purpose:
@@ -24528,7 +24754,8 @@ class OpenSky( Fetcher ):
 			Logger( ).write( exception )
 			raise exception
 	
-	def create_schema( self, function: str, tool: str, description: str, parameters: dict, required: list[ str ] ) -> Dict[ str, str ] | None:
+	def create_schema( self, function: str, tool: str, description: str, parameters: dict,
+			required: list[ str ] ) -> Dict[ str, str ] | None:
 		"""Build a function schema.
 
 		Purpose:
