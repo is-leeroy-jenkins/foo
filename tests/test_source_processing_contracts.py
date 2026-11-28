@@ -216,6 +216,71 @@ def test_source_switch_and_inactive_clear_preserve_owned_state( ) -> None:
 	assert state.embeddings is None
 
 
+def test_generation_provider_submit_contracts( ) -> None:
+	"""All five provider submit handlers must invoke and promote their results."""
+	tree = ast.parse( read( 'app.py' ), filename='app.py' )
+	generation = next( node for node in ast.walk( tree ) if isinstance( node, ast.If )
+		and isinstance( node.test, ast.Compare ) and isinstance( node.test.left, ast.Name )
+		and node.test.left.id == 'mode' and any( isinstance( item, ast.Constant )
+			and item.value == 'Generation' for item in node.test.comparators ) )
+	for flag, provider, method in ( ( 'chat_submit', 'ChatGPT', '_invoke_provider' ),
+		( 'groq_submit', 'Grok', '_invoke_provider' ), ( 'claude_submit', 'Claude', 'generate_text' ),
+		( 'gemini_submit', 'Gemini', '_invoke_provider' ), ( 'mistral_submit', 'Mistral', 'fetch' ) ):
+		handler = next( node for node in ast.walk( generation ) if isinstance( node, ast.If )
+			and isinstance( node.test, ast.Name ) and node.test.id == flag )
+		calls = [ node for node in ast.walk( handler ) if isinstance( node, ast.Call ) ]
+		assert any( ( isinstance( call.func, ast.Name ) and call.func.id == method ) or
+			( isinstance( call.func, ast.Attribute ) and call.func.attr == method ) for call in calls )
+		assert any( isinstance( call.func, ast.Name ) and call.func.id == '_promote_generation_result'
+			and any( item.arg == 'provider' and isinstance( item.value, ast.Constant )
+				and item.value.value == provider for item in call.keywords ) for call in calls )
+
+
+def test_generation_restores_owned_results_and_preserves_other_sources( ) -> None:
+	"""Generation promotion and clearing must respect the shared source lifecycle."""
+	ns = source_namespace( )
+	state = ns[ 'st' ].session_state
+	state.generation_documents = [ ]
+	state.generation_raw_result = None
+	state.generation_active_source = ''
+	warnings = [ ]
+	ns[ 'st' ].warning = warnings.append
+	tree = ast.parse( read( 'app.py' ), filename='app.py' )
+	names = { '_promote_generation_result', '_clear_generation_result' }
+	nodes = [ node for node in ast.walk( tree ) if isinstance( node, ast.FunctionDef )
+		and node.name in names ]
+	assert len( nodes ) == 2
+	exec( compile( ast.Module( body=nodes, type_ignores=[ ] ), 'app.py', 'exec' ), ns )
+	promote = ns[ '_promote_generation_result' ]
+	clear = ns[ '_clear_generation_result' ]
+	promote( 'Claude', 'Generated text' )
+	assert state.active_loader == 'Claude'
+	assert state.processing_active_source == 'Claude'
+	assert state.raw_text == 'Generated text'
+	assert state.generation_raw_result == 'Generated text'
+	state.chunk_source_signature = ns[ 'document_signature' ]( state.documents )
+	state.chunks = [ 'Generated text' ]
+	promote( 'Claude', 'Generated text' )
+	assert state.chunks == [ 'Generated text' ]
+	promote( 'Claude', '   ' )
+	assert warnings and state.raw_text == 'Generated text'
+	ns[ 'promote_source_result' ]( 'Retrieval', 'ArXiv', [ 'Research text' ] )
+	clear( 'Claude' )
+	assert state.active_loader == 'ArXiv'
+	assert state.raw_text == 'Research text'
+	assert state.generation_active_source == ''
+	assert state.generation_documents == [ ]
+
+
+def test_generation_right_column_uses_shared_processing( ) -> None:
+	"""Generation must render its result and shared document-processing tabs."""
+	source = read( 'app.py' ).split( "elif mode == 'Generation':", 1 )[ 1 ]
+	assert '\n\twith right:' in source
+	assert "_render_output( st, st.session_state[ 'generation_raw_result' ] )" in source
+	assert "render_source_processing_controls( generation_source, 'generation_processing' )" in source
+	assert "render_document_processing_tabs( key_prefix='generation' )" in source
+
+
 if __name__ == '__main__':
 	tests = [ value for name, value in globals( ).items( )
 		if name.startswith( 'test_' ) and callable( value ) ]
