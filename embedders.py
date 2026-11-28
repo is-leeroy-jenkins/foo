@@ -298,7 +298,7 @@ class EmbeddingFactory( ):
             exception = Error( e )
             exception.module = 'embedders'
             exception.cause = 'EmbeddingFactory'
-            exception.method = "create( self, provider: str, model: str, model_path: str = '' ) -> Embeddings"
+            exception.method = "create( self, **args ) -> Embeddings"
             Logger( ).write( exception )
             raise exception
 
