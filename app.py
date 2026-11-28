@@ -247,38 +247,61 @@ def throw_if( name: str, value: object ) -> None:
 		raise ValueError( f'Argument "{name}" cannot be empty!' )
 
 def filter_kwargs_for_callable( fn: Any, kwargs: dict[ str, Any ] ) -> dict[ str, Any ]:
-	try:
-		sig = inspect.signature( fn )
-		accepted = set( sig.parameters.keys( ) )
-		return { k: v for k, v in kwargs.items( ) if k in accepted }
-	except Exception:
-		return kwargs
-
-def _invoke_provider( fetcher: Any, prompt: str, params: dict[ str, Any ] ) -> Any:
-	"""Invoke a provider through its public text-generation contract.
-
-	Purpose:
-		Executes one request without retrying a caught ``TypeError`` under a guessed signature.
+	"""Validate request keywords against a callable without silently discarding values.
 
 	Args:
-		fetcher (Any): Provider wrapper exposing ``generate_text``.
-		prompt (str): Prompt submitted to the provider wrapper.
-		params (dict[str, Any]): Generation parameters supplied by the UI.
+		fn (Any): Callable provider method.
+		kwargs (dict[str, Any]): Request keyword arguments, including an empty dictionary.
 
 	Returns:
-		Any: Provider result returned by ``generate_text``.
+		dict[str, Any]: Original validated keyword arguments.
 
 	Raises:
-		RuntimeError: Raised when the wrapper does not expose ``generate_text``.
+		TypeError: A keyword is unsupported or the callable contract cannot be inspected.
 	"""
-	throw_if( 'fetcher', fetcher )
-	throw_if( 'prompt', prompt )
-	if not hasattr( fetcher, 'generate_text' ) or not callable( getattr( fetcher, 'generate_text' ) ):
-		raise RuntimeError(
-			f"Provider '{type( fetcher ).__name__}' does not expose generate_text." )
-	fn = getattr( fetcher, 'generate_text' )
-	safe = filter_kwargs_for_callable( fn, params )
-	return fn( prompt, **safe )
+	throw_if( 'fn', fn )
+	if not isinstance( kwargs, dict ):
+		raise TypeError( 'kwargs must be a dictionary.' )
+	signature = inspect.signature( fn )
+	parameters = signature.parameters
+	if not any( parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in parameters.values( ) ):
+		accepted = { name for name, parameter in parameters.items( ) if parameter.kind in
+			( inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY ) }
+		unsupported = kwargs.keys( ) - accepted
+		if unsupported:
+			raise TypeError( f'Unsupported provider arguments: {", ".join( sorted( unsupported ) )}' )
+	return kwargs
+
+def _invoke_provider( fetcher: Any, prompt: str, params: dict[ str, Any ] ) -> Any:
+	"""Invoke a provider exactly once using its public text-generation contract.
+
+	Args:
+		fetcher (Any): Provider exposing generate_text.
+		prompt (str): Non-empty prompt.
+		params (dict[str, Any]): Request parameters.
+
+	Returns:
+		Any: Provider result.
+
+	Raises:
+		Error: Wraps and logs dispatch failures or propagates existing provider errors.
+	"""
+	try:
+		throw_if( 'fetcher', fetcher )
+		throw_if( 'prompt', prompt )
+		fn = fetcher.generate_text
+		validated = filter_kwargs_for_callable( fn, params )
+		inspect.signature( fn ).bind( prompt, **validated )
+		return fn( prompt, **validated )
+	except Error:
+		raise
+	except Exception as e:
+		exception = Error( e )
+		exception.module = 'app'
+		exception.cause = 'Generation'
+		exception.method = '_invoke_provider( fetcher, prompt, params ) -> Any'
+		Logger( ).write( exception )
+		raise exception
 
 def _render_output( container: Any, result: Any ) -> None:
 	if result is None:
