@@ -1,6 +1,7 @@
 """Regression contracts for Foo source processing and provider alignment."""
 from __future__ import annotations
 import ast
+import inspect
 import json
 from hashlib import sha256
 from pathlib import Path
@@ -399,6 +400,66 @@ def test_claude_budget_is_adjusted_before_widget_creation( ) -> None:
 	assert ast.unparse( keywords[ 'disabled' ] ) == 'claude_max_tokens <= 1024'
 	assert source.index( "st.session_state[ 'claude_thinking_budget_chat' ] = max_budget" ) < source.index(
 		"claude_thinking_budget = st.number_input( 'Thinking Budget'" )
+
+
+def test_provider_dispatch_rejects_unknown_keywords_and_preserves_values( ) -> None:
+	"""Validate actual application dispatch functions without making provider requests."""
+	tree = ast.parse( read( 'app.py' ), filename='app.py' )
+	names = { 'filter_kwargs_for_callable', '_invoke_provider' }
+	nodes = [ node for node in tree.body if isinstance( node, ast.FunctionDef )
+		and node.name in names ]
+	ns = source_namespace( )
+	ns[ 'inspect' ] = inspect
+	exec( compile( ast.Module( body=nodes, type_ignores=[ ] ), 'app.py', 'exec' ), ns )
+	calls = [ ]
+
+	def generate( prompt: str, temperature: float=0.7 ) -> str:
+		"""Record one valid provider invocation."""
+		calls.append( ( prompt, temperature ) )
+		return prompt
+
+	params = { 'temperature': 0.0 }
+	assert ns[ 'filter_kwargs_for_callable' ]( generate, params ) is params
+	provider = SimpleNamespace( generate_text=generate )
+	assert ns[ '_invoke_provider' ]( provider, 'test', params ) == 'test'
+	assert calls == [ ( 'test', 0.0 ) ]
+	try:
+		ns[ 'filter_kwargs_for_callable' ]( generate, { 'unknown': True } )
+	except TypeError:
+		pass
+	else:
+		raise AssertionError( 'Unsupported argument was accepted.' )
+	assert len( calls ) == 1
+
+
+def test_provider_stream_failures_are_not_promoted_as_success( ) -> None:
+	"""Both Responses API adapters must explicitly handle terminal failure events."""
+	tree = ast.parse( read( 'generators.py' ), filename='generators.py' )
+	for name in ( 'Chat', 'Grok' ):
+		cls = next( node for node in tree.body if isinstance( node, ast.ClassDef )
+			and node.name == name )
+		method = next( node for node in cls.body if isinstance( node, ast.FunctionDef )
+			and node.name == 'extract_output_text' )
+		events = { node.value for node in ast.walk( method ) if isinstance( node, ast.Constant )
+			and isinstance( node.value, str ) }
+		assert { 'response.completed', 'response.failed', 'response.incomplete', 'error' } <= events
+		assert 'Provider stream ended without a completion event.' in events
+
+
+def test_provider_search_and_sampling_contracts( ) -> None:
+	"""Check native OpenAI domain filters and Claude request constraints."""
+	tree = ast.parse( read( 'generators.py' ), filename='generators.py' )
+	chat = next( node for node in tree.body if isinstance( node, ast.ClassDef )
+		and node.name == 'Chat' )
+	method = next( node for node in chat.body if isinstance( node, ast.FunctionDef )
+		and node.name == 'build_tools' )
+	assert 'allowed_domains' in ast.unparse( method )
+	claude = next( node for node in tree.body if isinstance( node, ast.ClassDef )
+		and node.name == 'Claude' )
+	fetch = next( node for node in claude.body if isinstance( node, ast.FunctionDef )
+		and node.name == 'fetch' )
+	assert '1024 <= _budget < self.max_tokens' in ast.unparse( fetch )
+	assert '0.95 <= self.top_p <= 1.0' in ast.unparse( fetch )
 
 
 if __name__ == '__main__':
