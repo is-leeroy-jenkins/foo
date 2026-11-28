@@ -281,6 +281,71 @@ def test_generation_right_column_uses_shared_processing( ) -> None:
 	assert "render_document_processing_tabs( key_prefix='generation' )" in source
 
 
+def test_xml_load_actions_guard_missing_upload_and_promote_owned_documents( ) -> None:
+	"""Missing XML uploads cannot promote documents from a previous loader."""
+	tree = ast.parse( read( 'app.py' ), filename='app.py' )
+	for label in ( 'Load XML (Semantic)', 'Load XML Tree' ):
+		action = next( node for node in ast.walk( tree ) if isinstance( node, ast.If )
+			and isinstance( node.test, ast.Call )
+			and isinstance( node.test.func, ast.Attribute ) and node.test.func.attr == 'button'
+			and node.test.args and isinstance( node.test.args[ 0 ], ast.Constant )
+			and node.test.args[ 0 ].value == label )
+		assert len( action.body ) == 1
+		guard = action.body[ 0 ]
+		assert isinstance( guard, ast.If )
+		assert ast.unparse( guard.test ) == 'xml_file is None'
+		warnings = [ ]
+		ns = source_namespace( )
+		ns[ 'st' ].warning = warnings.append
+		ns[ 'xml_file' ] = None
+		state = ns[ 'st' ].session_state
+		ns[ 'promote_source_result' ]( 'Loading', 'PdfLoader', [ 'Existing PDF' ] )
+		exec( compile( ast.Module( body=action.body, type_ignores=[ ] ), 'app.py', 'exec' ), ns )
+		assert warnings
+		assert state.active_loader == 'PdfLoader'
+		assert state.raw_text == 'Existing PDF'
+		assert any( isinstance( call, ast.Call ) and isinstance( call.func, ast.Name )
+			and call.func.id == '_promote_loader_documents'
+			and isinstance( call.args[ 1 ], ast.Constant ) and call.args[ 1 ].value == 'XmlLoader'
+			for statement in guard.orelse for call in ast.walk( statement ) )
+
+
+def test_structured_xml_document_promotion_synchronizes_state( ) -> None:
+	"""Structured XML replaces the canonical document collection and raw text."""
+	ns = source_namespace( )
+	state = ns[ 'st' ].session_state
+	ns[ 'promote_source_result' ]( 'Loading', 'PdfLoader', [ 'Existing PDF' ] )
+	xml = ns[ 'Document' ]( page_content='<root><item>value</item></root>',
+		metadata={ 'loader': 'XmlLoader', 'source': 'example.xml', 'load_mode': 'structured_xml' } )
+	ns[ '_promote_loader_documents' ]( [ xml ], 'XmlLoader' )
+	assert state.active_loader == 'XmlLoader'
+	assert state.processing_active_source == 'XmlLoader'
+	assert state.documents == [ xml ]
+	assert state.raw_documents == [ xml ]
+	assert state.raw_text == xml.page_content
+
+
+def test_xml_actions_and_chunking_handle_wrapped_errors( ) -> None:
+	"""All XML action boundaries and shared chunking display wrapped errors locally."""
+	tree = ast.parse( read( 'app.py' ), filename='app.py' )
+	for label in ( 'Load XML (Semantic)', 'Split Semantic Documents', 'Load XML Tree',
+		'Run XPath Query' ):
+		action = next( node for node in ast.walk( tree ) if isinstance( node, ast.If )
+			and isinstance( node.test, ast.Call )
+			and isinstance( node.test.func, ast.Attribute ) and node.test.func.attr == 'button'
+			and node.test.args and isinstance( node.test.args[ 0 ], ast.Constant )
+			and node.test.args[ 0 ].value == label )
+		assert any( isinstance( node, ast.ExceptHandler ) and isinstance( node.type, ast.Name )
+			and node.type.id == 'Error' and any( isinstance( call, ast.Call )
+				and isinstance( call.func, ast.Attribute ) and call.func.attr == 'error'
+				for call in ast.walk( node ) ) for node in ast.walk( action ) )
+	chunk = next( node for node in ast.walk( tree ) if isinstance( node, ast.If )
+		and isinstance( node.test, ast.Name ) and node.test.id == 'chunk_clicked' )
+	assert any( isinstance( node, ast.ExceptHandler ) and isinstance( node.type, ast.Name )
+		and node.type.id == 'Error' and not any( isinstance( item, ast.Raise )
+			for item in ast.walk( node ) ) for node in ast.walk( chunk ) )
+
+
 if __name__ == '__main__':
 	tests = [ value for name, value in globals( ).items( )
 		if name.startswith( 'test_' ) and callable( value ) ]
