@@ -1430,23 +1430,20 @@ if mode == 'Loading':
 	tokens = st.session_state[ 'tokens' ]
 	documents = st.session_state[ 'documents' ]
 	raw_text = st.session_state[ 'raw_text' ]
-	
 	st.subheader( '📤 Document Loading' )
 	st.divider( )
-	# ------------------------------------------------------------------
-	# LEFT COLUMN - LOADERS
-	# ------------------------------------------------------------------
 	left, right = st.columns( [ 0.4, 0.6 ], gap='xxsmall', border=True )
 	with left:
 		_loader_msg = st.session_state.pop( '_loader_status', None )
 		if isinstance( _loader_msg, str ) and _loader_msg.strip( ):
 			st.success( _loader_msg )
-		
+
+		# -----------------------------------------
+		# ------- Local Document Loaders
+		# -----------------------------------------
 		with st.expander( label='Local Documents', expanded=True ):
 			
-			# ----------------------------
 			# ------- Expander NLTK Loader
-			# ----------------------------
 			with st.expander( label='Corpora Loader', icon='📚', expanded=False ):
 				import nltk
 				from nltk.corpus import (brown, gutenberg, reuters, webtext, inaugural, state_union)
@@ -1571,17 +1568,13 @@ if mode == 'Loading':
 						
 						st.session_state.processed_text = None
 						st.session_state.active_loader = 'NLTKLoader'
-						
 						st.success( f'Loaded {len( documents )} document(s) from NLTK.' )
 					else:
 						st.warning( 'No documents were loaded.' )
-			
-
+		
 				render_source_processing_controls( 'NLTKLoader', 'loader_corpora_loader' )
 			
-			# ----------------------------
 			# ------ Expander Text Loader
-			# ----------------------------
 			with st.expander( label='Text Loader', icon='📝', expanded=False ):
 				files = st.file_uploader( 'Upload Text File(s)', type=[ 'txt', 'text', 'log' ],
 					accept_multiple_files=True, key='txt_upload', help=cfg.TEXT_LOADER )
@@ -1655,9 +1648,7 @@ if mode == 'Loading':
 				
 				render_document_processing_actions( 'TextLoader', 'txt' )
 
-			# ----------------------------
 			# ------ Expander CSV Loader
-			# ----------------------------
 			with st.expander( label='CSV Loader', icon='📑', expanded=False ):
 				csv_file = st.file_uploader( label='Upload CSV', type=[ 'csv' ],
 					key='csv_upload', help=cfg.CSV_LOADER )
@@ -1723,14 +1714,9 @@ if mode == 'Loading':
 					st.session_state[ '_loader_status' ] = \
 						f'Loaded {len( documents )} CSV document(s).'
 			
-			# ----------------------------
-			# ---- XML Loader
-			# ----------------------------
 				render_document_processing_actions( 'CsvLoader', 'csv' )
 
-			# ----------------------------
 			# ------ Expander XML Loader
-			# ----------------------------
 			with st.expander( label='XML Loader', icon='🧬', expanded=False ):
 				if 'xml_loader' not in st.session_state or st.session_state.xml_loader is None:
 					st.session_state.xml_loader = XmlLoader( )
@@ -1817,7 +1803,6 @@ if mode == 'Loading':
 						
 						if tree is not None:
 							xml_text = etree.tostring( tree, pretty_print=True, encoding='unicode' )
-							
 							st.session_state.raw_text = xml_text
 							st.session_state.processed_text = None
 							st.session_state.active_loader = 'XmlLoader'
@@ -1876,12 +1861,9 @@ if mode == 'Loading':
 								'chunk_size': getattr( xml_loader, 'chunk_size', None ),
 								'overlap_amount': getattr( xml_loader, 'overlap_amount', None ), } )
 			
-
 				render_source_processing_controls( 'XmlLoader', 'loader_xml_loader' )
 			
-			# ----------------------------
 			# ------- Expander Word Loader
-			# ----------------------------
 			with st.expander( label='Word Document Loader', icon='📘', expanded=False ):
 				word_file = st.file_uploader( 'Upload Word Document', type=[ 'docx' ],
 					key='word_upload', help=cfg.WORD_LOADER )
@@ -1951,9 +1933,7 @@ if mode == 'Loading':
 
 				render_document_processing_actions( 'WordLoader', 'word' )
 
-			# ----------------------------
 			# ------- Expander PDF Loader
-			# ----------------------------
 			with st.expander( label='PDF Loader', icon='📕', expanded=False ):
 				pdf = st.file_uploader( 'Upload PDF', type=[ 'pdf' ], key='pdf_upload',
 					help=cfg.PDF_LOADER )
@@ -2097,9 +2077,7 @@ if mode == 'Loading':
 			
 				render_document_processing_actions( 'PdfLoader', 'pdf' )
 
-			# ----------------------------
 			# ------- Expander PPT Loader
-			# ----------------------------
 			with st.expander( label='Power Point Loader', icon='📽', expanded=False ):
 				pptx = st.file_uploader( 'Upload PPTX', type=[ 'pptx' ], key='pptx_upload',
 					help=cfg.POWERPOINT_LOADER )
@@ -2151,14 +2129,9 @@ if mode == 'Loading':
 					st.session_state.active_loader = 'PowerPointLoader'
 					st.success( f'Loaded {len( documents )} PowerPoint document(s).' )
 			
-			# ----------------------------
-			# ------ Expander Jupyter Notebook Loader
-			# ----------------------------
 				render_document_processing_actions( 'PowerPointLoader', 'pptx' )
 
-			# ----------------------------
 			# ------- Expander Notebook Loader
-			# ----------------------------
 			with st.expander( label='Jupyter Notebook Loader', icon='📓', expanded=False ):
 				notebook_file = st.file_uploader( 'Upload Notebook', type=[
 						'ipynb' ], key='ipynb_upload', help=cfg.NOTEBOOK_LOADER )
@@ -2240,13 +2213,10 @@ if mode == 'Loading':
 					st.session_state[ '_loader_status' ] = \
 						f'Loaded {len( documents )} notebook document(s).'
 			
-
 				render_source_processing_controls( 'JupyterNotebookLoader',
 					'loader_jupyter_notebook_loader' )
 			
-			# ----------------------------
 			# ------- Expander Excel Loader
-			# ----------------------------
 			with st.expander( label='Excel Loader', icon='📊', expanded=False ):
 				excel_file = st.file_uploader( 'Upload Excel file', type=[ 'xlsx', 'xls' ],
 					key='excel_upload', help=cfg.EXCEL_LOADER )
@@ -2285,7 +2255,8 @@ if mode == 'Loading':
 						file_name='excel_loader_output.txt', mime='text/plain',
 						key='excel_save', icon='💾', width='stretch' )
 				else:
-					col_save.button( 'Save', key='excel_save_disabled', disabled=True, icon='💾', width='stretch' )
+					col_save.button( 'Save', key='excel_save_disabled', disabled=True,
+						icon='💾', width='stretch' )
 				
 				# --------------------------------------------------
 				# Clear (remove only ExcelLoader documents)
@@ -2383,16 +2354,10 @@ if mode == 'Loading':
 							st.warning( 'No data loaded (empty sheets or invalid selection).' )
 						else:
 							st.warning( 'No Excel document content was loaded.' )
-			
-			# ----------------------------
-			# ------ Expander Markdown Loader
-			# ----------------------------
-
+							
 				render_document_processing_actions( 'ExcelLoader', 'excel' )
 
-			# ----------------------------
 			# ------- Expander Markdown Loader
-			# ----------------------------
 			with st.expander( label='Markdown Loader', icon='🧾', expanded=False ):
 				md = st.file_uploader( 'Upload Markdown', type=[ 'md','markdown' ],
 					key='md_upload', help=cfg.MARKDOWN_LOADER )
@@ -2449,15 +2414,9 @@ if mode == 'Loading':
 					st.session_state.active_loader = 'MarkdownLoader'
 					st.success( f'Loaded {len( documents )} Markdown document(s).' )
 			
-			# ----------------------------
-			# ---- Expander HTML Loader
-			# ----------------------------
-
 				render_document_processing_actions( 'MarkdownLoader', 'md' )
 
-			# ----------------------------
 			# ------- Expander HTML Loader
-			# ----------------------------
 			with st.expander( label='HTML Loader', icon='🌐', expanded=False ):
 				html = st.file_uploader( 'Upload HTML', type=[ 'html', 'htm' ],
 					key='html_upload', help=cfg.HTML_LOADER )
@@ -2515,9 +2474,7 @@ if mode == 'Loading':
 
 				render_document_processing_actions( 'HtmlLoader', 'html' )
 
-			# ----------------------------
 			# ------- Expander JSON Loader
-			# ----------------------------
 			with st.expander( label='JSON Loader', icon='🧩', expanded=False ):
 				js = st.file_uploader( 'Upload JSON', type=[ 'json', 'jsonl' ],
 					key='json_upload', help=cfg.JSON_LOADER )
@@ -2535,12 +2492,12 @@ if mode == 'Loading':
 				
 				render_document_processing_inputs( 'JsonLoader', 'json' )
 
-				# --------------------------------------------------
-				# Buttons: Load / Clear / Save
-				# --------------------------------------------------
+				# Save
 				col_load, col_clear, col_save = st.columns( 3 )
-				load_json = col_load.button( 'Load', key='json_load', icon='📤', width='stretch' )
-				clear_json = col_clear.button( 'Clear', key='json_clear', icon='🧹', width='stretch' )
+				load_json = col_load.button( 'Load', key='json_load',
+					icon='📤', width='stretch' )
+				clear_json = col_clear.button( 'Clear', key='json_clear',
+					icon='🧹', width='stretch' )
 				
 				can_save = (
 							st.session_state.get( 'active_loader' ) == 'JsonLoader' \
@@ -2555,17 +2512,13 @@ if mode == 'Loading':
 					col_save.button( 'Save', key='json_save_disabled', disabled=True,
 						icon='💾', width='stretch' )
 				
-				# --------------------------------------------------
 				# Clear
-				# --------------------------------------------------
 				if clear_json:
 					reset_document_processing_controls( 'json' )
 					clear_if_active( 'JsonLoader' )
 					st.info( 'JSON Loader state cleared.' )
 				
-				# --------------------------------------------------
 				# Load
-				# --------------------------------------------------
 				if load_json and js:
 					with tempfile.TemporaryDirectory( ) as tmp:
 						path = os.path.join( tmp, js.name )
@@ -2585,12 +2538,13 @@ if mode == 'Loading':
 					st.success( f"Loaded {len( documents )} JSON document(s)." )
 		
 				render_document_processing_actions( 'JsonLoader', 'json' )
-
+				
+		# -----------------------------------------
+		# ------- Web Document Loaders
+		# -----------------------------------------
 		with st.expander( label='Web Documents', expanded=False ):
 			
-			# ----------------------------
-			# ------- Expander ArXiv Loader
-			# ----------------------------
+			# ------- ArXiv Loader
 			with st.expander( label='ArXiv Loader', icon='🧠', expanded=False ):
 				arxiv_query = st.text_input( 'Query',
 					placeholder='e.g., transformer OR llm', key='arxiv_query', )
@@ -2637,16 +2591,12 @@ if mode == 'Loading':
 						
 						st.session_state.raw_text = rebuild_raw_text_from_documents( )
 						st.session_state.active_loader = 'ArXivLoader'
-						
 						st.session_state[ '_loader_status' ] = \
 							f'Fetched {len( documents )} document(s).'
-			
-
+						
 				render_source_processing_controls( 'ArXivLoader', 'loader_arxiv_loader' )
 			
-			# ----------------------------
-			# ---- Expander Wikipedia Loader
-			# ----------------------------
+			# ---- Wikipedia Loader
 			with st.expander( label='Wikipedia Loader', icon='📚', expanded=False ):
 				wiki_query = st.text_input( 'Query',
 					placeholder='e.g., Natural language processing', key='wiki_query', )
@@ -2706,9 +2656,7 @@ if mode == 'Loading':
 
 				render_source_processing_controls( 'WikiLoader', 'loader_wikipedia_loader' )
 			
-			# ----------------------------
-			# ----- Expander GitHub Loader
-			# ----------------------------
+			# ----- GitHub Loader
 			with st.expander( label='GitHub Loader', icon='🐙', expanded=False ):
 				gh_url = st.text_input( 'GitHub API URL', placeholder='https://api.github.com',
 					value='https://api.github.com', key='gh_url', help='GitHub REST API base URL.',)
@@ -2750,7 +2698,6 @@ if mode == 'Loading':
 				if gh_fetch and gh_repo and gh_branch:
 					loader = GithubLoader( )
 					documents = loader.load( gh_url, gh_repo, gh_branch, gh_filetype ) or [ ]
-					
 					for d in documents:
 						if not isinstance( getattr( d, 'metadata', None ), dict ):
 							d.metadata = { }
@@ -2766,23 +2713,17 @@ if mode == 'Loading':
 						
 						st.session_state.raw_text = rebuild_raw_text_from_documents( )
 						st.session_state.active_loader = 'GithubLoader'
-						
 						st.session_state[ '_loader_status' ] = \
 							f'Fetched {len( documents )} GitHub document(s).'
 			
-
 				render_source_processing_controls( 'GithubLoader', 'loader_github_loader' )
 			
-			# ----------------------------
-			# -------- Expander Outlook Loader
-			# ----------------------------
+			# -------- Outlook Loader
 			with st.expander( label='Outlook Loader', icon='📨', expanded=False ):
 				outlook_file = st.file_uploader( 'Upload Outlook Message',
 					type=[ 'msg' ], key='outlook_upload', )
 				
-				# --------------------------------------------------
-				# Buttons: Load / Clear / Save
-				# --------------------------------------------------
+				# Save
 				col_load, col_clear, col_save = st.columns( 3 )
 				load_outlook = col_load.button( 'Load', key='outlook_load',
 					icon='📤', width='stretch' )
@@ -2802,17 +2743,13 @@ if mode == 'Loading':
 					col_save.button( 'Save', key='outlook_save_disabled',
 						disabled=True, icon='💾', width='stretch' )
 				
-				# --------------------------------------------------
 				# Clear
-				# --------------------------------------------------
 				if clear_outlook:
 					clear_if_active( 'OutlookLoader' )
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
 					st.session_state[ '_loader_status' ] = 'Outlook Loader state cleared.'
 				
-				# --------------------------------------------------
 				# Load
-				# --------------------------------------------------
 				if load_outlook and outlook_file:
 					with tempfile.TemporaryDirectory( ) as tmp:
 						path = os.path.join( tmp, outlook_file.name )
@@ -2846,9 +2783,7 @@ if mode == 'Loading':
 
 				render_source_processing_controls( 'OutlookLoader', 'loader_outlook_loader' )
 			
-			# ----------------------------
-			# ------- Expander Web Loader
-			# ----------------------------
+			# ------- Web Loader
 			with st.expander( label='Web Loader', icon='🌐', expanded=False ):
 				urls = st.text_area( 'Enter one URL per line',
 					placeholder="https://example.com\nhttps://another.com", key='web_urls', )
@@ -2907,12 +2842,9 @@ if mode == 'Loading':
 						st.session_state[ '_loader_status' ] = \
 							f'Fetched {len( new_docs )} web document(s).'
 			
-
 				render_source_processing_controls( 'WebLoader', 'loader_web_loader' )
 			
-			# ----------------------------
-			# ----- Expander Web Crawler
-			# ----------------------------
+			# ----- Web Crawler
 			with st.expander( label='Web Crawler', icon='🕷️', expanded=False ):
 				start_url = st.text_input( 'Start URL',
 					placeholder='https://example.com', key='crawl_start_url', )
@@ -2983,9 +2915,7 @@ if mode == 'Loading':
 
 				render_source_processing_controls( 'WebCrawler', 'loader_web_crawler' )
 			
-			# ----------------------------
-			# ----- Expander Email Loader
-			# ----------------------------
+			# ----- Email Loader
 			with st.expander( label='E-mail Loader', icon='📧', expanded=False ):
 				email_file = st.file_uploader( 'Upload Email File',
 					type=[ 'eml' ], key='email_upload', )
@@ -2996,12 +2926,12 @@ if mode == 'Loading':
 				email_attachments = st.checkbox( 'Process Attachments',
 					value=False, key='email_attachments', )
 				
-				# --------------------------------------------------
-				# Buttons: Load / Clear / Save
-				# --------------------------------------------------
+				# Save
 				col_load, col_clear, col_save = st.columns( 3 )
-				load_email = col_load.button( 'Load', key='email_load', icon='📤', width='stretch' )
-				clear_email = col_clear.button( 'Clear', key='email_clear', icon='🧹', width='stretch' )
+				load_email = col_load.button( 'Load', key='email_load', icon='📤',
+					width='stretch' )
+				clear_email = col_clear.button( 'Clear', key='email_clear', icon='🧹',
+					width='stretch' )
 				
 				can_save = (st.session_state.get( 'active_loader' ) == 'EmailLoader' \
 							and isinstance( st.session_state.get( 'raw_text' ), str ) \
@@ -3015,9 +2945,7 @@ if mode == 'Loading':
 					col_save.button( 'Save', key='email_save_disabled', disabled=True,
 						icon='💾', width='stretch' )
 				
-				# --------------------------------------------------
 				# Clear
-				# --------------------------------------------------
 				if clear_email:
 					clear_if_active( 'EmailLoader' )
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
@@ -3062,9 +2990,7 @@ if mode == 'Loading':
 
 				render_source_processing_controls( 'EmailLoader', 'loader_e_mail_loader' )
 			
-			# ----------------------------
-			# ---- Expander PubMed Loader
-			# ----------------------------
+			# ---- PubMed Loader
 			with st.expander( label='Pub Med Loader', icon='🧬', expanded=False ):
 				pubmed_query = st.text_input( 'PubMed Query', value='',
 					key='pubmed_query', placeholder='e.g. transformer models biomedical NLP', )
@@ -3072,9 +2998,7 @@ if mode == 'Loading':
 				pubmed_max_docs = st.number_input( 'Maximum Documents', min_value=1,
 					value=5, step=1, key='pubmed_max_docs', )
 				
-				# --------------------------------------------------
-				# Buttons: Load / Clear / Save
-				# --------------------------------------------------
+				# Save
 				col_load, col_clear, col_save = st.columns( 3 )
 				load_pubmed = col_load.button( 'Load', key='pubmed_load', icon='📥', width='stretch' )
 				clear_pubmed = col_clear.button( 'Clear', key='pubmed_clear', icon='🧹', width='stretch' )
@@ -3091,17 +3015,13 @@ if mode == 'Loading':
 					col_save.button( 'Save', key='pubmed_save_disabled', disabled=True,
 						icon='💾', width='stretch' )
 				
-				# --------------------------------------------------
 				# Clear
-				# --------------------------------------------------
 				if clear_pubmed:
 					clear_if_active( 'PubMedSearchLoader' )
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
 					st.session_state[ '_loader_status' ] = 'PubMed Loader state cleared.'
 				
-				# --------------------------------------------------
 				# Load
-				# --------------------------------------------------
 				if load_pubmed and isinstance( pubmed_query, str ) and pubmed_query.strip( ):
 					loader = PubMedSearchLoader( )
 					documents = loader.load( query=pubmed_query.strip( ),
@@ -3131,9 +3051,7 @@ if mode == 'Loading':
 
 				render_source_processing_controls( 'PubMedSearchLoader', 'loader_pub_med_loader' )
 			
-			# ----------------------------
-			# --- Expander Open City Loader
-			# ----------------------------
+			# --- Open City Loader
 			with st.expander( label='Open City Loader', icon='🏙️', expanded=False ):
 				open_city_id = st.text_input( 'City Domain', value='', key='open_city_id',
 					placeholder='e.g. data.sfgov.org',
@@ -3147,9 +3065,7 @@ if mode == 'Loading':
 				open_city_limit = st.number_input( 'Maximum Records', min_value=1, value=100,
 					step=1, key='open_city_limit', )
 				
-				# --------------------------------------------------
-				# Buttons: Load / Clear / Save
-				# --------------------------------------------------
+				# Save
 				col_load, col_clear, col_save = st.columns( 3 )
 				load_open_city = col_load.button( 'Load', key='open_city_load',
 					icon='📥', width='stretch' )
@@ -3169,17 +3085,13 @@ if mode == 'Loading':
 					col_save.button( 'Save', key='open_city_save_disabled', disabled=True,
 						icon='💾', width='stretch' )
 				
-				# --------------------------------------------------
 				# Clear
-				# --------------------------------------------------
 				if clear_open_city:
 					clear_if_active( 'OpenCityLoader' )
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
 					st.session_state[ '_loader_status' ] = 'Open City Loader state cleared.'
 				
-				# --------------------------------------------------
 				# Load
-				# --------------------------------------------------
 				if (load_open_city and isinstance( open_city_id, str ) \
 						and open_city_id.strip( ) and isinstance( open_city_dataset_id, str ) \
 						and open_city_dataset_id.strip( )):
@@ -3210,14 +3122,14 @@ if mode == 'Loading':
 					st.session_state[ '_loader_status' ] = \
 						f'Loaded {len( documents )} Open City document(s).'
 		
-
 				render_source_processing_controls( 'OpenCityLoader', 'loader_open_city_loader' )
-		
+
+		# -----------------------------------------
+		# ------- Cloud Document Loaders
+		# -----------------------------------------
 		with st.expander( label='Cloud Documents', expanded=False ):
 			
-			# ----------------------------
-			# ---- Expander OneDrive Loader
-			# ----------------------------
+			# ---- OneDrive Loader
 			with st.expander( label='OneDrive Loader', icon='🟦', expanded=False ):
 				onedrive_drive_id = st.text_input( 'Drive ID', value='', key='onedrive_drive_id',
 					placeholder='OneDrive drive identifier', )
@@ -3226,12 +3138,12 @@ if mode == 'Loading':
 					key='onedrive_folder_path', placeholder='Optional folder path within the drive',
 					help='Leave blank to load the drive target directly.', )
 				
-				# --------------------------------------------------
-				# Buttons: Load / Clear / Save
-				# --------------------------------------------------
+				# Save
 				col_load, col_clear, col_save = st.columns( 3 )
-				load_onedrive = col_load.button( 'Load', key='onedrive_load', icon='📤', width='stretch' )
-				clear_onedrive = col_clear.button( 'Clear', key='onedrive_clear', icon='🧹', width='stretch' )
+				load_onedrive = col_load.button( 'Load', key='onedrive_load',
+					icon='📤', width='stretch' )
+				clear_onedrive = col_clear.button( 'Clear', key='onedrive_clear',
+					icon='🧹', width='stretch' )
 				
 				can_save = ( st.session_state.get( 'active_loader' ) == 'OneDriveDocLoader' \
 							and isinstance( st.session_state.get( 'raw_text' ), str ) \
@@ -3245,17 +3157,13 @@ if mode == 'Loading':
 					col_save.button( 'Save', key='onedrive_save_disabled', disabled=True,
 						icon='💾', width='stretch' )
 				
-				# --------------------------------------------------
 				# Clear
-				# --------------------------------------------------
 				if clear_onedrive:
 					clear_if_active( 'OneDriveDocLoader' )
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
 					st.session_state[ '_loader_status' ] = 'OneDrive Loader state cleared.'
 				
-				# --------------------------------------------------
 				# Load
-				# --------------------------------------------------
 				if ( load_onedrive and isinstance( onedrive_drive_id, str ) \
 						and onedrive_drive_id.strip( )):
 					loader = OneDriveDocLoader( )
@@ -3293,12 +3201,9 @@ if mode == 'Loading':
 					st.session_state[
 						'_loader_status' ] = f'Loaded {len( documents )} OneDrive document(s).'
 			
-
 				render_source_processing_controls( 'OneDriveDocLoader', 'loader_onedrive_loader' )
 			
-			# ----------------------------
-			# ---- Expander Google Cloud File Loader
-			# ----------------------------
+			# ---- Google Cloud File Loader
 			with st.expander( label='Google Cloud File Loader', icon='☁️', expanded=False ):
 				gcs_project_name = st.text_input( 'Project Name', value='',
 					key='gcs_file_project_name', placeholder='e.g. my-gcp-project', )
@@ -3309,7 +3214,7 @@ if mode == 'Loading':
 				gcs_blob = st.text_input( 'Blob', value='',
 					key='gcs_file_blob', placeholder='e.g. documents/report.pdf', )
 				
-				# ---------------- Buttons: Load / Clear / Save
+				# Save
 				col_load, col_clear, col_save = st.columns( 3 )
 				load_gcs_file = col_load.button( 'Load', key='gcs_file_load', icon='📤', width='stretch' )
 				clear_gcs_file = col_clear.button( 'Clear', key='gcs_file_clear', icon='🧹', width='stretch' )
@@ -3326,18 +3231,14 @@ if mode == 'Loading':
 					col_save.button( 'Save', key='gcs_file_save_disabled',
 						disabled=True, icon='💾', width='stretch' )
 				
-				# --------------------------------------------------
 				# Clear
-				# --------------------------------------------------
 				if clear_gcs_file:
 					clear_if_active( 'GoogleCloudFileLoader' )
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
 					st.session_state[ '_loader_status' ] = ('Google Cloud File Loader state '
 					                                        'cleared.')
 				
-				# --------------------------------------------------
 				# Load
-				# --------------------------------------------------
 				if ( load_gcs_file and isinstance( gcs_project_name, str ) \
 						and gcs_project_name.strip( ) and isinstance( gcs_bucket, str ) \
 						and gcs_bucket.strip( ) and isinstance( gcs_blob, str ) and gcs_blob.strip( )):
@@ -3370,11 +3271,10 @@ if mode == 'Loading':
 							f'Loaded {len( documents )} Google Cloud file '
 							f'document(s).')
 			
-				render_source_processing_controls( 'GoogleCloudFileLoader', 'loader_google_cloud_file_loader' )
+				render_source_processing_controls( 'GoogleCloudFileLoader',
+					'loader_google_cloud_file_loader' )
 			
-			# ----------------------------
-			# ---- Expander AWS File Loader
-			# ----------------------------
+			# ---- AWS File Loader
 			with st.expander( label='AWS File Loader', icon='🪣', expanded=False ):
 				aws_file_bucket = st.text_input( 'Bucket', value='', key='aws_file_bucket',
 					placeholder='e.g. my-s3-bucket', )
@@ -3416,17 +3316,13 @@ if mode == 'Loading':
 					col_save.button( 'Save', key='aws_file_save_disabled', disabled=True,
 						icon='💾', width='stretch' )
 				
-				# --------------------------------------------------
 				# Clear
-				# --------------------------------------------------
 				if clear_aws_file:
 					clear_if_active( 'AwsFileLoader' )
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
 					st.session_state[ '_loader_status' ] = 'AWS File Loader state cleared.'
 				
-				# --------------------------------------------------
 				# Load
-				# --------------------------------------------------
 				if (load_aws_file and isinstance( aws_file_bucket, str ) \
 						and aws_file_bucket.strip( ) and isinstance( aws_file_key, str ) \
 						and aws_file_key.strip( )):
@@ -3480,9 +3376,7 @@ if mode == 'Loading':
 			
 				render_source_processing_controls( 'AwsFileLoader', 'loader_aws_file_loader' )
 			
-			# ----------------------------
-			# ----- Expander Google Bucket Loader
-			# ----------------------------
+			# ----- Google Bucket Loader
 			with st.expander( label='Google Bucket Loader', icon='🗂️', expanded=False ):
 				gcs_bucket_project_name = st.text_input( 'Project Name', value='',
 					key='gcs_bucket_project_name', placeholder='e.g. my-gcp-project', )
@@ -3516,17 +3410,13 @@ if mode == 'Loading':
 					col_save.button( 'Save', key='gcs_bucket_save_disabled', disabled=True,
 						icon='💾', width='stretch' )
 				
-				# --------------------------------------------------
 				# Clear
-				# --------------------------------------------------
 				if clear_gcs_bucket:
 					clear_if_active( 'GoogleBucketLoader' )
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
 					st.session_state[ '_loader_status' ] = 'Google Bucket Loader state cleared.'
 				
-				# --------------------------------------------------
 				# Load
-				# --------------------------------------------------
 				if ( load_gcs_bucket and isinstance( gcs_bucket_project_name, str ) \
 					and gcs_bucket_project_name.strip( ) and isinstance( gcs_bucket_name, str )\
 					and gcs_bucket_name.strip( )):
@@ -3571,9 +3461,7 @@ if mode == 'Loading':
 				render_source_processing_controls( 'GoogleBucketLoader', 
 					'loader_google_bucket_loader' )
 			
-			# ----------------------------
-			# ---- Expander AWS Bucket Loader
-			# ----------------------------
+			# ---- AWS Bucket Loader
 			with st.expander( label='AWS Bucket Loader', icon='🗃️', expanded=False ):
 				aws_bucket_name = st.text_input( 'Bucket', value='',
 					key='aws_bucket_name', placeholder='e.g. my-s3-bucket', )
@@ -3596,9 +3484,7 @@ if mode == 'Loading':
 				aws_bucket_endpoint_url = st.text_input( 'Endpoint URL', value='',
 					key='aws_bucket_endpoint_url', placeholder='Optional custom endpoint', )
 				
-				# --------------------------------------------------
-				# Buttons: Load / Clear / Save
-				# --------------------------------------------------
+				#  Save
 				col_load, col_clear, col_save = st.columns( 3 )
 				load_aws_bucket = col_load.button( 'Load', key='aws_bucket_load',
 					icon='📤', width='stretch' )
@@ -3618,17 +3504,13 @@ if mode == 'Loading':
 					col_save.button( 'Save', key='aws_bucket_save_disabled',
 						disabled=True, icon='💾', width='stretch' )
 				
-				# --------------------------------------------------
 				# Clear
-				# --------------------------------------------------
 				if clear_aws_bucket:
 					clear_if_active( 'AwsBucketLoader' )
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
 					st.session_state[ '_loader_status' ] = 'AWS Bucket Loader state cleared.'
 				
-				# --------------------------------------------------
 				# Load
-				# --------------------------------------------------
 				if ( load_aws_bucket and isinstance( aws_bucket_name, str ) \
 						and aws_bucket_name.strip( )):
 					verify_value: str = None
@@ -3692,9 +3574,7 @@ if mode == 'Loading':
 
 				render_source_processing_controls( 'AwsBucketLoader', 'loader_aws_bucket_loader' )
 			
-			# ---------------------------
-			# ---- Expander SharePoint Loader
-			# ---------------------------
+			# ---- SharePoint Loader
 			with st.expander( label='SharePoint Loader', icon='🟩', expanded=False ):
 				spfx_library_id = st.text_input( 'Library ID', value='',
 					key='spfx_library_id', placeholder='SharePoint document library identifier', )
@@ -3703,9 +3583,7 @@ if mode == 'Loading':
 					placeholder='Optional folder identifier within the library',
 					help='Leave blank to load the library directly.', )
 				
-				# --------------------------------------------------
-				# Buttons: Load / Clear / Save
-				# --------------------------------------------------
+				# Save
 				col_load, col_clear, col_save = st.columns( 3 )
 				load_spfx = col_load.button( 'Load', key='spfx_load', icon='📤', width='stretch' )
 				clear_spfx = col_clear.button( 'Clear', key='spfx_clear', icon='🧹', width='stretch' )
@@ -3722,17 +3600,13 @@ if mode == 'Loading':
 					col_save.button( 'Save', key='spfx_save_disabled', disabled=True,
 						icon='💾', width='stretch' )
 				
-				# --------------------------------------------------
 				# Clear
-				# --------------------------------------------------
 				if clear_spfx:
 					clear_if_active( 'SpfxLoader' )
 					st.session_state.raw_text = rebuild_raw_text_from_documents( )
 					st.session_state[ '_loader_status' ] = 'SharePoint Loader state cleared.'
 				
-				# --------------------------------------------------
 				# Load
-				# --------------------------------------------------
 				if (load_spfx and isinstance( spfx_library_id, str ) and spfx_library_id.strip( )):
 					loader = SpfxLoader( )
 					if isinstance( spfx_folder_id, str ) and spfx_folder_id.strip( ):
@@ -4404,9 +4278,8 @@ elif mode == 'Retrieval':
 		
 
 			render_source_processing_controls( 'Wikipedia', 'retrieval_wikipedia' )
-		# ----------------------------
-		# -------- Expander (Google Search)
-		# ----------------------------
+		
+		# -------- Google Search
 		with st.expander( label='Google Search', icon='🔍', expanded=False ):
 			st.badge( label='Information', help=cfg.GOOGLE_CSE )
 			if 'googlesearch_results' not in st.session_state:
@@ -4486,9 +4359,8 @@ elif mode == 'Retrieval':
 					placeholder='d7, m1, y1' )
 			
 			with c8:
-				google_safe = st.selectbox( 'Safe Search', options=[ 'off', 'active' ], index=[
-						'off',
-						'active' ].index( st.session_state.get( 'googlesearch_safe', 'off' ) ),
+				google_safe = st.selectbox( 'Safe Search', options=[ 'off', 'active' ],
+					index=['off','active' ].index( st.session_state.get('googlesearch_safe', 'off')),
 					key='googlesearch_safe' )
 			
 			c9, c10, c11 = st.columns( 3 )
@@ -4513,10 +4385,10 @@ elif mode == 'Retrieval':
 					placeholder='example.gov' )
 			
 			with c13:
-				google_site_search_filter = st.selectbox( 'Site Search Filter', options=[ '', 'i',
-						'e' ], index=[ '', 'i',
-						'e' ].index( st.session_state.get( 'googlesearch_site_search_filter',
-					'' ) ), key='googlesearch_site_search_filter', help='i=include, e=exclude' )
+				google_site_search_filter = st.selectbox( 'Site Search Filter',
+					options=[ '', 'i', 'e' ], index=[ '', 'i', 'e' ].index(
+						st.session_state.get( 'googlesearch_site_search_filter', '' ) ),
+					key='googlesearch_site_search_filter', help='i=include, e=exclude' )
 			
 			google_sort = st.text_input( 'Sort', value=st.session_state.get( 'googlesearch_sort',
 				'' ), key='googlesearch_sort', placeholder='date' )
@@ -4540,11 +4412,11 @@ elif mode == 'Retrieval':
 			
 			c16, c17 = st.columns( 2 )
 			with c16:
-				google_img_color_type = st.selectbox( 'Image Color Type', options=[ '', 'color',
-						'gray', 'mono', 'trans' ], index=[ '', 'color', 'gray', 'mono',
-						'trans' ].index( st.session_state.get( 'googlesearch_img_color_type',
-					'' ) ), key='googlesearch_img_color_type', disabled=(
-						google_search_type != 'image') )
+				google_img_color_type = st.selectbox( 'Image Color Type',
+					options=[ '', 'color', 'gray', 'mono', 'trans' ],
+					index=[ '', 'color', 'gray', 'mono', 'trans' ].index(
+						st.session_state.get( 'googlesearch_img_color_type', '' ) ),
+					key='googlesearch_img_color_type', disabled=( google_search_type != 'image') )
 			
 			with c17:
 				google_img_dominant_color = st.selectbox( 'Image Dominant Color',
@@ -4576,9 +4448,8 @@ elif mode == 'Retrieval':
 		
 
 			render_source_processing_controls( 'Google Search', 'retrieval_google_search' )
-		# ----------------------------
-		# -------- Expander (Open Science)
-		# ----------------------------
+		
+		# -------- Open Science
 		with st.expander( label='Open Science', icon='🧪', expanded=False ):
 			st.badge( label='Information', help=cfg.NASA_OPEN_SCIENCE )
 			if 'openscience_results' not in st.session_state:
@@ -4613,26 +4484,25 @@ elif mode == 'Retrieval':
 				height=120, key='openscience_query',
 				placeholder=( 'Example: (id.accession=OSD-48)') )
 			
-			openscience_format = st.selectbox( 'Format', options=[ 'json', 'csv', 'tsv',
-					'browser' ], index=[ 'json', 'csv', 'tsv',
-					'browser' ].index( st.session_state.get( 'openscience_format', 'json' ) ),
+			openscience_format = st.selectbox( 'Format', options=[ 'json', 'csv', 'tsv', 'browser' ],
+				index=[ 'json', 'csv', 'tsv', 'browser' ].index(
+					st.session_state.get( 'openscience_format', 'json' ) ),
 				key='openscience_format' )
 			
 			openscience_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120,
-				value=int( st.session_state.get( 'openscience_timeout', 20 ) ), step=1, key='openscience_timeout' )
+				value=int( st.session_state.get( 'openscience_timeout', 20 ) ),
+				step=1, key='openscience_timeout' )
 			
 			b1, b2 = st.columns( 2 )
 			with b1:
-				openscience_submit = st.button( 'Submit', key='openscience_submit', width='stretch' )
+				openscience_submit = st.button( 'Submit', key='openscience_submit', width='stretch')
 			with b2:
 				st.button( 'Clear', key='openscience_clear',
 					on_click=_clear_openscience_state, width='stretch' )
 		
-
 			render_source_processing_controls( 'Open Science', 'retrieval_open_science' )
-		# ----------------------------
-		# -------- Expander (Gov Info)
-		# ----------------------------
+		
+		# -------- Gov Info
 		with st.expander( label='Gov Info', icon='🏛️', expanded=False ):
 			st.badge( label='Information', help=cfg.GOV_INFO )
 			if 'govinfo_results' not in st.session_state:
@@ -4658,9 +4528,10 @@ elif mode == 'Retrieval':
 			def _clear_govinfo_state( ) -> None:
 				st.session_state[ 'govinfo_clear_request' ] = True
 			
-			govinfo_mode = st.selectbox( 'Mode', options=[ 'search', 'package_summary',
-					'collection' ], index=[ 'search', 'package_summary',
-					'collection' ].index( st.session_state.get( 'govinfo_mode', 'search' ) ),
+			govinfo_mode = st.selectbox( 'Mode',
+				options=[ 'search', 'package_summary', 'collection' ],
+				index=[ 'search', 'package_summary', 'collection' ].index(
+					st.session_state.get( 'govinfo_mode', 'search' ) ),
 				key='govinfo_mode', help=( 'search = GovInfo Search Service') )
 			
 			govinfo_query = st.text_area( 'Query',
@@ -4679,7 +4550,6 @@ elif mode == 'Retrieval':
 					key='govinfo_offset_mark', placeholder='*' )
 			
 			c3, c4 = st.columns( 2 )
-			
 			with c3:
 				govinfo_sort_field = st.selectbox( 'Sort Field',
 					options=[ 'score', 'lastModified' ],
@@ -4721,11 +4591,9 @@ elif mode == 'Retrieval':
 					on_click=_clear_govinfo_state, use_container_width=True, width='stretch' )
 			
 			result = st.session_state.get( 'govinfo_results', { } )
-			
 			if govinfo_submit:
 				try:
 					f = GovData( )
-					
 					result = f.fetch( mode=str( govinfo_mode ), query=str( govinfo_query ),
 						page_size=int( govinfo_page_size ), offset_mark=str( govinfo_offset_mark ),
 						sort_field=str( govinfo_sort_field ), sort_order=str( govinfo_sort_order ),
@@ -4738,7 +4606,6 @@ elif mode == 'Retrieval':
 				
 				except Exception as exc:
 					st.error( str( exc ) )
-					
 					result = st.session_state.get( 'govinfo_results', { } )
 			
 			if not result:
@@ -4754,7 +4621,6 @@ elif mode == 'Retrieval':
 						'payload': payload, } )
 				
 				items: List[ Dict[ str, Any ] ] = [ ]
-				
 				if isinstance( data, dict ):
 					for key in [ 'packages', 'results', 'items' ]:
 						value = data.get( key, None )
@@ -4766,13 +4632,11 @@ elif mode == 'Retrieval':
 				
 				if mode_value == 'package_summary' and isinstance( data, dict ) and data:
 					st.markdown( '#### Package Summary' )
-					
 					title_value = (
 							data.get( 'title' ) or data.get( 'packageTitle' ) \
 							or data.get( 'packageId' ) or 'Package')
 					
 					st.markdown( f'### {title_value}' )
-					
 					meta_parts: List[ str ] = [ ]
 					for key in [ 'packageId', 'collectionCode', 'lastModified', 'dateIssued' ]:
 						if key in data and str( data.get( key ) ).strip( ):
@@ -4791,7 +4655,6 @@ elif mode == 'Retrieval':
 				
 				elif items:
 					st.markdown( '#### Results' )
-					
 					for index, item in enumerate( items, start=1 ):
 						title_value = (
 								item.get( 'title' ) or item.get( 'packageTitle' ) \
@@ -4851,11 +4714,9 @@ elif mode == 'Retrieval':
 				with st.expander( 'Raw Result', expanded=False ):
 					st.json( result )
 		
-
 			render_source_processing_controls( 'Gov Info', 'retrieval_gov_info' )
-		# ----------------------------
-		# -------- Expander (Congress)
-		# ----------------------------
+		
+		# -------- Congress
 		with st.expander( label='US Congress', icon='⚖️', expanded=False ):
 			st.badge( label='Information', help=cfg.CONGRESS )
 			if 'congress_results' not in st.session_state:
@@ -4886,10 +4747,11 @@ elif mode == 'Retrieval':
 			def _clear_congress_state( ) -> None:
 				st.session_state[ 'congress_clear_request' ] = True
 			
-			congress_mode = st.selectbox( 'Mode', options=[ 'congresses', 'bills', 'bill_detail',
-					'laws', 'law_detail', 'reports', 'report_detail' ], index=[ 'congresses',
-					'bills', 'bill_detail', 'laws', 'law_detail', 'reports',
-					'report_detail' ].index( st.session_state.get(
+			congress_mode = st.selectbox( 'Mode',
+				options=[ 'congresses', 'bills', 'bill_detail', 'laws', 'law_detail',
+						'reports', 'report_detail' ],
+				index=[ 'congresses', 'bills', 'bill_detail', 'laws', 'law_detail',
+						'reports', 'report_detail' ].index( st.session_state.get(
 				'congress_mode', 'congresses' ) ), key='congress_mode',
 				help=( 'Congress.gov is a structured endpoint API. ') )
 			
@@ -4901,8 +4763,8 @@ elif mode == 'Retrieval':
 			with c1:
 				congress_bill_type = st.selectbox( 'Bill Type',
 					options=[ '', 'hr', 's', 'hjres', 'sjres', 'hconres', 'sconres', 'hres', 'sres' ],
-					index=[ '', 'hr', 's', 'hjres', 'sjres', 'hconres', 'sconres', 'hres', 'sres' ].index(
-						st.session_state.get( 'congress_bill_type', '' ) ),
+					index=[ '', 'hr', 's', 'hjres', 'sjres', 'hconres', 'sconres', 'hres',
+							'sres' ].index( st.session_state.get( 'congress_bill_type', '' ) ),
 					key='congress_bill_type' )
 			
 			with c2:
@@ -4971,7 +4833,6 @@ elif mode == 'Retrieval':
 				step=1, key='congress_timeout' )
 			
 			b1, b2 = st.columns( 2 )
-			
 			with b1:
 				congress_submit = st.button( 'Submit', key='congress_submit',
 					use_container_width=True, width='stretch' )
@@ -4983,7 +4844,6 @@ elif mode == 'Retrieval':
 			if congress_submit:
 				try:
 					f = Congress( )
-					
 					result = f.fetch( mode=str( congress_mode ), congress=int( congress_number ),
 						bill_type=str( congress_bill_type ), bill_number=int( congress_bill_number ),
 						law_type=str( congress_law_type ), law_number=int( congress_law_number ),
@@ -5002,7 +4862,6 @@ elif mode == 'Retrieval':
 					st.error( str( exc ) )
 			
 			result = st.session_state.get( 'congress_results', { } )
-			
 			if not result:
 				st.text( 'No results.' )
 			else:
@@ -5012,7 +4871,6 @@ elif mode == 'Retrieval':
 				
 				st.markdown( '#### Request Metadata' )
 				st.json( { 'mode': mode_value, 'url': result.get( 'url', '' ), 'params': params, } )
-				
 				items: List[ Dict[ str, Any ] ] = [ ]
 				if isinstance( data, dict ):
 					for key in [ 'bills', 'laws', 'reports', 'committeeReports', 'congresses',
@@ -5026,7 +4884,6 @@ elif mode == 'Retrieval':
 				
 				if items:
 					st.markdown( '#### Results' )
-					
 					for index, item in enumerate( items, start=1 ):
 						title_value = (
 									item.get( 'title' ) or item.get( 'name' ) \
@@ -5060,14 +4917,12 @@ elif mode == 'Retrieval':
 				
 				elif isinstance( data, dict ) and data:
 					st.markdown( '#### Detail' )
-					
 					title_value = (
 								data.get( 'title' ) or data.get( 'name' ) or data.get( 'number' ) \
 								or data.get( 'billNumber' ) or data.get( 'lawNumber' ) \
 								or data.get( 'reportNumber' ) or 'Result')
 					
 					st.markdown( f'### {title_value}' )
-					
 					summary_fields: Dict[ str, Any ] = { }
 					for key in [ 'congress', 'type', 'number', 'billType', 'billNumber', 'lawType',
 							'lawNumber', 'reportType', 'reportNumber', 'updateDate', 'actionDate' ]:
@@ -5096,9 +4951,8 @@ elif mode == 'Retrieval':
 		
 
 			render_source_processing_controls( 'US Congress', 'retrieval_us_congress' )
-		# ----------------------------
-		# -------- Expander (Internet Archive)
-		# ----------------------------
+		
+		# -------- Internet Archive
 		with st.expander( label='Internet Archive', icon='🌐', expanded=False ):
 			st.badge( label='Information', help=cfg.INTERNET_ARCHIVE )
 			if 'internetarchive_results' not in st.session_state:
@@ -5173,11 +5027,9 @@ elif mode == 'Retrieval':
 					on_click=_clear_internetarchive_state, use_container_width=True, width='stretch' )
 			
 			result = st.session_state.get( 'internetarchive_results', { } )
-			
 			if ia_submit:
 				try:
 					f = InternetArchive( )
-					
 					result = f.fetch( keywords=str( ia_query ), rows=int( ia_rows ),
 						page=int( ia_page ), sort=str( ia_sort ), media_type=str( ia_media_type ),
 						collection=str( ia_collection ), time=int( ia_timeout ) )
@@ -5197,16 +5049,12 @@ elif mode == 'Retrieval':
 				mode_value = result.get( 'mode', '' ) if isinstance( result, dict ) else ''
 				data = result.get( 'data', { } ) if isinstance( result, dict ) else { }
 				params = result.get( 'params', { } ) if isinstance( result, dict ) else { }
-				
 				st.markdown( '#### Request Metadata' )
 				st.json( { 'mode': mode_value, 'url': result.get( 'url', '' ), 'params': params, } )
-				
 				docs: List[ Dict[ str, Any ] ] = [ ]
 				num_found = None
-				
 				if isinstance( data, dict ):
 					response_block = data.get( 'response', { } )
-					
 					if isinstance( response_block, dict ):
 						num_found = response_block.get( 'numFound', None )
 						value = response_block.get( 'docs', [ ] )
@@ -5226,7 +5074,6 @@ elif mode == 'Retrieval':
 						
 						identifier_value = item.get( 'identifier', '' )
 						mediatype_value = item.get( 'mediatype', '' )
-						
 						collection_value = ''
 						collection_raw = item.get( 'collection', '' )
 						if isinstance( collection_raw, list ) and collection_raw:
@@ -5245,9 +5092,7 @@ elif mode == 'Retrieval':
 						
 						with st.container( border=True ):
 							st.markdown( f'**{index}. {title_value}**' )
-							
 							meta_parts: List[ str ] = [ ]
-							
 							if identifier_value:
 								meta_parts.append( f'Identifier: `{identifier_value}`' )
 							
@@ -5288,12 +5133,10 @@ elif mode == 'Retrieval':
 				
 				with st.expander( 'Raw Result', expanded=False ):
 					st.json( result )
-		
 
 			render_source_processing_controls( 'Internet Archive', 'retrieval_internet_archive' )
-		# ----------------------------
-		# -------- Expander (Grokipedia)
-		# ----------------------------
+		
+		# -------- Grokipedia
 		with st.expander( label='Grokipedia', icon='🧠', expanded=False ):
 			st.badge( label='Information', help=cfg.GROKIPEDIA )
 			if 'grokipedia_results' not in st.session_state:
@@ -5363,7 +5206,6 @@ elif mode == 'Retrieval':
 					on_click=_clear_grokipedia_state, use_container_width=True, width='stretch' )
 			
 			should_fetch_grokipedia = False
-			
 			if grokipedia_submit:
 				should_fetch_grokipedia = True
 			
@@ -5443,7 +5285,6 @@ elif mode == 'Retrieval':
 							with st.container( border=True ):
 								st.markdown( f'**{index}. {title_value}**' )
 								meta_parts: List[ str ] = [ ]
-								
 								if slug_value:
 									meta_parts.append( f'Slug: `{slug_value}`' )
 								
@@ -5459,7 +5300,6 @@ elif mode == 'Retrieval':
 									st.caption( 'No summary available.' )
 								
 								ca, cb = st.columns( 2 )
-								
 								with ca:
 									if slug_value:
 										if st.button( 'Load Page',
@@ -5474,9 +5314,7 @@ elif mode == 'Retrieval':
 				
 				elif mode_value == 'page':
 					st.markdown( '#### Page Result' )
-					
 					page_item: Dict[ str, Any ] = data if isinstance( data, dict ) else { }
-					
 					if not page_item:
 						if data:
 							st.text_area( 'Output', value=str( data ), height=320 )
@@ -5520,7 +5358,6 @@ elif mode == 'Retrieval':
 				
 				else:
 					st.markdown( '#### Result' )
-					
 					if isinstance( data, dict ) or isinstance( data, list ):
 						st.json( data )
 					elif data:
@@ -5530,9 +5367,8 @@ elif mode == 'Retrieval':
 		
 
 			render_source_processing_controls( 'Grokipedia', 'retrieval_grokipedia' )
-		# ----------------------------
-		# -------- Expander (Jupyter Notebook)
-		# ----------------------------
+		
+		# -------- Jupyter Notebook
 		with st.expander( label='Jupyter Notebook', icon='🪐', expanded=False ):
 			st.badge( label='Information', help=cfg.JUPYTER_NOTEBOOK )
 			if 'jupyter_notebook_results' not in st.session_state:
@@ -5575,21 +5411,17 @@ elif mode == 'Retrieval':
 				else:
 					st.button( 'Save', key='jupyter_notebook_save_disabled', disabled=True,
 						use_container_width=True, width='stretch' )
-		
 
 			render_source_processing_controls( 'Jupyter Notebook', 'retrieval_jupyter_notebook' )
-		# ----------------------------
-		# -------- Expander (Google Cloud File)
-		# ----------------------------
+		
+		# -------- Google Cloud File
 		with st.expander( label='Google Cloud File', icon='☁️', expanded=False ):
 			st.badge( label='Information', help=cfg.GOOGLE_FILE )
 			if 'google_cloud_file_results' not in st.session_state:
 				st.session_state[ 'google_cloud_file_results' ] = { }
 			
 			project_name = st.text_input( 'Project Name', key='google_cloud_file_project_name' )
-			
 			bucket = st.text_input( 'Bucket', key='google_cloud_file_bucket' )
-			
 			blob = st.text_input( 'Blob', key='google_cloud_file_blob',
 				help='The exact object name in the Google Cloud Storage bucket.' )
 			
@@ -5616,25 +5448,22 @@ elif mode == 'Retrieval':
 					st.button( 'Save', key='google_cloud_file_save_disabled', disabled=True,
 						use_container_width=True, width='stretch' )
 		
-
 			render_source_processing_controls( 'Google Cloud File', 'retrieval_google_cloud_file' )
-		# ----------------------------
-		# -------- Expander (AWS S3 File)
-		# ----------------------------
+		
+		# -------- AWS S3 File
 		with st.expander( label='AWS S3 File', icon='📗', expanded=False ):
 			st.badge( label='Information', help=cfg.AWS_FILE )
 			if 'aws_file_results' not in st.session_state:
 				st.session_state[ 'aws_file_results' ] = { }
 			
 			bucket = st.text_input( 'Bucket', key='aws_file_bucket' )
-			
 			key_name = st.text_input( 'Key', key='aws_file_key',
 				help='The exact S3 object key to load.' )
 			
 			region_name = st.text_input( 'Region (Optional)', key='aws_file_region_name' )
 			
-			st.caption( 'AWS credentials: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN (environment configuration).' )
-			
+			s = 'AWS credentials: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN'
+			st.caption( s )
 			b1, b2, b3 = st.columns( 3 )
 			with b1:
 				aws_file_submit = st.button( 'Submit', key='aws_file_submit',
@@ -5658,11 +5487,9 @@ elif mode == 'Retrieval':
 					st.button( 'Save', key='aws_file_save_disabled', disabled=True,
 						use_container_width=True, width='stretch' )
 		
-
 			render_source_processing_controls( 'AWS S3 File', 'retrieval_aws_s3_file' )
-		# ----------------------------
-		# -------- Expander (OneDrive)
-		# ----------------------------
+		
+		# -------- OneDrive
 		with st.expander( label='OneDrive', icon='💻', expanded=False ):
 			st.badge( label='Information', help=cfg.ONEDRIVE )
 			if 'onedrive_results' not in st.session_state:
@@ -5703,9 +5530,8 @@ elif mode == 'Retrieval':
 		
 
 			render_source_processing_controls( 'OneDrive', 'retrieval_onedrive' )
-		# ----------------------------
-		# -------- Expander (Google Speech-to-Text)
-		# ----------------------------
+		
+		# -------- Google Speech-to-Text
 		with st.expander( label='Google Speech-to-Text', icon='🗣️', expanded=False ):
 			st.badge( label='Information', help=cfg.GOOGLE_STT )
 			if 'google_speech_to_text_results' not in st.session_state:
@@ -5744,11 +5570,9 @@ elif mode == 'Retrieval':
 					st.button( 'Save', key='google_speech_to_text_save_disabled',
 						disabled=True, use_container_width=True, width='stretch' )
 		
-
 			render_source_processing_controls( 'Google Speech-to-Text', 'retrieval_google_speech_to_text' )
-		# ----------------------------
-		# -------- Expander  (AWS S3 Bucket)
-		# ----------------------------
+		
+		# -------- AWS S3 Bucket
 		with st.expander( label='AWS S3 Bucket', icon='🗂️', expanded=False ):
 			st.badge( label='Information', help=cfg.AWS_BUCKET )
 			if 'aws_bucket_results' not in st.session_state:
@@ -5762,8 +5586,8 @@ elif mode == 'Retrieval':
 			endpoint_url = st.text_input( 'Endpoint URL (Optional)', key='aws_bucket_endpoint_url',
 				help='Optional S3-compatible endpoint URL.' )
 			
-			st.caption( 'AWS credentials: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN (environment configuration).' )
-			
+			c = 'AWS credentials: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN '
+			st.caption( c )
 			b1, b2, b3 = st.columns( 3 )
 			with b1:
 				aws_bucket_submit = st.button( 'Submit', key='aws_bucket_submit',
@@ -5786,20 +5610,16 @@ elif mode == 'Retrieval':
 					st.button( 'Save', key='aws_bucket_save_disabled',
 						disabled=True, use_container_width=True, width='stretch' )
 		
-
 			render_source_processing_controls( 'AWS S3 Bucket', 'retrieval_aws_s3_bucket' )
-		# ----------------------------
-		# -------- Expander (Google Cloud Bucket)
-		# ----------------------------
+		
+		# -------- Google Cloud Bucket
 		with st.expander( label='Google Cloud Bucket', icon='🧊', expanded=False ):
 			st.badge( label='Information', help=cfg.GOOGLE_BUCKET )
 			if 'google_bucket_results' not in st.session_state:
 				st.session_state[ 'google_bucket_results' ] = { }
 			
 			project_name = st.text_input( 'Project Name', key='google_bucket_project_name' )
-			
 			bucket_name = st.text_input( 'Bucket', key='google_bucket_name' )
-			
 			prefix = st.text_input( 'Prefix (Optional)', key='google_bucket_prefix',
 				help='Optional folder / object prefix filter inside the bucket.' )
 			
@@ -5829,9 +5649,9 @@ elif mode == 'Retrieval':
 				else:
 					st.button( 'Save', key='google_bucket_save_disabled', disabled=True,
 						use_container_width=True, width='stretch' )
-	
 
 			render_source_processing_controls( 'Google Cloud Bucket', 'retrieval_google_cloud_bucket' )
+	
 	# ------------------------------------------------------------------
 	# Shared result selection
 	# ------------------------------------------------------------------
@@ -6736,8 +6556,6 @@ elif mode == 'Retrieval':
 		if not active_source:
 			st.info( 'No retrieval results available.' )
 
-# ==============================================================================
-# GEOSPATIAL MODE
 		retrieval_result_keys: Dict[ str, str ] = {
 			'ArXiv': 'arxiv_results', 'Google Drive': 'googledrive_results',
 			'Wikipedia': 'wikipedia_results', 'Google Search': 'googlesearch_results',
@@ -6751,8 +6569,11 @@ elif mode == 'Retrieval':
 		if active_source in retrieval_result_keys:
 			promote_source_result( mode_name='Retrieval', source_name=active_source,
 				result=st.session_state.get( retrieval_result_keys[ active_source ] ) )
+			
 		render_document_processing_tabs( key_prefix='retrieval' )
 
+# ==============================================================================
+# GEOSPATIAL MODE
 # ==============================================================================
 elif mode == 'Geospatial':
 	st.session_state.setdefault( 'geospatial_active_source', '' )
@@ -6792,12 +6613,10 @@ elif mode == 'Geospatial':
 	st.subheader( '📡 Geospatial & Weather' )
 	
 	st.divider( )
-	
 	left, right = st.columns( [ 0.4, 0.6 ], gap='xxsmall', border=True )
 	with left:
-		# ----------------------------
-		# ------ Expander Geocoding
-		# ----------------------------
+		
+		# ------ Geocoding
 		with st.expander( label='Geocoding', icon='📍', expanded=False ):
 			if 'googlegeocoding_results' not in st.session_state:
 				st.session_state[ 'googlegeocoding_results' ] = { }
@@ -6905,12 +6724,10 @@ elif mode == 'Geospatial':
 			
 			if googlegeocoding_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'Geocoding'
-		
 
 			render_source_processing_controls( 'Geocoding', 'api_geocoding' )
-		# ----------------------------
-		# ------ Expander Google Maps
-		# ----------------------------
+		
+		# ------ Google Maps
 		with st.expander( label='Google Maps', icon='🗺️', expanded=False ):
 			GOOGLEMAPS_MODES = [ 'geocode_location', 'geocode_coordinates', 'validate_address',
 					'request_directions' ]
@@ -7047,17 +6864,14 @@ elif mode == 'Geospatial':
 			if googlemaps_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'Google Maps'
 		
-
 			render_source_processing_controls( 'Google Maps', 'api_google_maps' )
-		# ----------------------------
-		# ------ Expander Google Weather
-		# ----------------------------
+		
+		# ------ Google Weather
 		with st.expander( label='Google Weather', icon='🌤️', expanded=False ):
 			GOOGLEWEATHER_MODES = [ 'current', 'hourly_forecast', 'daily_forecast',
 					'hourly_history', 'alerts' ]
 			
 			GOOGLEWEATHER_UNITS = [ 'METRIC', 'IMPERIAL' ]
-			
 			def _clear_googleweather_state( ) -> None:
 				st.session_state[ 'googleweather_clear_request' ] = True
 			
@@ -7103,38 +6917,50 @@ elif mode == 'Geospatial':
 				st.session_state[ 'googleweather_results' ] = { }
 				st.session_state[ 'googleweather_clear_request' ] = False
 			
-			gw_location = st.text_area( 'Location', height=70, key='googleweather_location', placeholder=(
-				'Examples:\n'
+			gw_location = st.text_area( 'Location', height=70, key='googleweather_location',
+				placeholder=( 'Examples:\n'
 				'Washington, DC\n'
 				'1600 Pennsylvania Ave NW, Washington, DC\n'
 				'Arlington, VA'), )
 			
 			c1, c2 = st.columns( 2 )
 			with c1:
-				gw_mode = st.selectbox( 'Mode', options=GOOGLEWEATHER_MODES, index=GOOGLEWEATHER_MODES.index( st.session_state.get( 'googleweather_mode', 'current' ) ), key='googleweather_mode', help='Choose the Google Weather API operation to run.' )
+				gw_mode = st.selectbox( 'Mode', options=GOOGLEWEATHER_MODES,
+					index=GOOGLEWEATHER_MODES.index( st.session_state.get(
+						'googleweather_mode', 'current' ) ), key='googleweather_mode',
+					help='Choose the Google Weather API operation to run.' )
 			
 			with c2:
-				gw_units = st.selectbox( 'Units', options=GOOGLEWEATHER_UNITS, index=GOOGLEWEATHER_UNITS.index( st.session_state.get( 'googleweather_units', 'METRIC' ) ), key='googleweather_units' )
+				gw_units = st.selectbox( 'Units', options=GOOGLEWEATHER_UNITS,
+					index=GOOGLEWEATHER_UNITS.index( st.session_state.get(
+						'googleweather_units', 'METRIC' ) ), key='googleweather_units' )
 			
 			c3, c4, c5 = st.columns( 3 )
 			with c3:
-				gw_language = st.text_input( 'Language', value=st.session_state.get( 'googleweather_language', 'en' ), key='googleweather_language', placeholder='en' )
+				gw_language = st.text_input( 'Language', value=st.session_state.get(
+					'googleweather_language', 'en' ), key='googleweather_language', placeholder='en' )
 			
 			with c4:
-				gw_hours = st.number_input( 'Forecast Hours', min_value=1, max_value=240, value=int( st.session_state.get( 'googleweather_hours', 24 ) ), step=1, key='googleweather_hours', disabled=(
-							gw_mode != 'hourly_forecast') )
+				gw_hours = st.number_input( 'Forecast Hours', min_value=1, max_value=240,
+					value=int( st.session_state.get( 'googleweather_hours', 24 ) ), step=1,
+					key='googleweather_hours', disabled=( gw_mode != 'hourly_forecast') )
 			
 			with c5:
-				gw_days = st.number_input( 'Forecast Days', min_value=1, max_value=10, value=int( st.session_state.get( 'googleweather_days', 5 ) ), step=1, key='googleweather_days', disabled=(
-							gw_mode != 'daily_forecast') )
+				gw_days = st.number_input( 'Forecast Days', min_value=1, max_value=10,
+					value=int( st.session_state.get( 'googleweather_days', 5 ) ), step=1,
+					key='googleweather_days', disabled=(gw_mode != 'daily_forecast') )
 			
 			h1, h2 = st.columns( 2 )
 			with h1:
-				gw_history_hours = st.number_input( 'History Hours', min_value=1, max_value=24, value=int( st.session_state.get( 'googleweather_history_hours', 24 ) ), step=1, key='googleweather_history_hours', disabled=(
-							gw_mode != 'hourly_history'), help='Google Weather hourly history supports up to 24 hours.' )
+				gw_history_hours = st.number_input( 'History Hours', min_value=1, max_value=24,
+					value=int( st.session_state.get( 'googleweather_history_hours', 24 ) ), step=1,
+					key='googleweather_history_hours', disabled=( gw_mode != 'hourly_history'),
+					help='Google Weather hourly history supports up to 24 hours.' )
 			
 			with h2:
-				gw_timeout = st.number_input( 'Timeout', min_value=1, max_value=60, value=int( st.session_state.get( 'googleweather_timeout', 10 ) ), step=1, key='googleweather_timeout' )
+				gw_timeout = st.number_input( 'Timeout', min_value=1, max_value=60,
+					value=int( st.session_state.get( 'googleweather_timeout', 10 ) ), step=1,
+					key='googleweather_timeout' )
 			
 			st.caption( 'Required keys: GOOGLE_WEATHER_API_KEY and GOOGLE_API_KEY. '
 			            'Weather and Geocoding APIs must be enabled in your Google Cloud project.' )
@@ -7144,16 +6970,15 @@ elif mode == 'Geospatial':
 				gw_submit = st.button( 'Submit', key='googleweather_submit', width='stretch' )
 			
 			with b2:
-				st.button( 'Clear', key='googleweather_clear', on_click=_clear_googleweather_state, width='stretch' )
+				st.button( 'Clear', key='googleweather_clear', on_click=_clear_googleweather_state,
+					width='stretch' )
 			
 			if gw_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'Google Weather'
 		
-
 			render_source_processing_controls( 'Google Weather', 'api_google_weather' )
-		# ----------------------------
-		# ------ Expander Open Weather
-		# ----------------------------
+		
+		# ------ Open Weather
 		with st.expander( label='Open Weather', icon='🌦️', expanded=False ):
 			if 'openweather_results' not in st.session_state:
 				st.session_state[ 'openweather_results' ] = { }
@@ -7219,11 +7044,9 @@ elif mode == 'Geospatial':
 			if openweather_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'Open Weather'
 		
-
 			render_source_processing_controls( 'Open Weather', 'api_open_weather' )
-		# ----------------------------
-		# ------ Expander Historical Weather
-		# ----------------------------
+		
+		# ------ Historical Weather
 		with st.expander( label='Historical Weather', icon='📈', expanded=False ):
 			if 'historicalweather_results' not in st.session_state:
 				st.session_state[ 'historicalweather_results' ] = { }
@@ -7280,12 +7103,10 @@ elif mode == 'Geospatial':
 		
 
 			render_source_processing_controls( 'Historical Weather', 'api_historical_weather' )
-		# ----------------------------
-		# ------ Expander USGS Earthquakes
-		# ----------------------------
+		
+		# ------ USGS Earthquakes
 		with st.expander( label='USGS Earthquakes', icon='🌎', expanded=False ):
 			USGSEARTHQUAKES_MODES = [ 'feed', 'search' ]
-			
 			USGSEARTHQUAKES_FEEDS = [ 'all_hour.geojson', 'all_day.geojson', 'all_week.geojson',
 					'all_month.geojson', 'significant_hour.geojson', 'significant_day.geojson',
 					'significant_week.geojson', 'significant_month.geojson', '4.5_hour.geojson',
@@ -7294,7 +7115,6 @@ elif mode == 'Geospatial':
 					'1.0_day.geojson', '1.0_week.geojson', '1.0_month.geojson' ]
 			
 			USGSEARTHQUAKES_ORDER_BY = [ 'time', 'time-asc', 'magnitude', 'magnitude-asc' ]
-			
 			USGSEARTHQUAKES_EVENT_TYPES = [ 'earthquake', 'quarry blast', 'explosion', 'ice quake',
 					'landslide', 'mining explosion', 'other event', 'rock burst',
 					'volcanic eruption' ]
@@ -7469,9 +7289,7 @@ elif mode == 'Geospatial':
 		
 			render_source_processing_controls( 'USGS Earthquakes', 'api_usgs_earthquakes' )
 		
-		# ----------------------------
-		# ------ Expander NASA Earth Observatory
-		# ----------------------------
+		# ------ NASA Earth Observatory
 		with st.expander( label='NASA Earth Observatory', icon='🛰️', expanded=False ):
 			if 'earthobservatory_results' not in st.session_state:
 				st.session_state[ 'earthobservatory_results' ] = { }
@@ -7565,12 +7383,9 @@ elif mode == 'Geospatial':
 		
 			render_source_processing_controls( 'NASA Earth Observatory', 'api_nasa_earth_observatory' )
 		
-		# ----------------------------
-		# ------ Expander The National Map
-		# ----------------------------
+		# ------ The National Map
 		with st.expander( label='The National Map', icon='🗺️', expanded=False ):
 			USGSTNM_MODES = [ 'products', 'datasets' ]
-			
 			USGSTNM_PRODUCT_FORMATS = [ 'GeoTIFF', 'IMG', 'LAS', 'LAZ', 'GeoPackage', 'GeoJSON',
 					'Shapefile', 'FileGDB', 'PDF', 'KMZ', 'TXT', 'CSV', 'JPEG', 'PNG', 'XML',
 					'ZIP' ]
@@ -7673,14 +7488,18 @@ elif mode == 'Geospatial':
 			page_c1, page_c2 = st.columns( 2 )
 			
 			with page_c1:
-				usgstnm_max_items = st.number_input( 'Max Items', min_value=1, max_value=500, value=int( st.session_state.get( 'usgstnm_max_items', 25 ) ), step=1, key='usgstnm_max_items', disabled=(
-							usgstnm_mode != 'products') )
+				usgstnm_max_items = st.number_input( 'Max Items', min_value=1, max_value=500,
+					value=int( st.session_state.get( 'usgstnm_max_items', 25 ) ), step=1,
+					key='usgstnm_max_items', disabled=(usgstnm_mode != 'products') )
 			
 			with page_c2:
-				usgstnm_offset = st.number_input( 'Offset', min_value=0, max_value=10000, value=int( st.session_state.get( 'usgstnm_offset', 0 ) ), step=1, key='usgstnm_offset', disabled=(
-							usgstnm_mode != 'products') )
+				usgstnm_offset = st.number_input( 'Offset', min_value=0, max_value=10000,
+					value=int( st.session_state.get( 'usgstnm_offset', 0 ) ), step=1,
+					key='usgstnm_offset', disabled=(usgstnm_mode != 'products') )
 			
-			usgstnm_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120, value=int( st.session_state.get( 'usgstnm_timeout', 20 ) ), step=1, key='usgstnm_timeout' )
+			usgstnm_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120,
+				value=int( st.session_state.get( 'usgstnm_timeout', 20 ) ), step=1,
+				key='usgstnm_timeout' )
 			
 			st.caption( 'Products mode searches downloadable TNM records. Datasets mode '
 			            'returns the dataset catalog for discovery.' )
@@ -7690,16 +7509,15 @@ elif mode == 'Geospatial':
 				usgstnm_submit = st.button( 'Submit', key='usgstnm_submit', width='stretch' )
 			
 			with btn_c2:
-				st.button( 'Clear', key='usgstnm_clear', on_click=_clear_usgstnm_state, width='stretch' )
+				st.button( 'Clear', key='usgstnm_clear', on_click=_clear_usgstnm_state,
+					width='stretch' )
 			
 			if usgstnm_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'The National Map'
 		
 			render_source_processing_controls( 'The National Map', 'api_the_national_map' )
 		
-		# ----------------------------
-		# ------ Expander USGS Science Base
-		# ----------------------------
+		# ------ USGS Science Base
 		with st.expander( label='USGS Science Base', icon='🔬', expanded=False ):
 			USGSSB_MODES = [ 'items', 'item' ]
 			
@@ -7753,32 +7571,39 @@ elif mode == 'Geospatial':
 				st.session_state[ 'usgssb_results' ] = { }
 				st.session_state[ 'usgssb_clear_request' ] = False
 			
-			usgssb_mode = st.selectbox( 'Mode', options=USGSSB_MODES, index=USGSSB_MODES.index( st.session_state.get( 'usgssb_mode', 'items' ) ), key='usgssb_mode' )
+			usgssb_mode = st.selectbox( 'Mode', options=USGSSB_MODES,
+				index=USGSSB_MODES.index( st.session_state.get( 'usgssb_mode', 'items' ) ),
+				key='usgssb_mode' )
 			
-			usgssb_q = st.text_input( 'Search Query', value=st.session_state.get( 'usgssb_q', '' ), key='usgssb_q', disabled=(
-						usgssb_mode != 'items'), placeholder='Optional keyword search' )
+			usgssb_q = st.text_input( 'Search Query', value=st.session_state.get( 'usgssb_q', '' ),
+				key='usgssb_q', disabled=(usgssb_mode != 'items'), placeholder='Optional keywords' )
 			
-			usgssb_item_id = st.text_input( 'Item ID', value=st.session_state.get( 'usgssb_item_id', '' ), key='usgssb_item_id', disabled=(
-						usgssb_mode != 'item'), placeholder='ScienceBase item identifier' )
+			usgssb_item_id = st.text_input( 'Item ID',
+				value=st.session_state.get( 'usgssb_item_id', '' ), key='usgssb_item_id',
+				disabled=(usgssb_mode != 'item'), placeholder='ScienceBase item identifier' )
 			
 			page_c1, page_c2 = st.columns( 2 )
-			
 			with page_c1:
-				usgssb_max_items = st.number_input( 'Max Items', min_value=5, max_value=1000, value=int( st.session_state.get( 'usgssb_max_items', 25 ) ), step=5, key='usgssb_max_items', disabled=(
-							usgssb_mode != 'items'), help='ScienceBase search guidance limits max to 1000 and uses increments '
-				                                          'of 5.' )
+				usgssb_max_items = st.number_input( 'Max Items', min_value=5, max_value=1000,
+					value=int( st.session_state.get( 'usgssb_max_items', 25 ) ), step=5,
+					key='usgssb_max_items', disabled=(usgssb_mode != 'items'),
+					help='ScienceBase search guidance limits max to 1000.' )
 			
 			with page_c2:
-				usgssb_offset = st.number_input( 'Offset', min_value=0, max_value=150000, value=int( st.session_state.get( 'usgssb_offset', 0 ) ), step=5, key='usgssb_offset', disabled=(
-							usgssb_mode != 'items'), help='Paging offset. Use increments of 5 for ScienceBase search '
-				                                          'requests.' )
+				usgssb_offset = st.number_input( 'Offset', min_value=0, max_value=150000,
+					value=int( st.session_state.get( 'usgssb_offset', 0 ) ), step=5,
+					key='usgssb_offset', disabled=(usgssb_mode != 'items'),
+					help='Paging offset. Use increments of 5 for ScienceBase search requests.' )
 			
-			usgssb_fields = st.multiselect( 'Fields', options=USGSSB_FIELD_OPTIONS, default=[ value
-					for value in st.session_state.get( 'usgssb_fields', [ ] ) if
-					value in USGSSB_FIELD_OPTIONS ], key='usgssb_fields', disabled=(
-						usgssb_mode != 'items'), help='Optional ScienceBase item fields to request.' )
+			usgssb_fields = st.multiselect( 'Fields', options=USGSSB_FIELD_OPTIONS,
+				default=[ value for value in st.session_state.get(
+					'usgssb_fields', [ ] ) if value in USGSSB_FIELD_OPTIONS ],
+				key='usgssb_fields',
+				disabled=( usgssb_mode != 'items'), help='Optional ScienceBase item fields' )
 			
-			usgssb_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120, value=int( st.session_state.get( 'usgssb_timeout', 20 ) ), step=1, key='usgssb_timeout' )
+			usgssb_timeout = st.number_input( 'Timeout (seconds)', min_value=5, max_value=120,
+				value=int( st.session_state.get( 'usgssb_timeout', 20 ) ),
+				step=1, key='usgssb_timeout' )
 			
 			st.caption( 'Items mode performs catalog discovery.' )
 			
@@ -7787,17 +7612,15 @@ elif mode == 'Geospatial':
 				usgssb_submit = st.button( 'Submit', key='usgssb_submit', width='stretch' )
 			
 			with btn_c2:
-				st.button( 'Clear', key='usgssb_clear', on_click=_clear_usgssb_state, width='stretch' )
+				st.button( 'Clear', key='usgssb_clear', on_click=_clear_usgssb_state,
+					width='stretch' )
 			
 			if usgssb_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'USGS Science Base'
 		
-
 			render_source_processing_controls( 'USGS Science Base', 'api_usgs_science_base' )
 		
-		# ----------------------------
-		# ------ Expander Open Sky
-		# ----------------------------
+		# ------ Open Sky
 		with st.expander( label='Open Sky', icon='✈️', expanded=False ):
 			def _clear_opensky_state( ) -> None:
 				st.session_state[ 'opensky_results' ] = { }
@@ -7864,30 +7687,32 @@ elif mode == 'Geospatial':
 			
 			if 'opensky_extended' not in st.session_state:
 				st.session_state[ 'opensky_extended' ] = False
-			
-			
-			
+				
 			if 'opensky_timeout' not in st.session_state:
 				st.session_state[ 'opensky_timeout' ] = 20
 			
 			mode = st.selectbox( 'Mode', options=[ 'states_bbox', 'flights_aircraft',
 					'arrivals_airport', 'departures_airport',
 					'track_aircraft', ], key='opensky_mode', help=(
-				'states_bbox = live aircraft inside a bounding box; '
-				'flights_aircraft = flights for one aircraft; '
-				'arrivals_airport / departures_airport = airport traffic; '
-				'track_aircraft = trajectory waypoints for one aircraft.') )
+					'states_bbox = live aircraft inside a bounding box; '
+					'flights_aircraft = flights for one aircraft; '
+					'arrivals_airport / departures_airport = airport traffic; '
+					'track_aircraft = trajectory waypoints for one aircraft.') )
 			
-			icao24 = st.text_input( 'ICAO24 (Aircraft Hex ID)', value='', key='opensky_icao24', help='Required for flights_aircraft and track_aircraft.' )
+			icao24 = st.text_input( 'ICAO24 (Aircraft Hex ID)', value='', key='opensky_icao24',
+				help='Required for flights_aircraft and track_aircraft.' )
 			
-			airport = st.text_input( 'Airport ICAO', value='', key='opensky_airport', help='Required for arrivals_airport and departures_airport.' )
+			airport = st.text_input( 'Airport ICAO', value='', key='opensky_airport',
+				help='Required for arrivals_airport and departures_airport.' )
 			
-			begin = st.number_input( 'Begin (Unix Time)', min_value=0, value=0, step=60, key='opensky_begin', help='Required for aircraft and airport history '
-			                                                                                                       'queries.' )
+			begin = st.number_input( 'Begin (Unix Time)', min_value=0, value=0, step=60,
+				key='opensky_begin', help='Required for aircraft and airport history queries.' )
 			
-			end = st.number_input( 'End (Unix Time)', min_value=0, value=0, step=60, key='opensky_end', help='Required for aircraft and airport history queries.' )
+			end = st.number_input( 'End (Unix Time)', min_value=0, value=0, step=60,
+				key='opensky_end', help='Required for aircraft and airport history queries.' )
 			
-			time_value = st.number_input( 'Time (Unix Time / 0 for Live Track)', min_value=0, value=0, step=60, key='opensky_time_value', help=(
+			time_value = st.number_input( 'Time (Unix Time / 0 for Live Track)', min_value=0,
+				value=0, step=60, key='opensky_time_value', help=(
 				'Optional for states_bbox. Leave at 0 for current live state '
 				'vectors. Used by track_aircraft, where 0 requests the current '
 				'or latest available track.') )
@@ -7896,25 +7721,31 @@ elif mode == 'Geospatial':
 			lomin = st.number_input( 'Min Longitude', value=-77.5, key='opensky_lomin' )
 			lamax = st.number_input( 'Max Latitude', value=40.5, key='opensky_lamax' )
 			lomax = st.number_input( 'Max Longitude', value=-75.0, key='opensky_lomax' )
-			extended = st.checkbox( 'Extended Aircraft Categories', value=False, key='opensky_extended', help='Only applies to states_bbox.' )
+			extended = st.checkbox( 'Extended Aircraft Categories', value=False,
+				key='opensky_extended', help='Only applies to states_bbox.' )
 			
-			st.text_input( 'Client ID (Environment)', value='', disabled=True, help='Configured through OPENSKY_API_CLIENT_ID.' )
+			st.text_input( 'Client ID (Environment)', value='', disabled=True,
+				help='Configured through OPENSKY_API_CLIENT_ID.' )
 			
-			st.text_input( 'Client Secret (Environment)', value='', type='password', disabled=True, help='Configured through OPENSKY_API_CLIENT_SECRET.' )
+			st.text_input( 'Client Secret (Environment)', value='', type='password', disabled=True,
+				help='Configured through OPENSKY_API_CLIENT_SECRET.' )
 			
-			timeout = st.slider( 'Timeout (seconds)', min_value=5, max_value=60, value=20, step=1, key='opensky_timeout' )
+			timeout = st.slider( 'Timeout (seconds)', min_value=5, max_value=60, value=20, step=1,
+				key='opensky_timeout' )
 			
 			b1, b2 = st.columns( 2 )
 			with b1:
-				opensky_submit = st.button( 'Submit', key='opensky_submit', use_container_width=True, width='stretch' )
+				opensky_submit = st.button( 'Submit', key='opensky_submit',
+					use_container_width=True, width='stretch' )
 			with b2:
-				st.button( 'Clear', key='opensky_clear', on_click=_clear_opensky_state, use_container_width=True, width='stretch' )
+				st.button( 'Clear', key='opensky_clear', on_click=_clear_opensky_state,
+					use_container_width=True, width='stretch' )
 			
 			if opensky_submit:
 				st.session_state[ 'geospatial_active_source' ] = 'Open Sky'
 	
-
 			render_source_processing_controls( 'Open Sky', 'api_open_sky' )
+			
 	with right:
 		active_source = st.session_state.get( 'geospatial_active_source', '' )
 		result_keys: Dict[ str, str ] = { 'Geocoding': 'googlegeocoding_results',
@@ -7925,6 +7756,7 @@ elif mode == 'Geospatial':
 				'NASA Earth Observatory': 'earthobservatory_results',
 				'The National Map': 'usgstnm_results', 'USGS Science Base': 'usgssb_results',
 				'Open Sky': 'opensky_results', }
+		
 		st.markdown( '##### Results' )
 		if not active_source:
 			st.info( 'Select a source, configure the request, and submit it to display results.' )
@@ -8024,8 +7856,7 @@ elif mode == 'Geospatial':
 					gm = GoogleMaps( )
 					if googlemaps_mode == 'geocode_location':
 						if not str( googlemaps_query or '' ).strip( ):
-							raise ValueError( 'Address is required for geocode_location '
-							                  'mode.' )
+							raise ValueError( 'Address is required for geocode_location mode.' )
 						
 						coords = gm.geocode_location( str( googlemaps_query ).strip( ) )
 						result = { 'mode': googlemaps_mode,
@@ -8045,8 +7876,7 @@ elif mode == 'Geospatial':
 						address_lines = _split_googlemaps_address_lines( googlemaps_address_lines )
 						
 						if not address_lines:
-							raise ValueError( 'One address line is required for validate_address '
-							                  'mode.' )
+							raise ValueError( 'One address line is required for validate_address' )
 						
 						payload = gm.validate_address( address_lines )
 						result = { 'mode': googlemaps_mode, 'address_lines': address_lines,
@@ -8116,7 +7946,6 @@ elif mode == 'Geospatial':
 				
 				else:
 					data = result.get( 'data', { } )
-					
 					if isinstance( data, dict ) and data:
 						status_value = data.get( 'status', '' )
 						if status_value:
@@ -8125,11 +7954,9 @@ elif mode == 'Geospatial':
 						routes = data.get( 'routes', [ ] )
 						if isinstance( routes, list ) and routes:
 							route_rows = [ ]
-							
 							for idx, route in enumerate( routes, start=1 ):
 								legs = route.get( 'legs', [] ) if isinstance( route, dict ) else []
 								first_leg = legs[ 0 ] if legs else { }
-								
 								route_rows.append( { 'Route': idx,
 										'Summary': route.get( 'summary', '' ),
 										'Start': first_leg.get( 'start_address', '' ),
@@ -8158,14 +7985,12 @@ elif mode == 'Geospatial':
 		# -------- Google Weather
 		if active_source == 'Google Weather':
 			st.markdown( 'Results' )
-			
 			if gw_submit:
 				try:
 					if not str( gw_location or '' ).strip( ):
 						raise ValueError( 'Location is required for Google Weather.' )
 					
 					f = GoogleWeather( )
-					
 					if gw_mode == 'current':
 						result = f.fetch_current( address=gw_location, units_system=gw_units,
 							language_code=gw_language, time=int( gw_timeout ) )
@@ -8193,31 +8018,28 @@ elif mode == 'Geospatial':
 					st.exception( exc )
 			
 			result = st.session_state.get( 'googleweather_results', { } )
-			
 			if not result:
 				st.text( 'No results.' )
 			else:
 				mode_value = result.get( 'mode', '' ) if isinstance( result, dict ) else ''
 				data = result.get( 'data', { } ) if isinstance( result, dict ) else { }
 				params = result.get( 'params', { } ) if isinstance( result, dict ) else { }
-				
 				st.markdown( '#### Request Metadata' )
 				st.json( { 'mode': mode_value, 'url': result.get( 'url', '' ), 'params': params, } )
-				
 				if isinstance( data, dict ) and data:
-					current = (
-								data.get( 'currentWeather' ) or data.get( 'current_weather' ) or data.get( 'currentConditions' ) or data.get( 'current_conditions' ) or { })
+					current = ( data.get( 'currentWeather' ) or data.get( 'current_weather' ) or
+							data.get( 'currentConditions' ) or data.get( 'current_conditions' ) or
+							{ })
 					
-					hourly = (
-								data.get( 'hourlyForecasts' ) or data.get( 'hourly_forecasts' ) or data.get( 'forecastHours' ) or data.get( 'hours' ) or [ ])
+					hourly = ( data.get( 'hourlyForecasts' ) or data.get( 'hourly_forecasts' ) or
+								data.get( 'forecastHours' ) or data.get( 'hours' ) or [ ])
 					
 					history = (data.get( 'historyHours' ) or data.get( 'history_hours' ) or [ ])
+					daily = ( data.get( 'dailyForecasts' ) or data.get( 'daily_forecasts' ) or
+								data.get( 'forecastDays' ) or data.get( 'days' ) or [ ])
 					
-					daily = (
-								data.get( 'dailyForecasts' ) or data.get( 'daily_forecasts' ) or data.get( 'forecastDays' ) or data.get( 'days' ) or [ ])
-					
-					alerts = (
-								data.get( 'weatherAlerts' ) or data.get( 'weather_alerts' ) or data.get( 'alerts' ) or [ ])
+					alerts = ( data.get( 'weatherAlerts' ) or data.get( 'weather_alerts' ) or
+								data.get( 'alerts' ) or [ ])
 					
 					if current:
 						st.markdown( '#### Current Conditions' )
@@ -8226,22 +8048,26 @@ elif mode == 'Geospatial':
 					if hourly:
 						st.markdown( '#### Hourly Forecast' )
 						df_googleweather_hourly = pd.DataFrame( hourly )
-						st.data_editor( df_googleweather_hourly, use_container_width=True, hide_index=True )
+						st.data_editor( df_googleweather_hourly, use_container_width=True,
+							hide_index=True )
 					
 					if history:
 						st.markdown( '#### Hourly History' )
 						df_googleweather_history = pd.DataFrame( history )
-						st.data_editor( df_googleweather_history, use_container_width=True, hide_index=True )
+						st.data_editor( df_googleweather_history, use_container_width=True,
+							hide_index=True )
 					
 					if daily:
 						st.markdown( '#### Daily Forecast' )
 						df_googleweather_daily = pd.DataFrame( daily )
-						st.data_editor( df_googleweather_daily, use_container_width=True, hide_index=True )
+						st.data_editor( df_googleweather_daily, use_container_width=True,
+							hide_index=True )
 					
 					if alerts:
 						st.markdown( '#### Weather Alerts' )
 						df_googleweather_alerts = pd.DataFrame( alerts )
-						st.data_editor( df_googleweather_alerts, use_container_width=True, hide_index=True )
+						st.data_editor( df_googleweather_alerts, use_container_width=True,
+							hide_index=True )
 					
 					with st.expander( 'Raw Payload', expanded=False ):
 						st.json( data )
@@ -8271,12 +8097,10 @@ elif mode == 'Geospatial':
 					st.exception( exc )
 			
 			result = st.session_state.get( 'openweather_results', { } )
-			
 			if not result:
 				st.text( 'No results.' )
 			else:
 				meta_c1, meta_c2 = st.columns( 2 )
-				
 				with meta_c1:
 					if 'mode' in result:
 						st.markdown( f"**Mode:** {result.get( 'mode', '' )}" )
@@ -8330,12 +8154,10 @@ elif mode == 'Geospatial':
 					st.exception( exc )
 			
 			result = st.session_state.get( 'historicalweather_results', { } )
-			
 			if not result:
 				st.text( 'No results.' )
 			else:
 				meta_c1, meta_c2 = st.columns( 2 )
-				
 				with meta_c1:
 					if 'location' in result:
 						st.markdown( f"**Location:** {result.get( 'location', '' )}" )
@@ -8380,19 +8202,20 @@ elif mode == 'Geospatial':
 							raise ValueError( 'Start Date must be on or before End Date.' )
 						
 						if float( usgseq_min_magnitude ) > float( usgseq_max_magnitude ):
-							raise ValueError( 'Min Magnitude must be less than or equal to Max Magnitude.' )
+							raise ValueError( 'Min Magnitude must be less than or equal to Maximum' )
 					
 					latitude_value = _coerce_optional_float( name='Latitude',
 						value=usgseq_latitude, min_value=-90.0, max_value=90.0 )
 					
 					longitude_value = _coerce_optional_float( name='Longitude',
 						value=usgseq_longitude, min_value=-180.0, max_value=180.0 )
+					
 					max_radius_value = _coerce_optional_float( name='Max Radius KM',
 						value=usgseq_max_radius_km, min_value=0.0, max_value=20001.6 )
 					
 					if (latitude_value is None and longitude_value is not None) or (
 							latitude_value is not None and longitude_value is None):
-						raise ValueError( 'Latitude and Longitude must both be supplied for radial search.' )
+						raise ValueError( 'Latitude and Longitude must both be supplied for search.' )
 					
 					if max_radius_value is not None and (
 							latitude_value is None or longitude_value is None):
@@ -8539,12 +8362,10 @@ elif mode == 'Geospatial':
 					st.exception( exc )
 			
 			result = st.session_state.get( 'earthobservatory_results', { } )
-			
 			if not result:
 				st.text( 'No results.' )
 			else:
 				meta_c1, meta_c2 = st.columns( 2 )
-				
 				with meta_c1:
 					if 'mode' in result:
 						st.markdown( f"**Mode:** {result.get( 'mode', '' )}" )
@@ -8587,8 +8408,7 @@ elif mode == 'Geospatial':
 			if usgstnm_submit:
 				try:
 					clean_bbox = _validate_usgstnm_bbox( usgstnm_bbox )
-					clean_product_formats = ','.join( usgstnm_prod_formats or [ ] )
-					
+					clean_product_formats = ','.join( usgstnm_prod_formats or [ ]
 					f = USGSTheNationalMap( )
 					result = f.fetch( mode=str( usgstnm_mode ),
 						dataset=str( usgstnm_dataset ).strip( ), q=str( usgstnm_q ).strip( ),
@@ -8600,16 +8420,13 @@ elif mode == 'Geospatial':
 					st.rerun( )
 				
 				except Exception as exc:
-					st.error( 'USGS The National Map request failed.' )
 					st.exception( exc )
 			
 			result = st.session_state.get( 'usgstnm_results', { } )
-			
 			if not result:
 				st.text( 'No results.' )
 			else:
 				meta_c1, meta_c2 = st.columns( 2 )
-				
 				with meta_c1:
 					if 'mode' in result:
 						st.markdown( f"**Mode:** {result.get( 'mode', '' )}" )
@@ -8628,9 +8445,7 @@ elif mode == 'Geospatial':
 				summary = result.get( 'summary', { } ) or { }
 				if summary:
 					st.markdown( '#### Result Summary' )
-					
 					sum_c1, sum_c2, sum_c3 = st.columns( 3 )
-					
 					with sum_c1:
 						st.metric( 'Count', int( summary.get( 'count', 0 ) or 0 ) )
 					
@@ -8657,10 +8472,8 @@ elif mode == 'Geospatial':
 				if rows:
 					st.markdown( '#### Results' )
 					df_usgstnm = pd.DataFrame( rows )
-					
 					if not df_usgstnm.empty:
 						st.data_editor( df_usgstnm, use_container_width=True, hide_index=True )
-						
 						top_rows = rows[ : min( 10, len( rows ) ) ]
 						for idx, item in enumerate( top_rows, start=1 ):
 							label = str( item.get( 'Title', '' ) or item.get( 'Name', '' ) \
@@ -8684,7 +8497,6 @@ elif mode == 'Geospatial':
 						raise ValueError( 'Item ID is required for ScienceBase item mode.' )
 					
 					selected_fields = ','.join( usgssb_fields or [ ] )
-					
 					f = USGSScienceBase( )
 					result = f.fetch( mode=str( usgssb_mode ), q=str( usgssb_q ).strip( ),
 						item_id=str( usgssb_item_id ).strip( ), max_items=int( usgssb_max_items ),
@@ -8699,12 +8511,10 @@ elif mode == 'Geospatial':
 					st.exception( exc )
 			
 			result = st.session_state.get( 'usgssb_results', { } )
-			
 			if not result:
 				st.text( 'No results.' )
 			else:
 				meta_c1, meta_c2 = st.columns( 2 )
-				
 				with meta_c1:
 					if 'mode' in result:
 						st.markdown( f"**Mode:** {result.get( 'mode', '' )}" )
@@ -8721,9 +8531,7 @@ elif mode == 'Geospatial':
 				summary = result.get( 'summary', { } ) or { }
 				if summary:
 					st.markdown( '#### Result Summary' )
-					
 					sum_c1, sum_c2, sum_c3 = st.columns( 3 )
-					
 					with sum_c1:
 						st.metric( 'Count', int( summary.get( 'count', 0 ) or 0 ) )
 					
@@ -8746,17 +8554,14 @@ elif mode == 'Geospatial':
 				if rows:
 					st.markdown( '#### Results' )
 					df_usgssb = pd.DataFrame( rows )
-					
 					if not df_usgssb.empty:
 						st.data_editor( df_usgssb, use_container_width=True, hide_index=True )
-						
 						top_rows = rows[ : min( 10, len( rows ) ) ]
 						for idx, item in enumerate( top_rows, start=1 ):
-							label = str( item.get( 'Title', '' ) or item.get( 'Id', '' ) or f'Record {idx}' )
+							label = item.get( 'Title', '' ) or item.get( 'Id', '' ) or f'Record {idx}')
 							
 							with st.expander( f'Record {idx}: {label}', expanded=False ):
 								left_c, right_c = st.columns( 2 )
-								
 								with left_c:
 									if 'Type' in item:
 										st.markdown( f"**Type:** {item.get( 'Type', '' )}" )
@@ -8818,7 +8623,6 @@ elif mode == 'Geospatial':
 					st.exception( exc )
 			
 			result = st.session_state.get( 'opensky_results', { } )
-			
 			if not result:
 				st.text( 'No results.' )
 			else:
@@ -8829,15 +8633,14 @@ elif mode == 'Geospatial':
 						'Callsign': result.get( 'callsign', '' ), } )
 				
 				items = result.get( 'items', [ ] ) if isinstance( result, dict ) else [ ]
-				
 				if result.get( 'mode' ) == 'states_bbox':
 					if items:
 						st.markdown( '#### Live State Vectors' )
 						st.data_editor( items, use_container_width=True, hide_index=True )
-						
 						map_rows = [ { 'lat': x.get( 'latitude' ), 'lon': x.get( 'longitude' ) } for
 								x in items if
 								x.get( 'latitude' ) is not None and x.get( 'longitude' ) is not None ]
+						
 						if map_rows:
 							st.markdown( '#### Aircraft Positions' )
 							st.map( map_rows )
@@ -8856,7 +8659,6 @@ elif mode == 'Geospatial':
 					if items:
 						st.markdown( '#### Aircraft Track' )
 						st.data_editor( items, use_container_width=True, hide_index=True )
-						
 						map_rows = [ { 'lat': x.get( 'latitude' ), 'lon': x.get( 'longitude' ) } for
 								x in items if
 								x.get( 'latitude' ) is not None and x.get( 'longitude' ) is not None ]
@@ -8869,13 +8671,14 @@ elif mode == 'Geospatial':
 				with st.expander( 'Raw Result', expanded=False ):
 					st.json( result )
 
-# ==============================================================================
-# ENVIRONMENTAL MODE
 		if active_source in result_keys:
 			_promote_geospatial_result( source=active_source,
 				result=st.session_state.get( result_keys[ active_source ] ) )
+		
 		render_document_processing_tabs( key_prefix='geospatial' )
 
+# ==============================================================================
+# ENVIRONMENTAL MODE
 # ==============================================================================
 elif mode == 'Environmental':
 	st.session_state.setdefault( 'environmental_active_source', '' )
