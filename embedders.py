@@ -41,7 +41,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, List
 import config as cfg
-
 from boogr import Error, Logger
 from langchain_core.embeddings import Embeddings
 
@@ -135,7 +134,7 @@ class LocalEmbeddings( Embeddings ):
         except Exception as e:
             exception = Error( e )
             exception.module = 'embedders'
-            exception.cause = 'LocalGGUFEmbeddings'
+            exception.cause = 'LocalEmbeddings'
             exception.method = 'load( self ) -> None'
             Logger( ).write( exception )
             raise exception
